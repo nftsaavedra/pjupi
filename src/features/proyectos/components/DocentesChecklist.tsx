@@ -13,6 +13,8 @@ interface DocentesChecklistProps {
   refreshing?: boolean;
 }
 
+const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
+
 export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
   docentes,
   selectedIds,
@@ -24,7 +26,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
   const helperId = useId();
   const resultsId = useId();
   const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+  const deferredQuery = useDeferredValue(normalizeText(query));
 
   useRefreshToast({
     refreshing,
@@ -48,8 +50,8 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
     : docentes.filter((docente) => {
         if (!deferredQuery) return docentes.length <= 25 && !selectedIds.includes(docente.id_docente);
 
-        const nombre = docente.nombres_apellidos.toLowerCase();
-        const dni = docente.dni.toLowerCase();
+        const nombre = normalizeText(docente.nombres_apellidos);
+        const dni = normalizeText(docente.dni);
 
         return nombre.includes(deferredQuery) || dni.includes(deferredQuery);
       });

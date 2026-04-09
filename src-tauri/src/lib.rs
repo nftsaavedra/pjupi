@@ -49,7 +49,9 @@ pub fn run() {
                 .await
                 .expect("Failed to connect to MongoDB");
 
-            if sqlite_exists {
+            if sqlite_exists && !migration::migration_marker_exists(&database)
+                .await
+                .expect("Failed to inspect SQLite migration marker") {
                 let migration_pool = SqlitePool::connect(&config.sqlite_url)
                     .await
                     .expect("Failed to connect to SQLite database for migration");

@@ -4,6 +4,8 @@ import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
 import { toast } from '../../../services/toast';
 import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, type DocenteDetalle } from '../api';
 
+const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
+
 export const useDocentesTable = (refreshTrigger = 0) => {
   const [selectedDocente, setSelectedDocente] = useState<DocenteDetalle | null>(null);
   const [docenteToDelete, setDocenteToDelete] = useState<DocenteDetalle | null>(null);
@@ -59,12 +61,12 @@ export const useDocentesTable = (refreshTrigger = 0) => {
     if (estadoFiltro === 'inactivos') return docente.activo === 0;
     return true;
   }).filter((docente) => {
-    const texto = busqueda.trim().toLowerCase();
+    const texto = normalizeText(busqueda);
     if (!texto) return true;
     return (
-      docente.nombres_apellidos.toLowerCase().includes(texto) ||
-      docente.dni.includes(texto) ||
-      docente.grado.toLowerCase().includes(texto)
+      normalizeText(docente.nombres_apellidos).includes(texto) ||
+      normalizeText(docente.dni).includes(texto) ||
+      normalizeText(docente.grado).includes(texto)
     );
   }), [busqueda, docentes, estadoFiltro]);
 

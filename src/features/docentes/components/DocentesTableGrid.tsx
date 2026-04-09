@@ -45,9 +45,9 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
             key={docente.id_docente}
             className={docente.cantidad_proyectos === 0 ? 'unassigned' : ''}
           >
-            <td className="font-semibold">{docente.nombres_apellidos}</td>
-            <td>{docente.dni}</td>
-            <td>{docente.grado}</td>
+            <td className="font-semibold">{docente.nombres_apellidos || 'Sin nombre registrado'}</td>
+            <td>{docente.dni || 'Sin DNI'}</td>
+            <td>{docente.grado || 'Sin grado'}</td>
             <td>
               <span
                 className={`badge badge-${
@@ -80,12 +80,14 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                   onClick={() => onReactivate(docente.id_docente)}
                 />
               )}
-              <TableActionButton
-                className="btn-delete"
-                icon={Trash2}
-                label={docente.activo === 1 ? 'Desactivar docente' : 'Mantener docente inactivo'}
-                onClick={() => onDeactivate(docente)}
-              />
+              {docente.activo === 1 && (
+                <TableActionButton
+                  className="btn-delete"
+                  icon={Trash2}
+                  label="Desactivar docente"
+                  onClick={() => onDeactivate(docente)}
+                />
+              )}
             </td>
           </tr>
         ))}

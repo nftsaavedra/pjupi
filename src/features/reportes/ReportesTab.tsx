@@ -15,6 +15,8 @@ import { SkeletonTable } from '../../shared/ui/Skeleton';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
 
+const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
+
 interface ReportesTabProps {
   refreshTrigger?: number;
 }
@@ -65,10 +67,11 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
     }
   };
 
+  const normalizedQuery = normalizeText(query);
   const filtrados = preview.filter((d) =>
-    d.docente.toLowerCase().includes(query.toLowerCase()) ||
-    d.dni.includes(query) ||
-    d.grado.toLowerCase().includes(query.toLowerCase())
+    normalizeText(d.docente).includes(normalizedQuery) ||
+    normalizeText(d.dni).includes(normalizedQuery) ||
+    normalizeText(d.grado).includes(normalizedQuery)
   );
 
   return (

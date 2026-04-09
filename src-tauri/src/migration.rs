@@ -24,10 +24,14 @@ struct ParticipacionMongo {
     id_docente: String,
 }
 
+pub async fn migration_marker_exists(db: &Database) -> Result<bool, AppError> {
+    let meta = db.collection::<Document>("system_meta");
+    Ok(meta.find_one(doc! { "_id": "sqlite_migration_v1" }).await?.is_some())
+}
+
 pub async fn migrate_sqlite_to_mongodb(pool: &SqlitePool, db: &Database) -> Result<(), AppError> {
     let meta = db.collection::<Document>("system_meta");
-    let existing_meta = meta.find_one(doc! { "_id": "sqlite_migration_v1" }).await?;
-    if existing_meta.is_some() {
+    if migration_marker_exists(db).await? {
         return Ok(());
     }
 

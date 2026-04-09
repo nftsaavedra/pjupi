@@ -63,7 +63,7 @@ pub async fn get_all_docentes_con_proyectos(pool: &SqlitePool) -> Result<Vec<Doc
             d.apellido_materno,
             g.nombre as "grado",
             COALESCE(COUNT(p.id_proyecto), 0) as "cantidad_proyectos",
-            GROUP_CONCAT(p.titulo_proyecto, ', ') as "proyectos",
+            GROUP_CONCAT(p.titulo_proyecto, ' | ') as "proyectos",
             d.activo as "activo",
             d.renacyt_codigo_registro as "renacyt_codigo_registro",
             d.renacyt_id_investigador as "renacyt_id_investigador",
