@@ -1,5 +1,5 @@
 use tauri::State;
-use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RenacytLookupResult, ReniecDniLookupResult};
+use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado, RenacytLookupResult, ReniecDniLookupResult};
 use crate::error::AppError;
 use crate::infrastructure::renacyt_client;
 use crate::infrastructure::reniec_client;
@@ -67,4 +67,12 @@ pub async fn consultar_renacyt_docente(
     codigo_o_id: String,
 ) -> Result<RenacytLookupResult, AppError> {
     renacyt_client::consultar_investigador(state.renacyt_config(), &codigo_o_id).await
+}
+
+#[tauri::command]
+pub async fn refrescar_formacion_academica_renacyt_docente(
+    state: State<'_, AppState>,
+    id_docente: String,
+) -> Result<RefreshDocenteRenacytFormacionResultado, AppError> {
+    storage::refrescar_formacion_academica_renacyt_docente(&state, &id_docente).await
 }

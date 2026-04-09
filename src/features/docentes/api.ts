@@ -6,6 +6,7 @@ export {
   eliminarDocente,
   getAllDocentes,
   getAllDocentesConProyectos,
+  refrescarFormacionAcademicaRenacytDocente,
   reactivarDocente,
 } from '../../services/tauri/docentes';
 
@@ -15,6 +16,8 @@ export type {
   Docente,
   DocenteDetalle,
   EliminarDocenteResultado,
+  RefreshDocenteRenacytFormacionResultado,
+  RenacytFormacionAcademicaResumen,
   RenacytLookupResult,
   ReniecDniLookupResult,
 } from '../../services/tauri/types';

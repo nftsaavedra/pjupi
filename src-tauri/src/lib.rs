@@ -59,6 +59,7 @@ pub fn run() {
                 reactivar_docente,
                 consultar_dni_reniec,
                 consultar_renacyt_docente,
+                refrescar_formacion_academica_renacyt_docente,
                 crear_proyecto_con_participantes,
                 buscar_proyectos_por_docente,
                 get_all_proyectos_detalle,

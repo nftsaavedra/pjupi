@@ -239,6 +239,21 @@ pub async fn get_docente_by_dni(db: &Database, dni: &str) -> Result<Option<Docen
         .map_err(Into::into)
 }
 
+pub async fn get_docente_by_id(db: &Database, id_docente: &str) -> Result<Docente, AppError> {
+    db.collection::<Docente>("docentes")
+        .find_one(doc! { "id_docente": id_docente })
+        .await?
+        .ok_or_else(|| AppError::NotFound("Docente no encontrado.".to_string()))
+}
+
+pub async fn update_docente_renacyt(db: &Database, docente: &Docente) -> Result<(), AppError> {
+    db.collection::<Docente>("docentes")
+        .replace_one(doc! { "id_docente": &docente.id_docente }, docente)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<DocenteDetalle>, AppError> {
     let mut docentes = db.collection::<Docente>("docentes")
         .find(doc! {})
@@ -299,11 +314,62 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
                 renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
                 renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
                 renacyt_ficha_url: docente.renacyt_ficha_url,
+                renacyt_formaciones_academicas_json: docente.renacyt_formaciones_academicas_json,
             }
         })
         .collect();
 
     Ok(detalles)
+}
+
+pub async fn get_docente_detalle_by_id(db: &Database, id_docente: &str) -> Result<DocenteDetalle, AppError> {
+    let docente = get_docente_by_id(db, id_docente).await?;
+    let grados = load_grados_map(db).await?;
+    let proyectos = load_proyectos_map(db).await?;
+    let participaciones = load_participaciones(db).await?;
+
+    let proyectos_docente = participaciones
+        .into_iter()
+        .filter(|participacion| participacion.id_docente == docente.id_docente)
+        .filter_map(|participacion| proyectos.get(&participacion.id_proyecto))
+        .filter(|proyecto| proyecto.activo == 1)
+        .map(|proyecto| proyecto.titulo_proyecto.clone())
+        .collect::<Vec<_>>();
+
+    let grado = grados
+        .get(&docente.id_grado)
+        .map(|grado| grado.nombre.clone())
+        .unwrap_or_else(|| "Sin grado".to_string());
+
+    Ok(DocenteDetalle {
+        id_docente: docente.id_docente,
+        dni: docente.dni,
+        nombres_apellidos: docente.nombres_apellidos,
+        nombres: docente.nombres,
+        apellido_paterno: docente.apellido_paterno,
+        apellido_materno: docente.apellido_materno,
+        grado,
+        cantidad_proyectos: proyectos_docente.len() as i64,
+        proyectos: if proyectos_docente.is_empty() {
+            None
+        } else {
+            Some(proyectos_docente.join(" | "))
+        },
+        activo: docente.activo,
+        renacyt_codigo_registro: docente.renacyt_codigo_registro,
+        renacyt_id_investigador: docente.renacyt_id_investigador,
+        renacyt_nivel: docente.renacyt_nivel,
+        renacyt_grupo: docente.renacyt_grupo,
+        renacyt_condicion: docente.renacyt_condicion,
+        renacyt_fecha_informe_calificacion: docente.renacyt_fecha_informe_calificacion,
+        renacyt_fecha_registro: docente.renacyt_fecha_registro,
+        renacyt_fecha_ultima_revision: docente.renacyt_fecha_ultima_revision,
+        renacyt_orcid: docente.renacyt_orcid,
+        renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
+        renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
+        renacyt_ficha_url: docente.renacyt_ficha_url,
+        renacyt_formaciones_academicas_json: docente.renacyt_formaciones_academicas_json,
+    })
 }
 
 pub async fn delete_docente(db: &Database, id_docente: &str) -> Result<EliminarDocenteResultado, AppError> {

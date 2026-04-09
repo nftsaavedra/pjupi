@@ -19,6 +19,7 @@ export interface Docente {
   renacyt_scopus_author_id?: string | null;
   renacyt_fecha_ultima_sincronizacion?: number | null;
   renacyt_ficha_url?: string | null;
+  renacyt_formaciones_academicas_json?: string | null;
 }
 
 export interface DocenteDetalle {
@@ -44,6 +45,20 @@ export interface DocenteDetalle {
   renacyt_scopus_author_id?: string | null;
   renacyt_fecha_ultima_sincronizacion?: number | null;
   renacyt_ficha_url?: string | null;
+  renacyt_formaciones_academicas_json?: string | null;
+}
+
+export interface RenacytFormacionAcademicaResumen {
+  id: number;
+  centro_estudios?: string | null;
+  grado_academico?: string | null;
+  titulo?: string | null;
+  fecha_inicio?: number | null;
+  fecha_fin?: number | null;
+  indicador_importado: boolean;
+  puntaje_obtenido?: number | null;
+  considerado_para_cc: boolean;
+  es_calificado: boolean;
 }
 
 export interface RenacytLookupResult {
@@ -60,6 +75,8 @@ export interface RenacytLookupResult {
   orcid?: string | null;
   scopus_author_id?: string | null;
   ficha_url: string;
+  solicitud_id?: number | null;
+  formaciones_academicas_json?: string | null;
 }
 
 export interface ReniecDniLookupResult {
@@ -72,6 +89,12 @@ export interface ReniecDniLookupResult {
 
 export interface EliminarDocenteResultado {
   accion: 'desactivado' | string;
+  mensaje: string;
+}
+
+export interface RefreshDocenteRenacytFormacionResultado {
+  docente: DocenteDetalle;
+  actualizada: boolean;
   mensaje: string;
 }
 

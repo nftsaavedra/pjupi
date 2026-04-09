@@ -1,5 +1,5 @@
 import { invoke } from './client';
-import type { Docente, DocenteDetalle, EliminarDocenteResultado, RenacytLookupResult, ReniecDniLookupResult } from './types';
+import type { Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado, RenacytLookupResult, ReniecDniLookupResult } from './types';
 
 interface CreateDocenteRenacytPayload {
   codigo_registro: string;
@@ -13,6 +13,7 @@ interface CreateDocenteRenacytPayload {
   orcid?: string | null;
   scopus_author_id?: string | null;
   ficha_url: string;
+  formaciones_academicas_json?: string | null;
 }
 
 export const crearDocente = async (
@@ -61,4 +62,8 @@ export const eliminarDocente = async (id_docente: string): Promise<EliminarDocen
 
 export const reactivarDocente = async (id_docente: string): Promise<Docente> => {
   return await invoke('reactivar_docente', { idDocente: id_docente });
+};
+
+export const refrescarFormacionAcademicaRenacytDocente = async (id_docente: string): Promise<RefreshDocenteRenacytFormacionResultado> => {
+  return await invoke('refrescar_formacion_academica_renacyt_docente', { idDocente: id_docente });
 };

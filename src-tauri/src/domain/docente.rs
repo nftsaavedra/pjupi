@@ -15,6 +15,7 @@ pub struct CreateDocenteRenacytRequest {
     pub orcid: Option<String>,
     pub scopus_author_id: Option<String>,
     pub ficha_url: String,
+    pub formaciones_academicas_json: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -32,6 +33,8 @@ pub struct RenacytLookupResult {
     pub orcid: Option<String>,
     pub scopus_author_id: Option<String>,
     pub ficha_url: String,
+    pub solicitud_id: Option<i64>,
+    pub formaciones_academicas_json: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -56,6 +59,7 @@ pub struct Docente {
     pub renacyt_scopus_author_id: Option<String>,
     pub renacyt_fecha_ultima_sincronizacion: Option<i64>,
     pub renacyt_ficha_url: Option<String>,
+    pub renacyt_formaciones_academicas_json: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +97,7 @@ pub struct DocenteDetalle {
     pub renacyt_scopus_author_id: Option<String>,
     pub renacyt_fecha_ultima_sincronizacion: Option<i64>,
     pub renacyt_ficha_url: Option<String>,
+    pub renacyt_formaciones_academicas_json: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,6 +112,13 @@ pub struct ReniecDniLookupResult {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EliminarDocenteResultado {
     pub accion: String, // "desactivado"
+    pub mensaje: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RefreshDocenteRenacytFormacionResultado {
+    pub docente: DocenteDetalle,
+    pub actualizada: bool,
     pub mensaje: String,
 }
 
@@ -157,6 +169,40 @@ impl Docente {
             renacyt_scopus_author_id: renacyt.as_ref().and_then(|value| value.scopus_author_id.clone()).filter(|value| !value.trim().is_empty()),
             renacyt_fecha_ultima_sincronizacion: fecha_ultima_sincronizacion,
             renacyt_ficha_url: renacyt.as_ref().map(|value| value.ficha_url.trim().to_string()).filter(|value| !value.is_empty()),
+            renacyt_formaciones_academicas_json: renacyt.as_ref().and_then(|value| value.formaciones_academicas_json.clone()).filter(|value| !value.trim().is_empty()),
         }
+    }
+
+    pub fn apply_renacyt_refresh(&mut self, lookup: RenacytLookupResult) -> bool {
+        let nuevas_formaciones = lookup
+            .formaciones_academicas_json
+            .filter(|value| !value.trim().is_empty());
+        let tiene_nuevas_formaciones = nuevas_formaciones.is_some();
+
+        self.renacyt_codigo_registro = Some(lookup.codigo_registro.trim().to_string()).filter(|value| !value.is_empty());
+        self.renacyt_id_investigador = Some(lookup.id_investigador.trim().to_string()).filter(|value| !value.is_empty());
+        self.renacyt_nivel = lookup.nivel.filter(|value| !value.trim().is_empty());
+        self.renacyt_grupo = lookup.grupo.filter(|value| !value.trim().is_empty());
+        self.renacyt_condicion = lookup.condicion.filter(|value| !value.trim().is_empty());
+        self.renacyt_fecha_informe_calificacion = lookup.fecha_informe_calificacion;
+        self.renacyt_fecha_registro = lookup.fecha_registro;
+        self.renacyt_fecha_ultima_revision = lookup.fecha_ultima_revision;
+        self.renacyt_orcid = lookup.orcid.filter(|value| !value.trim().is_empty());
+        self.renacyt_scopus_author_id = lookup.scopus_author_id.filter(|value| !value.trim().is_empty());
+        self.renacyt_ficha_url = Some(lookup.ficha_url.trim().to_string()).filter(|value| !value.is_empty());
+        self.renacyt_fecha_ultima_sincronizacion = Some(Self::current_timestamp_ms());
+
+        if let Some(formaciones) = nuevas_formaciones {
+            self.renacyt_formaciones_academicas_json = Some(formaciones);
+        }
+
+        tiene_nuevas_formaciones
+    }
+
+    fn current_timestamp_ms() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as i64)
+            .unwrap_or_default()
     }
 }

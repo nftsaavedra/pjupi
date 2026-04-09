@@ -1,5 +1,5 @@
 use crate::config::DatabaseBackend;
-use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado};
+use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado};
 use crate::domain::estadisticas::{DocenteProyectosCount, ExportData, KpisDashboard};
 use crate::domain::grado::{CreateGradoRequest, EliminarGradoResultado, GradoAcademico};
 use crate::domain::proyecto::{
@@ -89,6 +89,54 @@ pub async fn reactivar_docente(state: &AppState, id_docente: &str) -> Result<Doc
         DatabaseBackend::Sqlite => docente_repo::reactivar_docente(state.sqlite_pool()?, id_docente).await,
         DatabaseBackend::MongoDb => mongo_repo::reactivar_docente(state.mongo_db()?, id_docente).await,
     }
+}
+
+pub async fn refrescar_formacion_academica_renacyt_docente(
+    state: &AppState,
+    id_docente: &str,
+) -> Result<RefreshDocenteRenacytFormacionResultado, AppError> {
+    let mut docente = match state.backend {
+        DatabaseBackend::Sqlite => docente_repo::get_docente_by_id(state.sqlite_pool()?, id_docente).await?,
+        DatabaseBackend::MongoDb => mongo_repo::get_docente_by_id(state.mongo_db()?, id_docente).await?,
+    };
+
+    let codigo_o_id = docente
+        .renacyt_id_investigador
+        .clone()
+        .or_else(|| docente.renacyt_codigo_registro.clone())
+        .ok_or_else(|| AppError::ExternalServiceError("El docente no tiene un vínculo RENACYT para refrescar su formación académica.".to_string()))?;
+
+    let tenia_formaciones = docente
+        .renacyt_formaciones_academicas_json
+        .as_ref()
+        .is_some_and(|value| !value.trim().is_empty());
+
+    let lookup = crate::infrastructure::renacyt_client::consultar_investigador(state.renacyt_config(), &codigo_o_id).await?;
+    let actualizada = docente.apply_renacyt_refresh(lookup);
+
+    match state.backend {
+        DatabaseBackend::Sqlite => docente_repo::update_docente_renacyt(state.sqlite_pool()?, &docente).await?,
+        DatabaseBackend::MongoDb => mongo_repo::update_docente_renacyt(state.mongo_db()?, &docente).await?,
+    }
+
+    let docente_detalle = match state.backend {
+        DatabaseBackend::Sqlite => docente_repo::get_docente_detalle_by_id(state.sqlite_pool()?, id_docente).await?,
+        DatabaseBackend::MongoDb => mongo_repo::get_docente_detalle_by_id(state.mongo_db()?, id_docente).await?,
+    };
+
+    let mensaje = if actualizada {
+        "Formación académica RENACYT actualizada correctamente.".to_string()
+    } else if tenia_formaciones {
+        "RENACYT no devolvió nueva formación académica en esta sincronización. Se mantuvo la información registrada.".to_string()
+    } else {
+        "RENACYT no devolvió formación académica disponible para este docente en esta sincronización.".to_string()
+    };
+
+    Ok(RefreshDocenteRenacytFormacionResultado {
+        docente: docente_detalle,
+        actualizada,
+        mensaje,
+    })
 }
 
 pub async fn crear_proyecto_con_participantes(state: &AppState, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {

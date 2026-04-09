@@ -37,6 +37,7 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             renacyt_scopus_author_id VARCHAR(40),
             renacyt_fecha_ultima_sincronizacion INTEGER,
             renacyt_ficha_url TEXT,
+            renacyt_formaciones_academicas_json TEXT,
             FOREIGN KEY (id_grado) REFERENCES grado_academico (id_grado)
         );
 

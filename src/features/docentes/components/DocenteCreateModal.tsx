@@ -26,6 +26,19 @@ const formatDate = (value?: number | null) => {
   }).format(value);
 };
 
+const countFormacionesAcademicas = (value?: string | null) => {
+  if (!value) {
+    return 0;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
+};
+
 export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
   open,
   onClose,
@@ -73,7 +86,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
           <span>Registrar Nuevo Docente</span>
         </span>
       )}
-      description="Valide el DNI, seleccione el grado y, si corresponde, adjunte la clasificación RENACYT antes de registrar al docente."
+      description="Valide el DNI, vincule RENACYT si corresponde y luego seleccione el grado antes de registrar al docente."
       onClose={onClose}
       onSubmit={handleSubmit}
       size="lg"
@@ -129,17 +142,6 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
             </div>
           </div>
 
-          <FormSelect
-            label="Grado Académico"
-            value={idGrado}
-            onChange={setIdGrado}
-            options={grados.filter((g) => g.activo !== 0).map((g) => ({ value: g.id_grado, label: g.nombre }))}
-            help="Seleccione el grado vigente del docente. Solo se muestran grados activos para preservar consistencia operativa."
-            disabled={camposBloqueados}
-            required
-            containerClassName="docente-form-span-1"
-          />
-
           <div className="form-inline-preview docente-form-preview-card" aria-live="polite">
             <strong>Nombre a registrar</strong>
             <span>{nombreCompletoPreview || 'Complete nombres y apellidos para ver la vista previa.'}</span>
@@ -193,10 +195,22 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
                   <span><strong>Scopus:</strong> {renacytData.scopus_author_id ?? 'No disponible'}</span>
                   <span><strong>Informe:</strong> {formatDate(renacytData.fecha_informe_calificacion)}</span>
                   <span><strong>Última revisión:</strong> {formatDate(renacytData.fecha_ultima_revision)}</span>
+                  <span><strong>Formaciones:</strong> {countFormacionesAcademicas(renacytData.formaciones_academicas_json)}</span>
                 </div>
               </div>
             )}
           </div>
+
+          <FormSelect
+            label="Grado Académico"
+            value={idGrado}
+            onChange={setIdGrado}
+            options={grados.filter((g) => g.activo !== 0).map((g) => ({ value: g.id_grado, label: g.nombre }))}
+            help="Seleccione el grado vigente del docente. Solo se muestran grados activos para preservar consistencia operativa."
+            disabled={camposBloqueados}
+            required
+            containerClassName="docente-form-span-1"
+          />
 
           <FormInput
             label="Nombres"

@@ -226,6 +226,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
           orcid: renacytData.orcid ?? null,
           scopus_author_id: renacytData.scopus_author_id ?? null,
           ficha_url: renacytData.ficha_url,
+          formaciones_academicas_json: renacytData.formaciones_academicas_json ?? null,
         } : null,
       );
       toast.success('Docente registrado exitosamente');

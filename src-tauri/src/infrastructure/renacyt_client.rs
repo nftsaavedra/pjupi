@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::RenacytConfig;
 use crate::domain::docente::RenacytLookupResult;
@@ -50,6 +50,68 @@ struct RenacytActoRegistralData {
     condicion: String,
     #[serde(default)]
     fechaRegistroActivo: Option<i64>,
+    #[serde(default)]
+    solicitudId: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+struct RenacytCriteriosResponse {
+    #[serde(default)]
+    criterioARequest: Option<RenacytCriterioARequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+struct RenacytCriterioARequest {
+    #[serde(default)]
+    formacionesAcademicas: Vec<RenacytFormacionAcademicaEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+struct RenacytFormacionAcademicaEntry {
+    #[serde(default)]
+    formacionAcademicaPOJO: Option<RenacytFormacionAcademicaPojo>,
+    #[serde(default)]
+    consideradoParaCC: bool,
+    #[serde(default)]
+    esCalificado: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+struct RenacytFormacionAcademicaPojo {
+    #[serde(default)]
+    id: i64,
+    #[serde(default)]
+    descCentroEstudios: String,
+    #[serde(default)]
+    descGradoAcademico: String,
+    #[serde(default)]
+    fechaInicio: Option<i64>,
+    #[serde(default)]
+    fechaFin: Option<i64>,
+    #[serde(default)]
+    indicadorImportado: bool,
+    #[serde(default)]
+    titulo: String,
+    #[serde(default)]
+    puntajeObtenido: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+struct RenacytFormacionAcademicaResumen {
+    id: i64,
+    centro_estudios: Option<String>,
+    grado_academico: Option<String>,
+    titulo: Option<String>,
+    fecha_inicio: Option<i64>,
+    fecha_fin: Option<i64>,
+    indicador_importado: bool,
+    puntaje_obtenido: Option<f64>,
+    considerado_para_cc: bool,
+    es_calificado: bool,
 }
 
 pub async fn consultar_investigador(config: &RenacytConfig, codigo_o_id: &str) -> Result<RenacytLookupResult, AppError> {
@@ -105,6 +167,11 @@ pub async fn consultar_investigador(config: &RenacytConfig, codigo_o_id: &str) -
     let acto = acto_response.json::<RenacytActoRegistralData>().await?;
     let ficha_url = build_ficha_url(config, &id_investigador);
     let ficha_html = client.get(&ficha_url).send().await?.text().await?;
+    let formaciones_academicas_json = if let Some(solicitud_id) = acto.solicitudId {
+        fetch_formaciones_academicas_json(&client, config, solicitud_id).await
+    } else {
+        None
+    };
 
     Ok(RenacytLookupResult {
         codigo_registro: first_non_empty(&[&acto.codigoRegistro, &build_codigo_registro(&id_investigador)]).unwrap_or_default(),
@@ -120,7 +187,67 @@ pub async fn consultar_investigador(config: &RenacytConfig, codigo_o_id: &str) -
         orcid: first_non_empty_owned(vec![acto.orcid, postulante.idOrcid]),
         scopus_author_id: non_empty(postulante.idPerfilScopus),
         ficha_url,
+        solicitud_id: acto.solicitudId,
+        formaciones_academicas_json,
     })
+}
+
+async fn fetch_formaciones_academicas_json(
+    client: &reqwest::Client,
+    config: &RenacytConfig,
+    solicitud_id: i64,
+) -> Option<String> {
+    let criterios_url = format!(
+        "{}/usuario/obtenerInformacionCriteriosFiltroCc/{}",
+        config.api_base_url.trim_end_matches('/'),
+        solicitud_id,
+    );
+
+    let response = match client.get(&criterios_url).send().await {
+        Ok(response) => response,
+        Err(_) => return None,
+    };
+
+    if !response.status().is_success() {
+        return None;
+    }
+
+    let payload = match response.json::<RenacytCriteriosResponse>().await {
+        Ok(payload) => payload,
+        Err(_) => return None,
+    };
+
+    let formaciones = payload
+        .criterioARequest
+        .map(|criterio| {
+            criterio
+                .formacionesAcademicas
+                .into_iter()
+                .filter_map(|entry| {
+                    let pojo = entry.formacionAcademicaPOJO?;
+                    Some(RenacytFormacionAcademicaResumen {
+                        id: pojo.id,
+                        centro_estudios: non_empty(pojo.descCentroEstudios),
+                        grado_academico: non_empty(pojo.descGradoAcademico),
+                        titulo: non_empty(pojo.titulo),
+                        fecha_inicio: pojo.fechaInicio,
+                        fecha_fin: pojo.fechaFin,
+                        indicador_importado: pojo.indicadorImportado,
+                        puntaje_obtenido: pojo.puntajeObtenido,
+                        considerado_para_cc: entry.consideradoParaCC,
+                        es_calificado: entry.esCalificado,
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if formaciones.is_empty() {
+        return None;
+    }
+
+    serde_json::to_string(&formaciones)
+        .ok()
 }
 
 fn normalize_id_investigador(value: &str) -> Result<String, AppError> {

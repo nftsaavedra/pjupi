@@ -1890,12 +1890,46 @@ select {
   flex-wrap: wrap;
 }
 
+.renacyt-detail-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .renacyt-detail-label {
   color: #1e40af;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.brand-mark-renacyt {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.brand-mark-orcid {
+  background: #d9f99d;
+  color: #3f6212;
+}
+
+.brand-mark-scopus {
+  background: #fed7aa;
+  color: #c2410c;
 }
 
 .renacyt-detail-item strong {
@@ -1928,6 +1962,87 @@ select {
   flex-wrap: wrap;
 }
 
+.renacyt-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.renacyt-formaciones-feedback {
+  margin-top: 0.25rem;
+}
+
+.renacyt-subsection-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  text-align: left;
+}
+
+.renacyt-subsection-toggle-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.renacyt-subsection-title {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.renacyt-formaciones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.renacyt-formacion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(191, 219, 254, 0.9);
+}
+
+.renacyt-formacion-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.renacyt-formacion-head strong {
+  color: var(--text-primary);
+}
+
+.renacyt-formacion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.9rem;
+}
+
+.renacyt-formacion-grid span {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.renacyt-formacion-grid strong {
+  color: var(--text-primary);
+}
+
 .renacyt-detail-empty {
   color: var(--text-secondary);
   font-size: 0.92rem;
@@ -1953,7 +2068,8 @@ select {
   }
 
   .renacyt-summary-grid,
-  .renacyt-detail-grid {
+  .renacyt-detail-grid,
+  .renacyt-formacion-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

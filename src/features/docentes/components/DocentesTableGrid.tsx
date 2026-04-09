@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, RotateCcw, Trash2 } from 'lucide-react';
+import { Eye, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import type { DocenteDetalle } from '../api';
 import { SkeletonTable } from '../../../shared/ui/Skeleton';
 import { TableActionButton } from '../../../shared/ui/TableActionButton';
@@ -8,16 +8,20 @@ interface DocentesTableGridProps {
   docentes: DocenteDetalle[];
   loading: boolean;
   onView: (docente: DocenteDetalle) => void;
+  onRefreshRenacyt: (id: string) => void;
   onReactivate: (id: string) => void;
   onDeactivate: (docente: DocenteDetalle) => void;
+  refreshingRenacytDocenteId: string | null;
 }
 
 export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
   docentes,
   loading,
   onView,
+  onRefreshRenacyt,
   onReactivate,
   onDeactivate,
+  refreshingRenacytDocenteId,
 }) => {
   if (loading) {
     return <SkeletonTable columns={6} rows={6} />;
@@ -41,6 +45,12 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
       </thead>
       <tbody>
         {docentes.map((docente) => (
+          (() => {
+            const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
+            const tieneFormaciones = Boolean(docente.renacyt_formaciones_academicas_json?.trim());
+            const estaActualizando = refreshingRenacytDocenteId === docente.id_docente;
+
+            return (
           <tr
             key={docente.id_docente}
             className={docente.cantidad_proyectos === 0 ? 'unassigned' : ''}
@@ -71,6 +81,15 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                 label="Ver detalles"
                 onClick={() => onView(docente)}
               />
+              {tieneRenacyt && (
+                <TableActionButton
+                  className="btn-secondary"
+                  icon={RefreshCw}
+                  label={estaActualizando ? 'Actualizando formación RENACYT' : tieneFormaciones ? 'Actualizar formación RENACYT' : 'Reintentar formación RENACYT'}
+                  onClick={() => onRefreshRenacyt(docente.id_docente)}
+                  disabled={estaActualizando}
+                />
+              )}
               {docente.activo === 0 && (
                 <TableActionButton
                   className="btn-primary"
@@ -90,6 +109,8 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
               )}
             </td>
           </tr>
+            );
+          })()
         ))}
       </tbody>
     </table>

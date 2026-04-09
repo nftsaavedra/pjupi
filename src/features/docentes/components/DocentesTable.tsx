@@ -25,8 +25,10 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
     error,
     estadoFiltro,
     handleEliminarDocente,
+    handleRefreshRenacytFormaciones,
     handleReactivarDocente,
     loading,
+    refreshingRenacytDocenteId,
     selectedDocente,
     setBusqueda,
     setDocenteToDelete,
@@ -75,8 +77,10 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           docentes={docentesFiltrados}
           loading={loading}
           onView={setSelectedDocente}
+          onRefreshRenacyt={handleRefreshRenacytFormaciones}
           onReactivate={handleReactivarDocente}
           onDeactivate={setDocenteToDelete}
+          refreshingRenacytDocenteId={refreshingRenacytDocenteId}
         />
       </div>
 
@@ -84,6 +88,8 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
         <DocenteDetailModal
           docente={selectedDocente}
           onClose={() => setSelectedDocente(null)}
+          onRefreshRenacytFormaciones={handleRefreshRenacytFormaciones}
+          isRefreshingRenacyt={refreshingRenacytDocenteId === selectedDocente.id_docente}
         />
       )}
 

@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, TriangleAlert, UserRound, X } from 'lucide-react';
+import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, RefreshCw, TriangleAlert, UserRound, X } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import type { DocenteDetalle } from '../api';
+import type { DocenteDetalle, RenacytFormacionAcademicaResumen } from '../api';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { toast } from '../../../services/toast';
 
 interface DocenteDetailModalProps {
   docente: DocenteDetalle;
   onClose: () => void;
+  onRefreshRenacytFormaciones: (id: string) => void;
+  isRefreshingRenacyt: boolean;
 }
 
-export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente, onClose }) => {
+type ExternalBrand = 'renacyt' | 'orcid' | 'scopus';
+
+export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
+  docente,
+  onClose,
+  onRefreshRenacytFormaciones,
+  isRefreshingRenacyt,
+}) => {
   const proyectos = docente.proyectos ? docente.proyectos.split(' | ') : [];
   const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
   const [renacytExpanded, setRenacytExpanded] = useState(true);
+  const [formacionesExpanded, setFormacionesExpanded] = useState(false);
 
   const formatDate = (value?: number | null) => {
     if (!value) {
@@ -41,6 +51,30 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
   const orcidUrl = docente.renacyt_orcid
     ? `https://orcid.org/${encodeURIComponent(docente.renacyt_orcid)}`
     : null;
+  const formacionesAcademicas = parseFormacionesAcademicas(docente.renacyt_formaciones_academicas_json);
+
+  const renderBrandLabel = (label: string, brand?: ExternalBrand) => (
+    <span className="renacyt-detail-label-row">
+      {brand && (
+        <span className={`brand-mark brand-mark-${brand}`} aria-hidden="true">
+          {brand === 'renacyt' ? 'R' : brand === 'orcid' ? 'O' : 'S'}
+        </span>
+      )}
+      <span className="renacyt-detail-label">{label}</span>
+    </span>
+  );
+
+  const renderFormacionDate = (value?: number | null) => {
+    if (!value) {
+      return 'No disponible';
+    }
+
+    return new Intl.DateTimeFormat('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(value);
+  };
 
   const renderLinkedIdentifier = (
     label: string,
@@ -48,9 +82,10 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
     url: string | null,
     actionLabel: string,
     errorMessage: string,
+    brand?: ExternalBrand,
   ) => (
     <div className="renacyt-detail-item renacyt-detail-item-linked">
-      <span className="renacyt-detail-label">{label}</span>
+      {renderBrandLabel(label, brand)}
       <div className="renacyt-detail-item-content">
         <strong>{value ?? 'No disponible'}</strong>
         {url && (
@@ -129,7 +164,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
               <>
                 <div className="renacyt-detail-grid">
                   <div className="renacyt-detail-item">
-                    <span className="renacyt-detail-label">Código</span>
+                    {renderBrandLabel('Código', 'renacyt')}
                     <strong>{docente.renacyt_codigo_registro ?? 'No disponible'}</strong>
                   </div>
                   {renderLinkedIdentifier(
@@ -138,6 +173,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
                     docente.renacyt_ficha_url ?? null,
                     'Abrir ficha RENACYT',
                     'No se pudo abrir la ficha pública RENACYT.',
+                    'renacyt',
                   )}
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Nivel</span>
@@ -173,6 +209,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
                     orcidUrl,
                     'Abrir ORCID',
                     'No se pudo abrir el perfil de ORCID.',
+                    'orcid',
                   )}
                   {renderLinkedIdentifier(
                     'Scopus Author ID',
@@ -180,8 +217,80 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
                     scopusUrl,
                     'Abrir Scopus',
                     'No se pudo abrir el perfil de Scopus.',
+                    'scopus',
                   )}
                 </div>
+
+                <div className="renacyt-detail-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => onRefreshRenacytFormaciones(docente.id_docente)}
+                    disabled={isRefreshingRenacyt}
+                  >
+                    <span className="button-with-icon">
+                      <AppIcon icon={RefreshCw} size={16} />
+                      <span>
+                        {isRefreshingRenacyt
+                          ? 'Actualizando formación...'
+                          : formacionesAcademicas.length > 0
+                            ? 'Actualizar formación académica'
+                            : 'Reintentar formación académica'}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+
+                {formacionesAcademicas.length === 0 && (
+                  <div className="inline-feedback inline-feedback-info renacyt-formaciones-feedback">
+                    <span>No hay formación académica RENACYT sincronizada para este docente. Puede reintentar la consulta.</span>
+                  </div>
+                )}
+
+                {formacionesAcademicas.length > 0 && (
+                  <div className="renacyt-subsection">
+                    <button
+                      type="button"
+                      className="renacyt-subsection-toggle"
+                      onClick={() => setFormacionesExpanded((current) => !current)}
+                      aria-expanded={formacionesExpanded}
+                    >
+                      <span className="renacyt-subsection-toggle-copy">
+                        <span className="title-with-icon renacyt-subsection-title">
+                          <span className="brand-mark brand-mark-renacyt" aria-hidden="true">F</span>
+                          <span>Formación académica</span>
+                        </span>
+                        <span className="badge badge-info">{formacionesAcademicas.length}</span>
+                      </span>
+                      <span className="renacyt-detail-toggle-icon" aria-hidden="true">
+                        <AppIcon icon={formacionesExpanded ? ChevronUp : ChevronDown} size={18} />
+                      </span>
+                    </button>
+
+                    {formacionesExpanded && (
+                      <div className="renacyt-formaciones-list">
+                        {formacionesAcademicas.map((formacion) => (
+                          <article key={formacion.id} className="renacyt-formacion-card">
+                            <div className="renacyt-formacion-head">
+                              <strong>{formacion.titulo ?? 'Formación sin título'}</strong>
+                              <span className={`badge ${formacion.considerado_para_cc ? 'badge-success' : 'badge-warning'}`}>
+                                {formacion.considerado_para_cc ? 'Considerado CC' : 'Informativo'}
+                              </span>
+                            </div>
+                            <div className="renacyt-formacion-grid">
+                              <span><strong>Grado:</strong> {formacion.grado_academico ?? 'No disponible'}</span>
+                              <span><strong>Centro:</strong> {formacion.centro_estudios ?? 'No disponible'}</span>
+                              <span><strong>Inicio:</strong> {renderFormacionDate(formacion.fecha_inicio)}</span>
+                              <span><strong>Fin:</strong> {renderFormacionDate(formacion.fecha_fin)}</span>
+                              <span><strong>Puntaje:</strong> {formacion.puntaje_obtenido ?? 'No disponible'}</span>
+                              <span><strong>Origen:</strong> {formacion.indicador_importado ? 'Importado' : 'Manual'}</span>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
               </>
             ) : (
@@ -224,4 +333,17 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
       </div>
     </div>
   );
+};
+
+const parseFormacionesAcademicas = (value?: string | null): RenacytFormacionAcademicaResumen[] => {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed as RenacytFormacionAcademicaResumen[] : [];
+  } catch {
+    return [];
+  }
 };
