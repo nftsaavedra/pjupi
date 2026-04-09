@@ -7,6 +7,7 @@ pub enum AppError {
     NotFound(String),
     InternalError(String),
     ConfigurationError(String),
+    ExternalServiceError(String),
 }
 
 impl From<sqlx::Error> for AppError {
@@ -52,5 +53,11 @@ impl From<mongodb::error::Error> for AppError {
         } else {
             AppError::DatabaseError(message)
         }
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(err: reqwest::Error) -> Self {
+        AppError::ExternalServiceError(err.to_string())
     }
 }

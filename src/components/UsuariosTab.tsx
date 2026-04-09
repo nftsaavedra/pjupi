@@ -17,6 +17,7 @@ import { FormInput } from './FormInput';
 import { FormSelect } from './FormSelect';
 import { SkeletonTable } from './Skeleton';
 import { toast } from '../services/toast';
+import { TableActionButton } from './TableActionButton';
 
 interface UsuariosTabProps {
   onUsuarioModified: () => void;
@@ -235,18 +236,18 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
                     )}
                   </td>
                   <td className="table-actions">
-                    <button className="btn-edit" onClick={() => handleEditar(usuario)}>
-                      <span className="button-with-icon">
-                        <AppIcon icon={Pencil} size={16} />
-                        <span>Editar</span>
-                      </span>
-                    </button>
-                    <button className={usuario.activo === 1 ? 'btn-delete' : 'btn-primary'} onClick={() => setUsuarioToToggle(usuario)}>
-                      <span className="button-with-icon">
-                        <AppIcon icon={usuario.activo === 1 ? Trash2 : RotateCcw} size={16} />
-                        <span>{usuario.activo === 1 ? 'Desactivar' : 'Reactivar'}</span>
-                      </span>
-                    </button>
+                    <TableActionButton
+                      className="btn-edit"
+                      icon={Pencil}
+                      label="Editar usuario"
+                      onClick={() => handleEditar(usuario)}
+                    />
+                    <TableActionButton
+                      className={usuario.activo === 1 ? 'btn-delete' : 'btn-primary'}
+                      icon={usuario.activo === 1 ? Trash2 : RotateCcw}
+                      label={usuario.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
+                      onClick={() => setUsuarioToToggle(usuario)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -279,6 +280,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
           value={username}
           onChange={setUsername}
           placeholder="Ej: jlopez"
+          help="Use un identificador corto, sin espacios, para facilitar el acceso y la búsqueda interna del usuario."
           required
         />
         <FormInput
@@ -286,6 +288,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
           value={nombreCompleto}
           onChange={setNombreCompleto}
           placeholder="Ej: Juan López"
+          help="Ingrese el nombre visible que se mostrará en la aplicación y en las trazas operativas."
           required
         />
         <FormSelect
@@ -293,6 +296,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
           value={rol}
           onChange={setRol}
           options={roles}
+          help="El rol define los permisos disponibles dentro del sistema. Asigne el mínimo acceso necesario según la función del usuario."
           required
         />
         <FormInput
@@ -300,6 +304,9 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
           value={password}
           onChange={setPassword}
           placeholder={editingUsuario ? 'Dejar vacío para conservarla' : 'Mínimo 8 caracteres'}
+          help={editingUsuario
+            ? 'Complete este campo solo si necesita reemplazar la contraseña actual. Si lo deja vacío, se conservará la existente.'
+            : 'Defina una contraseña de al menos 8 caracteres. Evite claves obvias o reutilizadas.'}
           required={!editingUsuario}
         />
       </FormModal>

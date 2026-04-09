@@ -4,11 +4,14 @@ use crate::error::AppError;
 
 pub async fn create_docente(pool: &SqlitePool, request: CreateDocenteRequest) -> Result<Docente, AppError> {
     let docente = Docente::new(request);
-    query("INSERT INTO docente (id_docente, dni, id_grado, nombres_apellidos, activo) VALUES (?, ?, ?, ?, ?)")
+    query("INSERT INTO docente (id_docente, dni, id_grado, nombres_apellidos, nombres, apellido_paterno, apellido_materno, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(&docente.id_docente)
         .bind(&docente.dni)
         .bind(&docente.id_grado)
         .bind(&docente.nombres_apellidos)
+        .bind(&docente.nombres)
+        .bind(&docente.apellido_paterno)
+        .bind(&docente.apellido_materno)
         .bind(docente.activo)
         .execute(pool)
         .await?;
@@ -17,11 +20,22 @@ pub async fn create_docente(pool: &SqlitePool, request: CreateDocenteRequest) ->
 
 pub async fn get_all_docentes(pool: &SqlitePool) -> Result<Vec<Docente>, AppError> {
     let docentes = query_as::<_, Docente>(
-        "SELECT id_docente, dni, id_grado, nombres_apellidos, activo FROM docente WHERE activo = 1"
+        "SELECT id_docente, dni, id_grado, nombres_apellidos, nombres, apellido_paterno, apellido_materno, activo FROM docente WHERE activo = 1"
     )
         .fetch_all(pool)
         .await?;
     Ok(docentes)
+}
+
+pub async fn get_docente_by_dni(pool: &SqlitePool, dni: &str) -> Result<Option<Docente>, AppError> {
+    let docente = query_as::<_, Docente>(
+        "SELECT id_docente, dni, id_grado, nombres_apellidos, nombres, apellido_paterno, apellido_materno, activo FROM docente WHERE dni = ?"
+    )
+    .bind(dni)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(docente)
 }
 
 // NEW: Get all docentes with project details (for detailed reporting)
@@ -32,6 +46,9 @@ pub async fn get_all_docentes_con_proyectos(pool: &SqlitePool) -> Result<Vec<Doc
             d.id_docente,
             d.dni,
             d.nombres_apellidos,
+            d.nombres,
+            d.apellido_paterno,
+            d.apellido_materno,
             g.nombre as "grado",
             COALESCE(COUNT(p.id_proyecto), 0) as "cantidad_proyectos",
             GROUP_CONCAT(p.titulo_proyecto, ', ') as "proyectos",
@@ -80,7 +97,7 @@ pub async fn reactivar_docente(pool: &SqlitePool, id_docente: &str) -> Result<Do
         .await?;
 
     let docente = query_as::<_, Docente>(
-        "SELECT id_docente, dni, id_grado, nombres_apellidos, activo FROM docente WHERE id_docente = ?"
+        "SELECT id_docente, dni, id_grado, nombres_apellidos, nombres, apellido_paterno, apellido_materno, activo FROM docente WHERE id_docente = ?"
     )
     .bind(id_docente)
     .fetch_one(pool)

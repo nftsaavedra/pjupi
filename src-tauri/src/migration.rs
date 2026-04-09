@@ -76,7 +76,7 @@ pub async fn migrate_sqlite_to_mongodb(pool: &SqlitePool, db: &Database) -> Resu
     .await?;
 
     let docentes: Vec<Docente> = sqlx::query_as(
-        "SELECT id_docente, dni, id_grado, nombres_apellidos, activo FROM docente"
+        "SELECT id_docente, dni, id_grado, nombres_apellidos, nombres, apellido_paterno, apellido_materno, activo FROM docente"
     )
     .fetch_all(pool)
     .await?;

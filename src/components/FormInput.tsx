@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 
 interface FormInputProps {
   label: string;
@@ -8,7 +9,9 @@ interface FormInputProps {
   type?: string;
   maxLength?: number;
   required?: boolean;
-  help?: string;
+  help?: React.ReactNode;
+  readOnly?: boolean;
+  disabled?: boolean;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -20,28 +23,35 @@ export const FormInput: React.FC<FormInputProps> = ({
   maxLength,
   required = false,
   help,
+  readOnly = false,
+  disabled = false,
 }) => {
   const inputId = useId();
   const helpId = help ? `${inputId}-help` : undefined;
 
   return (
-  <div className="form-group">
-    <label htmlFor={inputId}>
-      {label}
-      {required && ' *'}
-    </label>
-    <input
-      id={inputId}
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      required={required}
-      className="form-input"
-      aria-describedby={helpId}
-    />
-    {help && <small id={helpId}>{help}</small>}
-  </div>
+    <div className="form-group">
+      <div className="form-label-row">
+        <label htmlFor={inputId} className="form-label-text">
+          {label}
+          {required && ' *'}
+        </label>
+        {help && <FieldHelpTooltip content={help} label={`Ayuda para ${label}`} />}
+      </div>
+      <input
+        id={inputId}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        required={required}
+        className="form-input"
+        aria-describedby={helpId}
+        readOnly={readOnly}
+        disabled={disabled}
+      />
+      {help && <span id={helpId} className="visually-hidden">{help}</span>}
+    </div>
   );
 };

@@ -244,6 +244,13 @@ pub async fn get_all_docentes(db: &Database) -> Result<Vec<Docente>, AppError> {
     Ok(docentes)
 }
 
+pub async fn get_docente_by_dni(db: &Database, dni: &str) -> Result<Option<Docente>, AppError> {
+    db.collection::<Docente>("docentes")
+        .find_one(doc! { "dni": dni })
+        .await
+        .map_err(Into::into)
+}
+
 pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<DocenteDetalle>, AppError> {
     let mut docentes = db.collection::<Docente>("docentes")
         .find(doc! {})
@@ -281,6 +288,9 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
                 id_docente: docente.id_docente,
                 dni: docente.dni,
                 nombres_apellidos: docente.nombres_apellidos,
+                nombres: docente.nombres,
+                apellido_paterno: docente.apellido_paterno,
+                apellido_materno: docente.apellido_materno,
                 grado,
                 cantidad_proyectos: proyectos_docente.len() as i64,
                 proyectos: if proyectos_docente.is_empty() {

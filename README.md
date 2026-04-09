@@ -16,7 +16,17 @@ PJUPI_DB_BACKEND=mongodb
 PJUPI_MONGODB_URI=<tu_uri_mongodb>
 PJUPI_MONGODB_DB=pjupi
 PJUPI_SQLITE_URL=sqlite:database.db
+PJUPI_RENIEC_API_BASE_URL=https://api.decolecta.com/v1
+PJUPI_RENIEC_TOKEN=<tu_token_reniec>
 ```
+
+## Integración RENIEC
+
+- La consulta de DNI usa por defecto `https://api.decolecta.com/v1`.
+- Solo necesita definir `PJUPI_RENIEC_TOKEN` para habilitar el autocompletado de datos personales en el alta de docentes.
+- Si el token no está configurado, el flujo manual sigue funcionando y la aplicación mostrará un mensaje claro al intentar consultar.
+
+El formulario de docentes mantiene compatibilidad con el flujo actual, pero ahora registra nombres y apellidos por separado y conserva `nombres_apellidos` como valor compuesto para listados, reportes y trazabilidad existente.
 
 ## Estrategia de Migración Segura
 

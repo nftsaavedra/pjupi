@@ -149,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
 
           {mode === 'setup' && (
             <div className="auth-note">
-              El primer usuario se crea automáticamente con rol <strong>Administrador</strong>.
+              El primer usuario se crea automáticamente con rol <strong>Administrador</strong>. La integración RENIEC queda lista al definir <strong>PJUPI_RENIEC_TOKEN</strong> en el archivo de entorno; el endpoint base ya viene configurado por defecto.
             </div>
           )}
 

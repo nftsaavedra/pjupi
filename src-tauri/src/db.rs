@@ -21,6 +21,9 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             dni VARCHAR(8) UNIQUE NOT NULL,
             id_grado TEXT NOT NULL,
             nombres_apellidos VARCHAR(150) NOT NULL,
+            nombres VARCHAR(100),
+            apellido_paterno VARCHAR(80),
+            apellido_materno VARCHAR(80),
             activo INTEGER NOT NULL DEFAULT 1,
             FOREIGN KEY (id_grado) REFERENCES grado_academico (id_grado)
         );
@@ -72,6 +75,42 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     if docente_activo_col_count.0 == 0 {
       query("ALTER TABLE docente ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
+          .execute(pool)
+          .await?;
+    }
+
+    let docente_nombres_col_count: (i64,) = query_as(
+        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'nombres'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if docente_nombres_col_count.0 == 0 {
+      query("ALTER TABLE docente ADD COLUMN nombres VARCHAR(100)")
+          .execute(pool)
+          .await?;
+    }
+
+    let docente_apellido_paterno_col_count: (i64,) = query_as(
+        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'apellido_paterno'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if docente_apellido_paterno_col_count.0 == 0 {
+      query("ALTER TABLE docente ADD COLUMN apellido_paterno VARCHAR(80)")
+          .execute(pool)
+          .await?;
+    }
+
+    let docente_apellido_materno_col_count: (i64,) = query_as(
+        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'apellido_materno'"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if docente_apellido_materno_col_count.0 == 0 {
+      query("ALTER TABLE docente ADD COLUMN apellido_materno VARCHAR(80)")
           .execute(pool)
           .await?;
     }

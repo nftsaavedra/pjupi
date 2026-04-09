@@ -14,6 +14,12 @@ pub struct DatabaseConfig {
     pub mongodb_db_name: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct ReniecConfig {
+    pub api_base_url: String,
+    pub token: Option<String>,
+}
+
 impl DatabaseConfig {
     pub fn from_env() -> Self {
         let sqlite_url = env::var("PJUPI_SQLITE_URL").unwrap_or_else(|_| "sqlite:database.db".to_string());
@@ -39,5 +45,18 @@ impl DatabaseConfig {
 
     pub fn requires_mongodb(&self) -> bool {
         self.backend == DatabaseBackend::MongoDb
+    }
+}
+
+impl ReniecConfig {
+    pub fn from_env() -> Self {
+        let api_base_url = env::var("PJUPI_RENIEC_API_BASE_URL")
+            .unwrap_or_else(|_| "https://api.decolecta.com/v1".to_string());
+        let token = env::var("PJUPI_RENIEC_TOKEN")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+
+        Self { api_base_url, token }
     }
 }

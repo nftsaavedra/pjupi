@@ -5,6 +5,7 @@ import { getAuthStatus, type Usuario } from './services/tauriApi';
 import { AuthScreen } from './components/AuthScreen';
 import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './components/Skeleton';
 import { ToastContainer } from './components/ToastContainer';
+import { FloatingTooltip } from './components/FloatingTooltip';
 import { TabNavigation, type Tab } from './components/TabNavigation';
 import { toast } from './services/toast';
 import './App.css';
@@ -317,15 +318,24 @@ function App() {
               <div className="sidebar-brand-copy">
                 <div className="sidebar-kicker">Research</div>
               </div>
-              <button
-                type="button"
-                className="sidebar-toggle"
-                onClick={handleToggleSidebar}
-                aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-                title={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-              >
-                <AppIcon icon={sidebarCollapsed ? ChevronRight : ChevronLeft} size={18} />
-              </button>
+              <FloatingTooltip
+                content={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+                size="sm"
+                placement="right"
+                offsetValue={12}
+                renderTrigger={({ ref, triggerProps }) => (
+                  <button
+                    type="button"
+                    ref={ref}
+                    className="sidebar-toggle"
+                    onClick={handleToggleSidebar}
+                    aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+                    {...triggerProps}
+                  >
+                    <AppIcon icon={sidebarCollapsed ? ChevronRight : ChevronLeft} size={18} />
+                  </button>
+                )}
+              />
             </div>
 
             <TabNavigation

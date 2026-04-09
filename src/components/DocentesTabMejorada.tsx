@@ -3,6 +3,7 @@ import { Eye, GraduationCap, Plus, RotateCcw, TriangleAlert, Trash2, UserRound, 
 import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, type DocenteDetalle } from '../services/tauriApi';
 import { AppIcon } from './AppIcon';
 import { ConfirmDialog } from './ConfirmDialog';
+import { TableActionButton } from './TableActionButton';
 import { toast } from '../services/toast';
 import { useStableFetchData } from '../hooks/useFetch';
 import { useRefreshToast } from '../hooks/useRefreshToast';
@@ -244,36 +245,28 @@ export const DocentesTabMejorada: React.FC<DocentesTabMejoradaProps> = ({
                       <span className="badge badge-warning">Inactivo</span>
                     )}
                   </td>
-                  <td>
-                    <button
+                  <td className="table-actions">
+                    <TableActionButton
                       className="btn-view"
+                      icon={Eye}
+                      label="Ver detalles"
                       onClick={() => setSelectedDocente(docente)}
-                    >
-                      <span className="button-with-icon">
-                        <AppIcon icon={Eye} size={16} />
-                        <span>Ver Detalles</span>
-                      </span>
-                    </button>
+                    />
                     {docente.activo === 0 && (
-                      <button
+                      <TableActionButton
                         className="btn-primary"
+                        icon={RotateCcw}
+                        iconSize={18}
+                        label="Reactivar docente"
                         onClick={() => handleReactivarDocente(docente.id_docente)}
-                      >
-                        <span className="button-with-icon">
-                          <AppIcon icon={RotateCcw} size={18} />
-                          <span>Reactivar</span>
-                        </span>
-                      </button>
+                      />
                     )}
-                    <button
+                    <TableActionButton
                       className="btn-delete"
+                      icon={Trash2}
+                      label={docente.activo === 1 ? 'Desactivar docente' : 'Mantener docente inactivo'}
                       onClick={() => setDocenteToDelete(docente)}
-                    >
-                      <span className="button-with-icon">
-                        <AppIcon icon={Trash2} size={16} />
-                        <span>{docente.activo === 1 ? 'Desactivar' : 'Mantener inactivo'}</span>
-                      </span>
-                    </button>
+                    />
                   </td>
                 </tr>
               ))}

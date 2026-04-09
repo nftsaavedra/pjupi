@@ -63,6 +63,13 @@ pub async fn get_all_docentes(state: &AppState) -> Result<Vec<Docente>, AppError
     }
 }
 
+pub async fn buscar_docente_por_dni(state: &AppState, dni: &str) -> Result<Option<Docente>, AppError> {
+    match state.backend {
+        DatabaseBackend::Sqlite => docente_repo::get_docente_by_dni(state.sqlite_pool()?, dni).await,
+        DatabaseBackend::MongoDb => mongo_repo::get_docente_by_dni(state.mongo_db()?, dni).await,
+    }
+}
+
 pub async fn get_all_docentes_con_proyectos(state: &AppState) -> Result<Vec<DocenteDetalle>, AppError> {
     match state.backend {
         DatabaseBackend::Sqlite => docente_repo::get_all_docentes_con_proyectos(state.sqlite_pool()?).await,

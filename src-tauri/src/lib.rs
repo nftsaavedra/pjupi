@@ -18,7 +18,7 @@ use commands::proyecto_cmd::*;
 use commands::reporte_cmd::*;
 use commands::grado_cmd::*;
 use commands::usuario_cmd::*;
-use config::{DatabaseBackend, DatabaseConfig};
+use config::{DatabaseBackend, DatabaseConfig, ReniecConfig};
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -26,6 +26,7 @@ pub fn run() {
     tauri::async_runtime::block_on(async {
         dotenvy::dotenv().ok();
         let config = DatabaseConfig::from_env();
+        let reniec_config = ReniecConfig::from_env();
         let sqlite_path = config
             .sqlite_url
             .strip_prefix("sqlite:")
@@ -64,7 +65,7 @@ pub fn run() {
             None
         };
 
-        let app_state = AppState::new(config.backend, sqlite_pool, mongo_db);
+        let app_state = AppState::new(config.backend, sqlite_pool, mongo_db, reniec_config);
 
         tauri::Builder::default()
             .plugin(tauri_plugin_opener::init())
@@ -72,9 +73,11 @@ pub fn run() {
             .invoke_handler(tauri::generate_handler![
                 crear_docente,
                 get_all_docentes,
+                buscar_docente_por_dni,
                 get_all_docentes_con_proyectos,
                 eliminar_docente,
                 reactivar_docente,
+                consultar_dni_reniec,
                 crear_proyecto_con_participantes,
                 buscar_proyectos_por_docente,
                 get_all_proyectos_detalle,

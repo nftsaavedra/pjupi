@@ -18,6 +18,7 @@ import { DocentesChecklist } from './DocentesChecklist';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SkeletonTable } from './Skeleton';
 import { AppIcon } from './AppIcon';
+import { TableActionButton } from './TableActionButton';
 
 interface ProyectosTabProps {
   onProyectoCreated: () => void;
@@ -232,39 +233,27 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, r
                     )}
                   </td>
                   <td className="table-actions">
-                    <button
-                      type="button"
+                    <TableActionButton
                       className="btn-secondary"
+                      icon={Link2Off}
+                      label="Desvincular docentes del proyecto"
                       onClick={() => setProyectoToDetach(p)}
                       disabled={p.activo === 0}
-                    >
-                      <span className="button-with-icon">
-                        <AppIcon icon={Link2Off} size={16} />
-                        <span>Desvincular docentes</span>
-                      </span>
-                    </button>
+                    />
                     {p.activo === 0 && (
-                      <button
-                        type="button"
+                      <TableActionButton
                         className="btn-primary"
+                        icon={RotateCcw}
+                        label="Reactivar proyecto"
                         onClick={() => handleReactivarProyecto(p.id_proyecto)}
-                      >
-                        <span className="button-with-icon">
-                          <AppIcon icon={RotateCcw} size={16} />
-                          <span>Reactivar</span>
-                        </span>
-                      </button>
+                      />
                     )}
-                    <button
-                      type="button"
+                    <TableActionButton
                       className="btn-delete"
+                      icon={Trash2}
+                      label={p.activo === 1 ? 'Desactivar proyecto' : 'Mantener proyecto inactivo'}
                       onClick={() => setProyectoToDelete(p)}
-                    >
-                      <span className="button-with-icon">
-                        <AppIcon icon={Trash2} size={16} />
-                        <span>{p.activo === 1 ? 'Desactivar proyecto' : 'Mantener inactivo'}</span>
-                      </span>
-                    </button>
+                    />
                   </td>
                 </tr>
               ))}
@@ -298,6 +287,7 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, r
           value={titulo}
           onChange={setTitulo}
           placeholder="Ej: Análisis de Microalgas en Agua Dulce"
+          help="Registre el nombre con el que el proyecto será identificado en listados, reportes y relaciones con docentes."
           required
         />
 

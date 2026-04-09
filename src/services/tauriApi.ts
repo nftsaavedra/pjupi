@@ -19,6 +19,7 @@ export const getTauriErrorMessage = (error: unknown): string => {
       'NotFound',
       'InternalError',
       'ConfigurationError',
+      'ExternalServiceError',
     ];
     for (const key of keys) {
       const value = maybe[key];
@@ -44,6 +45,9 @@ export interface Docente {
   dni: string;
   id_grado: string;
   nombres_apellidos: string;
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
   activo?: number;
 }
 
@@ -97,12 +101,24 @@ export interface ExportData {
 }
 
 // Docente API
-export const crearDocente = async (dni: string, id_grado: string, nombres_apellidos: string): Promise<Docente> => {
-  return await invoke('crear_docente', { request: { dni, id_grado, nombres_apellidos } });
+export const crearDocente = async (
+  dni: string,
+  id_grado: string,
+  nombres: string,
+  apellido_paterno: string,
+  apellido_materno?: string,
+): Promise<Docente> => {
+  return await invoke('crear_docente', {
+    request: { dni, id_grado, nombres, apellido_paterno, apellido_materno: apellido_materno?.trim() ? apellido_materno : null },
+  });
 };
 
 export const getAllDocentes = async (): Promise<Docente[]> => {
   return await invoke('get_all_docentes');
+};
+
+export const buscarDocentePorDni = async (dni: string): Promise<Docente | null> => {
+  return await invoke('buscar_docente_por_dni', { dni });
 };
 
 // NEW: Get docentes with project details
@@ -110,11 +126,26 @@ export interface DocenteDetalle {
   id_docente: string;
   dni: string;
   nombres_apellidos: string;
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
   grado: string;
   cantidad_proyectos: number;
   proyectos: string | null;
   activo: number;
 }
+
+export interface ReniecDniLookupResult {
+  first_name: string;
+  first_last_name: string;
+  second_last_name: string;
+  full_name: string;
+  document_number: string;
+}
+
+export const consultarDniReniec = async (numero: string): Promise<ReniecDniLookupResult> => {
+  return await invoke('consultar_dni_reniec', { numero });
+};
 
 export interface EliminarDocenteResultado {
   accion: 'desactivado' | string;

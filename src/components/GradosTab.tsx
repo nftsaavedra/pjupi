@@ -9,6 +9,7 @@ import { FormModal } from './FormModal';
 import { FormInput } from './FormInput';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SkeletonTable } from './Skeleton';
+import { TableActionButton } from './TableActionButton';
 
 interface GradosTabProps {
   onGradoModified: () => void;
@@ -197,25 +198,26 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
                   <td className="table-actions">
                     {grado.activo === 0 && <span className="badge badge-warning">Inactivo</span>}
                     {grado.activo === 0 && (
-                      <button className="btn-primary" onClick={() => handleReactivar(grado.id_grado)}>
-                        <span className="button-with-icon">
-                          <AppIcon icon={RotateCcw} size={18} />
-                          <span>Reactivar</span>
-                        </span>
-                      </button>
+                      <TableActionButton
+                        className="btn-primary"
+                        icon={RotateCcw}
+                        iconSize={18}
+                        label="Reactivar grado"
+                        onClick={() => handleReactivar(grado.id_grado)}
+                      />
                     )}
-                    <button className="btn-edit" onClick={() => handleEditar(grado)}>
-                      <span className="button-with-icon">
-                        <AppIcon icon={Pencil} size={16} />
-                        <span>Editar</span>
-                      </span>
-                    </button>
-                    <button className="btn-delete" onClick={() => setGradoToDelete(grado)}>
-                      <span className="button-with-icon">
-                        <AppIcon icon={Trash2} size={16} />
-                        <span>Desactivar o eliminar</span>
-                      </span>
-                    </button>
+                    <TableActionButton
+                      className="btn-edit"
+                      icon={Pencil}
+                      label="Editar grado"
+                      onClick={() => handleEditar(grado)}
+                    />
+                    <TableActionButton
+                      className="btn-delete"
+                      icon={Trash2}
+                      label="Desactivar o eliminar grado"
+                      onClick={() => setGradoToDelete(grado)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -250,6 +252,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
           value={nombre}
           onChange={setNombre}
           placeholder="Ej: Licenciado"
+          help="Use la denominación académica principal con la que se clasificará a los docentes dentro del sistema."
           required
         />
 
@@ -258,6 +261,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
           value={descripcion}
           onChange={setDescripcion}
           placeholder="Ej: Licenciatura en Ciencias"
+          help="Agregue contexto opcional para diferenciar este grado de otros similares o precisar su alcance."
         />
       </FormModal>
 

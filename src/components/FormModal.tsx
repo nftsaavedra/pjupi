@@ -12,6 +12,7 @@ interface FormModalProps {
   submitText?: React.ReactNode;
   cancelText?: string;
   isLoading?: boolean;
+  submitDisabled?: boolean;
   size?: 'md' | 'lg';
 }
 
@@ -25,6 +26,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   submitText = 'Guardar',
   cancelText = 'Cancelar',
   isLoading = false,
+  submitDisabled = false,
   size = 'md',
 }) => {
   const titleId = useId();
@@ -83,7 +85,7 @@ export const FormModal: React.FC<FormModalProps> = ({
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
               {cancelText}
             </button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
+            <button type="submit" className="btn-primary" disabled={isLoading || submitDisabled}>
               {isLoading ? 'Procesando...' : submitText}
             </button>
           </div>
