@@ -31,7 +31,7 @@ struct ParticipacionRecord {
     id_docente: String,
 }
 
-pub async fn ensure_indexes_and_seed(db: &Database) -> Result<(), AppError> {
+pub async fn ensure_indexes(db: &Database) -> Result<(), AppError> {
     db.collection::<Document>("grados")
         .create_index(
             IndexModel::builder()
@@ -104,24 +104,6 @@ pub async fn ensure_indexes_and_seed(db: &Database) -> Result<(), AppError> {
                 .build(),
         )
         .await?;
-
-    let grados_collection = db.collection::<GradoAcademico>("grados");
-    let existing = grados_collection.count_documents(doc! {}).await?;
-    if existing == 0 {
-        for (nombre, descripcion) in [
-            ("Licenciado", Some("Licenciatura".to_string())),
-            ("Master", Some("Maestría".to_string())),
-            ("Doctor", Some("Doctorado".to_string())),
-            ("Especialista", Some("Especialización".to_string())),
-        ] {
-            grados_collection.insert_one(GradoAcademico {
-                id_grado: uuid::Uuid::new_v4().to_string(),
-                nombre: nombre.to_string(),
-                descripcion,
-                activo: 1,
-            }).await?;
-        }
-    }
 
     Ok(())
 }

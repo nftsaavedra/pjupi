@@ -1,5 +1,5 @@
-import React from 'react';
-import { BadgeCheck, ExternalLink, GraduationCap, TriangleAlert, UserRound, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, TriangleAlert, UserRound, X } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { DocenteDetalle } from '../api';
 import { AppIcon } from '../../../shared/ui/AppIcon';
@@ -13,6 +13,7 @@ interface DocenteDetailModalProps {
 export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente, onClose }) => {
   const proyectos = docente.proyectos ? docente.proyectos.split(' | ') : [];
   const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
+  const [renacytExpanded, setRenacytExpanded] = useState(true);
 
   const formatDate = (value?: number | null) => {
     if (!value) {
@@ -26,17 +27,47 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
     }).format(value);
   };
 
-  const handleOpenRenacyt = async () => {
-    if (!docente.renacyt_ficha_url) {
-      return;
-    }
-
+  const handleOpenExternalUrl = async (url: string, errorMessage: string) => {
     try {
-      await openUrl(docente.renacyt_ficha_url);
+      await openUrl(url);
     } catch {
-      toast.error('No se pudo abrir la ficha pública RENACYT.');
+      toast.error(errorMessage);
     }
   };
+
+  const scopusUrl = docente.renacyt_scopus_author_id
+    ? `https://www.scopus.com/authid/detail.uri?authorId=${encodeURIComponent(docente.renacyt_scopus_author_id)}`
+    : null;
+  const orcidUrl = docente.renacyt_orcid
+    ? `https://orcid.org/${encodeURIComponent(docente.renacyt_orcid)}`
+    : null;
+
+  const renderLinkedIdentifier = (
+    label: string,
+    value: string | null | undefined,
+    url: string | null,
+    actionLabel: string,
+    errorMessage: string,
+  ) => (
+    <div className="renacyt-detail-item renacyt-detail-item-linked">
+      <span className="renacyt-detail-label">{label}</span>
+      <div className="renacyt-detail-item-content">
+        <strong>{value ?? 'No disponible'}</strong>
+        {url && (
+          <button
+            type="button"
+            className="renacyt-inline-link"
+            onClick={() => void handleOpenExternalUrl(url, errorMessage)}
+          >
+            <span className="button-with-icon">
+              <AppIcon icon={ExternalLink} size={14} />
+              <span>{actionLabel}</span>
+            </span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -72,29 +103,42 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
           </div>
 
           <div className="renacyt-detail-card">
-            <div className="renacyt-detail-header">
-              <h3 className="title-with-icon">
-                <AppIcon icon={BadgeCheck} size={18} />
-                <span>Estado RENACYT</span>
-              </h3>
-              {tieneRenacyt ? (
-                <span className="badge badge-success">Vinculado</span>
-              ) : (
-                <span className="badge badge-warning">No registrado</span>
-              )}
-            </div>
+            <button
+              type="button"
+              className="renacyt-detail-toggle"
+              onClick={() => setRenacytExpanded((current) => !current)}
+              aria-expanded={renacytExpanded}
+            >
+              <span className="renacyt-detail-toggle-copy">
+                <span className="title-with-icon renacyt-detail-title">
+                  <AppIcon icon={BadgeCheck} size={18} />
+                  <span>Estado RENACYT</span>
+                </span>
+                {tieneRenacyt ? (
+                  <span className="badge badge-success">Vinculado</span>
+                ) : (
+                  <span className="badge badge-warning">No registrado</span>
+                )}
+              </span>
+              <span className="renacyt-detail-toggle-icon" aria-hidden="true">
+                <AppIcon icon={renacytExpanded ? ChevronUp : ChevronDown} size={18} />
+              </span>
+            </button>
 
-            {tieneRenacyt ? (
+            {renacytExpanded && (tieneRenacyt ? (
               <>
                 <div className="renacyt-detail-grid">
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Código</span>
                     <strong>{docente.renacyt_codigo_registro ?? 'No disponible'}</strong>
                   </div>
-                  <div className="renacyt-detail-item">
-                    <span className="renacyt-detail-label">ID investigador</span>
-                    <strong>{docente.renacyt_id_investigador ?? 'No disponible'}</strong>
-                  </div>
+                  {renderLinkedIdentifier(
+                    'ID investigador',
+                    docente.renacyt_id_investigador,
+                    docente.renacyt_ficha_url ?? null,
+                    'Abrir ficha RENACYT',
+                    'No se pudo abrir la ficha pública RENACYT.',
+                  )}
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Nivel</span>
                     <strong>{docente.renacyt_nivel ?? 'No disponible'}</strong>
@@ -123,32 +167,28 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({ docente,
                     <span className="renacyt-detail-label">Última sincronización</span>
                     <strong>{formatDate(docente.renacyt_fecha_ultima_sincronizacion)}</strong>
                   </div>
-                  <div className="renacyt-detail-item">
-                    <span className="renacyt-detail-label">ORCID</span>
-                    <strong>{docente.renacyt_orcid ?? 'No disponible'}</strong>
-                  </div>
-                  <div className="renacyt-detail-item">
-                    <span className="renacyt-detail-label">Scopus Author ID</span>
-                    <strong>{docente.renacyt_scopus_author_id ?? 'No disponible'}</strong>
-                  </div>
+                  {renderLinkedIdentifier(
+                    'ORCID',
+                    docente.renacyt_orcid,
+                    orcidUrl,
+                    'Abrir ORCID',
+                    'No se pudo abrir el perfil de ORCID.',
+                  )}
+                  {renderLinkedIdentifier(
+                    'Scopus Author ID',
+                    docente.renacyt_scopus_author_id,
+                    scopusUrl,
+                    'Abrir Scopus',
+                    'No se pudo abrir el perfil de Scopus.',
+                  )}
                 </div>
 
-                {docente.renacyt_ficha_url && (
-                  <div className="renacyt-detail-actions">
-                    <button type="button" className="btn-secondary" onClick={handleOpenRenacyt}>
-                      <span className="button-with-icon">
-                        <AppIcon icon={ExternalLink} size={16} />
-                        <span>Ver ficha RENACYT</span>
-                      </span>
-                    </button>
-                  </div>
-                )}
               </>
             ) : (
               <p className="renacyt-detail-empty">
                 Este docente no tiene una clasificación RENACYT vinculada en su registro actual.
               </p>
-            )}
+            ))}
           </div>
 
           {docente.cantidad_proyectos > 0 ? (

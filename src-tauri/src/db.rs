@@ -1,5 +1,5 @@
 use mongodb::{Client, Database};
-use sqlx::{query, query_as, SqlitePool};
+use sqlx::{query, SqlitePool};
 
 use crate::config::DatabaseConfig;
 use crate::error::AppError;
@@ -66,152 +66,6 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // Backward-compatible migration: add 'activo' column if the DB already existed.
-    let activo_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('grado_academico') WHERE name = 'activo'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if activo_col_count.0 == 0 {
-      query("ALTER TABLE grado_academico ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
-          .execute(pool)
-          .await?;
-    }
-
-    let docente_activo_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'activo'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if docente_activo_col_count.0 == 0 {
-      query("ALTER TABLE docente ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
-          .execute(pool)
-          .await?;
-    }
-
-    let docente_nombres_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'nombres'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if docente_nombres_col_count.0 == 0 {
-      query("ALTER TABLE docente ADD COLUMN nombres VARCHAR(100)")
-          .execute(pool)
-          .await?;
-    }
-
-    let docente_apellido_paterno_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'apellido_paterno'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if docente_apellido_paterno_col_count.0 == 0 {
-      query("ALTER TABLE docente ADD COLUMN apellido_paterno VARCHAR(80)")
-          .execute(pool)
-          .await?;
-    }
-
-    let docente_apellido_materno_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = 'apellido_materno'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if docente_apellido_materno_col_count.0 == 0 {
-      query("ALTER TABLE docente ADD COLUMN apellido_materno VARCHAR(80)")
-          .execute(pool)
-          .await?;
-    }
-
-    for (column, statement) in [
-        ("renacyt_codigo_registro", "ALTER TABLE docente ADD COLUMN renacyt_codigo_registro VARCHAR(20)"),
-        ("renacyt_id_investigador", "ALTER TABLE docente ADD COLUMN renacyt_id_investigador VARCHAR(20)"),
-        ("renacyt_nivel", "ALTER TABLE docente ADD COLUMN renacyt_nivel VARCHAR(20)"),
-        ("renacyt_grupo", "ALTER TABLE docente ADD COLUMN renacyt_grupo VARCHAR(20)"),
-        ("renacyt_condicion", "ALTER TABLE docente ADD COLUMN renacyt_condicion VARCHAR(80)"),
-        ("renacyt_fecha_informe_calificacion", "ALTER TABLE docente ADD COLUMN renacyt_fecha_informe_calificacion INTEGER"),
-        ("renacyt_fecha_registro", "ALTER TABLE docente ADD COLUMN renacyt_fecha_registro INTEGER"),
-        ("renacyt_fecha_ultima_revision", "ALTER TABLE docente ADD COLUMN renacyt_fecha_ultima_revision INTEGER"),
-        ("renacyt_orcid", "ALTER TABLE docente ADD COLUMN renacyt_orcid VARCHAR(40)"),
-        ("renacyt_scopus_author_id", "ALTER TABLE docente ADD COLUMN renacyt_scopus_author_id VARCHAR(40)"),
-        ("renacyt_fecha_ultima_sincronizacion", "ALTER TABLE docente ADD COLUMN renacyt_fecha_ultima_sincronizacion INTEGER"),
-        ("renacyt_ficha_url", "ALTER TABLE docente ADD COLUMN renacyt_ficha_url TEXT"),
-    ] {
-        let column_count: (i64,) = query_as(
-            "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = ?"
-        )
-        .bind(column)
-        .fetch_one(pool)
-        .await?;
-
-        if column_count.0 == 0 {
-            query(statement).execute(pool).await?;
-        }
-    }
-
-    let proyecto_activo_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('proyecto') WHERE name = 'activo'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if proyecto_activo_col_count.0 == 0 {
-      query("ALTER TABLE proyecto ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
-          .execute(pool)
-          .await?;
-    }
-
-    let usuario_activo_col_count: (i64,) = query_as(
-        "SELECT COUNT(*) FROM pragma_table_info('usuario') WHERE name = 'activo'"
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if usuario_activo_col_count.0 == 0 {
-      query("ALTER TABLE usuario ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
-          .execute(pool)
-          .await?;
-    }
-
-    // Insert default academic grades if not exist
-    let count: (i64,) = query_as("SELECT COUNT(*) FROM grado_academico")
-        .fetch_one(pool)
-        .await?;
-    
-    if count.0 == 0 {
-        query("INSERT INTO grado_academico (id_grado, nombre, descripcion) VALUES (?, ?, ?)")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind("Licenciado")
-            .bind("Licenciatura")
-            .execute(pool)
-            .await?;
-        
-        query("INSERT INTO grado_academico (id_grado, nombre, descripcion) VALUES (?, ?, ?)")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind("Master")
-            .bind("Maestría")
-            .execute(pool)
-            .await?;
-        
-        query("INSERT INTO grado_academico (id_grado, nombre, descripcion) VALUES (?, ?, ?)")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind("Doctor")
-            .bind("Doctorado")
-            .execute(pool)
-            .await?;
-        
-        query("INSERT INTO grado_academico (id_grado, nombre, descripcion) VALUES (?, ?, ?)")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind("Especialista")
-            .bind("Especialización")
-            .execute(pool)
-            .await?;
-    }
-
     Ok(())
 }
 
@@ -222,6 +76,6 @@ pub async fn init_mongo(config: &DatabaseConfig) -> Result<Database, AppError> {
 
     let client = Client::with_uri_str(uri).await?;
     let database = client.database(&config.mongodb_db_name);
-    mongo_repo::ensure_indexes_and_seed(&database).await?;
+    mongo_repo::ensure_indexes(&database).await?;
     Ok(database)
 }

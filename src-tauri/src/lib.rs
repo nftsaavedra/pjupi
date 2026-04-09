@@ -1,6 +1,3 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use std::path::Path;
-
 use sqlx::SqlitePool;
 
 mod commands;
@@ -9,7 +6,6 @@ mod db;
 mod domain;
 mod error;
 mod infrastructure;
-mod migration;
 mod state;
 mod storage;
 
@@ -28,11 +24,6 @@ pub fn run() {
         let config = DatabaseConfig::from_env();
         let reniec_config = ReniecConfig::from_env();
         let renacyt_config = RenacytConfig::from_env();
-        let sqlite_path = config
-            .sqlite_url
-            .strip_prefix("sqlite:")
-            .unwrap_or("database.db");
-        let sqlite_exists = Path::new(sqlite_path).exists();
 
         let sqlite_pool = if config.backend == DatabaseBackend::Sqlite {
             let pool = SqlitePool::connect(&config.sqlite_url)
@@ -48,20 +39,6 @@ pub fn run() {
             let database = db::init_mongo(&config)
                 .await
                 .expect("Failed to connect to MongoDB");
-
-            if sqlite_exists && !migration::migration_marker_exists(&database)
-                .await
-                .expect("Failed to inspect SQLite migration marker") {
-                let migration_pool = SqlitePool::connect(&config.sqlite_url)
-                    .await
-                    .expect("Failed to connect to SQLite database for migration");
-                db::init_db(&migration_pool)
-                    .await
-                    .expect("Failed to initialize SQLite database for migration");
-                migration::migrate_sqlite_to_mongodb(&migration_pool, &database)
-                    .await
-                    .expect("Failed to migrate SQLite data to MongoDB");
-            }
 
             Some(database)
         } else {
