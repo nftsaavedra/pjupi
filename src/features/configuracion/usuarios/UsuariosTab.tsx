@@ -1,23 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pencil, Plus, RotateCcw, Save, ShieldPlus, Trash2 } from 'lucide-react';
-import {
-  actualizarUsuario,
-  crearUsuario,
-  desactivarUsuario,
-  getTauriErrorMessage,
-  reactivarUsuario,
-  type Usuario,
-} from '../services/tauriApi';
-import { useFetchUsuarios } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { toast } from '../services/toast';
-import { FormInput } from '../shared/forms/FormInput';
-import { FormModal } from '../shared/forms/FormModal';
-import { FormSelect } from '../shared/forms/FormSelect';
-import { ConfirmDialog } from '../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../shared/ui/AppIcon';
-import { SkeletonTable } from '../shared/ui/Skeleton';
-import { TableActionButton } from '../shared/ui/TableActionButton';
+import { useUsuariosTab } from './hooks/useUsuariosTab';
+import { FormInput } from '../../../shared/forms/FormInput';
+import { FormModal } from '../../../shared/forms/FormModal';
+import { FormSelect } from '../../../shared/forms/FormSelect';
+import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../../../shared/ui/AppIcon';
+import { SkeletonTable } from '../../../shared/ui/Skeleton';
+import { TableActionButton } from '../../../shared/ui/TableActionButton';
 
 interface UsuariosTabProps {
   onUsuarioModified: () => void;
@@ -31,131 +21,37 @@ const roles = [
 ];
 
 export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, refreshTrigger = 0 }) => {
-  const [username, setUsername] = useState('');
-  const [nombreCompleto, setNombreCompleto] = useState('');
-  const [rol, setRol] = useState('operador');
-  const [password, setPassword] = useState('');
-  const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [usuarioToToggle, setUsuarioToToggle] = useState<Usuario | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('activos');
-  const [busqueda, setBusqueda] = useState('');
-
-  const { usuarios, loading, refreshing, error, recargar } = useFetchUsuarios(refreshTrigger);
-
-  useRefreshToast({
-    refreshing,
-    message: 'Actualizando usuarios',
-    toastKey: 'usuarios-refresh',
-  });
-
-  const resetForm = () => {
-    setUsername('');
-    setNombreCompleto('');
-    setRol('operador');
-    setPassword('');
-    setEditingUsuario(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!username.trim() || !nombreCompleto.trim() || !rol) {
-      toast.warning('Complete todos los campos del usuario');
-      return;
-    }
-
-    if (!editingUsuario && password.trim().length < 8) {
-      toast.warning('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      if (editingUsuario) {
-        await actualizarUsuario(
-          editingUsuario.id_usuario,
-          username,
-          nombreCompleto,
-          rol,
-          password || undefined,
-        );
-        toast.success('Usuario actualizado correctamente');
-      } else {
-        await crearUsuario(username, nombreCompleto, rol, password);
-        toast.success('Usuario creado correctamente');
-      }
-
-      resetForm();
-      setIsFormOpen(false);
-      await recargar();
-      onUsuarioModified();
-    } catch (error) {
-      toast.error(getTauriErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditar = (usuario: Usuario) => {
-    setEditingUsuario(usuario);
-    setUsername(usuario.username);
-    setNombreCompleto(usuario.nombre_completo);
-    setRol(usuario.rol);
-    setPassword('');
-    setIsFormOpen(true);
-  };
-
-  const handleOpenCreate = () => {
-    resetForm();
-    setIsFormOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    if (isLoading) return;
-    resetForm();
-    setIsFormOpen(false);
-  };
-
-  const handleToggleUsuario = async () => {
-    if (!usuarioToToggle) return;
-
-    try {
-      if (usuarioToToggle.activo === 1) {
-        await desactivarUsuario(usuarioToToggle.id_usuario);
-        toast.info('Usuario desactivado correctamente');
-      } else {
-        await reactivarUsuario(usuarioToToggle.id_usuario);
-        toast.success('Usuario reactivado correctamente');
-      }
-
-      setUsuarioToToggle(null);
-      await recargar();
-      onUsuarioModified();
-    } catch (error) {
-      toast.error(getTauriErrorMessage(error));
-    }
-  };
-
-  const totalActivos = usuarios.filter((usuario) => usuario.activo === 1).length;
-  const totalInactivos = usuarios.filter((usuario) => usuario.activo === 0).length;
-
-  const usuariosFiltrados = usuarios
-    .filter((usuario) => {
-      if (estadoFiltro === 'activos') return usuario.activo === 1;
-      if (estadoFiltro === 'inactivos') return usuario.activo === 0;
-      return true;
-    })
-    .filter((usuario) => {
-      const texto = busqueda.trim().toLowerCase();
-      if (!texto) return true;
-      return (
-        usuario.username.toLowerCase().includes(texto) ||
-        usuario.nombre_completo.toLowerCase().includes(texto) ||
-        usuario.rol.toLowerCase().includes(texto)
-      );
-    });
+  const {
+    busqueda,
+    editingUsuario,
+    error,
+    estadoFiltro,
+    handleCloseForm,
+    handleEditar,
+    handleOpenCreate,
+    handleSubmit,
+    handleToggleUsuario,
+    isFormOpen,
+    isLoading,
+    loading,
+    nombreCompleto,
+    password,
+    recargar,
+    rol,
+    setBusqueda,
+    setEstadoFiltro,
+    setNombreCompleto,
+    setPassword,
+    setRol,
+    setUsername,
+    setUsuarioToToggle,
+    totalActivos,
+    totalInactivos,
+    username,
+    usuarioToToggle,
+    usuarios,
+    usuariosFiltrados,
+  } = useUsuariosTab(refreshTrigger, onUsuarioModified);
 
   return (
     <div className="tab-panel">
@@ -316,7 +212,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
         title={usuarioToToggle?.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
         message={
           usuarioToToggle?.activo === 1
-            ? `¿Desea desactivar al usuario "${usuarioToToggle?.username ?? ''}"?` 
+            ? `¿Desea desactivar al usuario "${usuarioToToggle?.username ?? ''}"?`
             : `¿Desea reactivar al usuario "${usuarioToToggle?.username ?? ''}"?`
         }
         confirmText={usuarioToToggle?.activo === 1 ? 'Sí, desactivar' : 'Sí, reactivar'}

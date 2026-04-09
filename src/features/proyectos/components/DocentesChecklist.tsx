@@ -1,7 +1,7 @@
 import React, { useDeferredValue, useId, useState } from 'react';
 import { X } from 'lucide-react';
-import { useRefreshToast } from '../../../hooks/useRefreshToast';
-import { type Docente } from '../../../services/tauriApi';
+import { type Docente } from '../../docentes/api';
+import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { SkeletonChecklist } from '../../../shared/ui/Skeleton';
 

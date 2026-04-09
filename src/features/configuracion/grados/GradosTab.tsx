@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { BookPlus, Pencil, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
-import { crearGrado, actualizarGrado, eliminarGrado, reactivarGrado, getTauriErrorMessage, type GradoAcademico } from '../services/tauriApi';
-import { toast } from '../services/toast';
-import { useFetchGrados } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { FormInput } from '../shared/forms/FormInput';
-import { FormModal } from '../shared/forms/FormModal';
-import { ConfirmDialog } from '../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../shared/ui/AppIcon';
-import { SkeletonTable } from '../shared/ui/Skeleton';
-import { TableActionButton } from '../shared/ui/TableActionButton';
+import { useFetchGrados } from './hooks/useFetchGrados';
+import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
+import { toast } from '../../../services/toast';
+import { FormInput } from '../../../shared/forms/FormInput';
+import { FormModal } from '../../../shared/forms/FormModal';
+import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../../../shared/ui/AppIcon';
+import { SkeletonTable } from '../../../shared/ui/Skeleton';
+import { TableActionButton } from '../../../shared/ui/TableActionButton';
+import { actualizarGrado, crearGrado, eliminarGrado, getTauriErrorMessage, reactivarGrado, type GradoAcademico } from '../api';
 
 interface GradosTabProps {
   onGradoModified: () => void;

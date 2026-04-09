@@ -1,8 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { GraduationCap, Users } from 'lucide-react';
-import { AppIcon } from '../shared/ui/AppIcon';
-import { GradosTab } from './GradosTab';
-import { UsuariosTab } from './UsuariosTab';
+import { AppIcon } from '../../shared/ui/AppIcon';
+import { SkeletonBlock, SkeletonTable } from '../../shared/ui/Skeleton';
+
+const GradosTab = lazy(async () => {
+  const module = await import('./grados/GradosTab');
+  return { default: module.GradosTab };
+});
+
+const UsuariosTab = lazy(async () => {
+  const module = await import('./usuarios/UsuariosTab');
+  return { default: module.UsuariosTab };
+});
 
 type ConfigSection = 'grados' | 'usuarios';
 
@@ -11,6 +20,15 @@ interface ConfiguracionTabProps {
   isAdmin: boolean;
   onDataModified: () => void;
 }
+
+const ConfigSectionFallback = () => (
+  <div className="tab-panel">
+    <div className="table-container">
+      <SkeletonBlock className="skeleton skeleton-line skeleton-title-md" />
+      <SkeletonTable columns={5} rows={5} />
+    </div>
+  </div>
+);
 
 export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
   refreshTrigger = 0,
@@ -80,13 +98,15 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
             aria-labelledby={`config-tab-${activeSection}`}
             className="settings-content settings-content-panel"
           >
-            {activeSection === 'grados' && (
-              <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} />
-            )}
+            <Suspense fallback={<ConfigSectionFallback />}>
+              {activeSection === 'grados' && (
+                <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} />
+              )}
 
-            {activeSection === 'usuarios' && isAdmin && (
-              <UsuariosTab onUsuarioModified={onDataModified} refreshTrigger={refreshTrigger} />
-            )}
+              {activeSection === 'usuarios' && isAdmin && (
+                <UsuariosTab onUsuarioModified={onDataModified} refreshTrigger={refreshTrigger} />
+              )}
+            </Suspense>
           </div>
         </div>
       </div>

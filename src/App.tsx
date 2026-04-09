@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
-import { getAuthStatus, type Usuario } from './services/tauriApi';
-import { AuthScreen } from './components/AuthScreen';
+import { getAuthStatus, type Usuario } from './features/auth/api';
+import { AuthScreen } from './features/auth/AuthScreen';
 import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
 import { ToastContainer } from './shared/feedback/ToastContainer';
 import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
@@ -31,12 +31,12 @@ const DocentesTable = lazy(async () => {
 });
 
 const ReportesTab = lazy(async () => {
-  const module = await import('./components/ReportesTab');
+  const module = await import('./features/reportes/ReportesTab');
   return { default: module.ReportesTab };
 });
 
 const ConfiguracionTab = lazy(async () => {
-  const module = await import('./components/ConfiguracionTab');
+  const module = await import('./features/configuracion/ConfiguracionTab');
   return { default: module.ConfiguracionTab };
 });
 
@@ -178,16 +178,20 @@ function App() {
         return (
           <Suspense fallback={<FormAndTableFallback columns={6} />}>
             <div className="module-shell docentes-module">
-              <DocenteCreateModal
-                open={docenteFormOpen}
-                onClose={() => setDocenteFormOpen(false)}
-                onDocenteCreated={handleDataModified}
-                refreshTrigger={refreshTrigger}
-              />
               <DocentesTable
                 onCreateClick={() => setDocenteFormOpen(true)}
                 refreshTrigger={refreshTrigger}
               />
+              {docenteFormOpen && (
+                <Suspense fallback={null}>
+                  <DocenteCreateModal
+                    open={docenteFormOpen}
+                    onClose={() => setDocenteFormOpen(false)}
+                    onDocenteCreated={handleDataModified}
+                    refreshTrigger={refreshTrigger}
+                  />
+                </Suspense>
+              )}
             </div>
           </Suspense>
         );

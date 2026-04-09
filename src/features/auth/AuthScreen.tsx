@@ -1,8 +1,8 @@
 import React, { useEffect, useId, useState } from 'react';
 import { LogIn, ShieldCheck } from 'lucide-react';
-import { AppIcon } from '../shared/ui/AppIcon';
-import { getTauriErrorMessage, loginUsuario, registrarPrimerUsuario, type Usuario } from '../services/tauriApi';
-import { toast } from '../services/toast';
+import { getTauriErrorMessage, loginUsuario, registrarPrimerUsuario, type Usuario } from './api';
+import { AppIcon } from '../../shared/ui/AppIcon';
+import { toast } from '../../services/toast';
 
 interface AuthScreenProps {
   mode: 'setup' | 'login';

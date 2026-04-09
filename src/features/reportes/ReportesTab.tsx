@@ -6,12 +6,12 @@ import {
   getTauriErrorMessage,
   type ExportData,
   type DatosExportDocenteAgrupado,
-} from '../services/tauriApi';
-import { toast } from '../services/toast';
-import { useStableFetchData } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from '../shared/ui/AppIcon';
-import { SkeletonTable } from '../shared/ui/Skeleton';
+} from './api';
+import { toast } from '../../services/toast';
+import { useStableFetchData } from '../../shared/hooks/useStableFetch';
+import { useRefreshToast } from '../../shared/hooks/useRefreshToast';
+import { AppIcon } from '../../shared/ui/AppIcon';
+import { SkeletonTable } from '../../shared/ui/Skeleton';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
 
