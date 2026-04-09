@@ -12,6 +12,7 @@ interface FormInputProps {
   help?: React.ReactNode;
   readOnly?: boolean;
   disabled?: boolean;
+  containerClassName?: string;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -25,12 +26,13 @@ export const FormInput: React.FC<FormInputProps> = ({
   help,
   readOnly = false,
   disabled = false,
+  containerClassName,
 }) => {
   const inputId = useId();
   const helpId = help ? `${inputId}-help` : undefined;
 
   return (
-    <div className="form-group">
+    <div className={containerClassName ? `form-group ${containerClassName}` : 'form-group'}>
       <div className="form-label-row">
         <label htmlFor={inputId} className="form-label-text">
           {label}

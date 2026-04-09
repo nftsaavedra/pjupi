@@ -14,6 +14,8 @@ interface FormModalProps {
   isLoading?: boolean;
   submitDisabled?: boolean;
   size?: 'md' | 'lg';
+  className?: string;
+  bodyClassName?: string;
 }
 
 export const FormModal: React.FC<FormModalProps> = ({
@@ -28,6 +30,8 @@ export const FormModal: React.FC<FormModalProps> = ({
   isLoading = false,
   submitDisabled = false,
   size = 'md',
+  className,
+  bodyClassName,
 }) => {
   const titleId = useId();
 
@@ -56,7 +60,9 @@ export const FormModal: React.FC<FormModalProps> = ({
   return (
     <div className="modal-overlay" onClick={() => { if (!isLoading) onClose(); }}>
       <div
-        className={`modal-content form-modal ${size === 'lg' ? 'form-modal-lg' : ''}`}
+        className={className
+          ? `modal-content form-modal ${size === 'lg' ? 'form-modal-lg' : ''} ${className}`
+          : `modal-content form-modal ${size === 'lg' ? 'form-modal-lg' : ''}`}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -76,7 +82,7 @@ export const FormModal: React.FC<FormModalProps> = ({
         </div>
 
         <form onSubmit={onSubmit} className="form form-modal-form">
-          <div className="modal-body form-modal-body">
+          <div className={bodyClassName ? `modal-body form-modal-body ${bodyClassName}` : 'modal-body form-modal-body'}>
             {description && <p className="form-modal-description">{description}</p>}
             {children}
           </div>

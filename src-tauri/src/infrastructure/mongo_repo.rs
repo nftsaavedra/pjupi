@@ -65,6 +65,12 @@ pub async fn ensure_indexes_and_seed(db: &Database) -> Result<(), AppError> {
                 .build(),
         )
         .await?;
+    db.collection::<Document>("docentes")
+        .create_index(IndexModel::builder().keys(doc! { "renacyt_id_investigador": 1 }).build())
+        .await?;
+    db.collection::<Document>("docentes")
+        .create_index(IndexModel::builder().keys(doc! { "renacyt_codigo_registro": 1 }).build())
+        .await?;
 
     db.collection::<Document>("proyectos")
         .create_index(
@@ -296,9 +302,21 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
                 proyectos: if proyectos_docente.is_empty() {
                     None
                 } else {
-                    Some(proyectos_docente.join(", "))
+                    Some(proyectos_docente.join(" | "))
                 },
                 activo: docente.activo,
+                renacyt_codigo_registro: docente.renacyt_codigo_registro,
+                renacyt_id_investigador: docente.renacyt_id_investigador,
+                renacyt_nivel: docente.renacyt_nivel,
+                renacyt_grupo: docente.renacyt_grupo,
+                renacyt_condicion: docente.renacyt_condicion,
+                renacyt_fecha_informe_calificacion: docente.renacyt_fecha_informe_calificacion,
+                renacyt_fecha_registro: docente.renacyt_fecha_registro,
+                renacyt_fecha_ultima_revision: docente.renacyt_fecha_ultima_revision,
+                renacyt_orcid: docente.renacyt_orcid,
+                renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
+                renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
+                renacyt_ficha_url: docente.renacyt_ficha_url,
             }
         })
         .collect();

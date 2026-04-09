@@ -10,6 +10,7 @@ interface FormSelectProps {
   required?: boolean;
   help?: React.ReactNode;
   disabled?: boolean;
+  containerClassName?: string;
 }
 
 export const FormSelect: React.FC<FormSelectProps> = ({
@@ -21,12 +22,13 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   required = false,
   help,
   disabled = false,
+  containerClassName,
 }) => {
   const selectId = useId();
   const helpId = help ? `${selectId}-help` : undefined;
 
   return (
-    <div className="form-group">
+    <div className={containerClassName ? `form-group ${containerClassName}` : 'form-group'}>
       <div className="form-label-row">
         <label htmlFor={selectId} className="form-label-text">
           {label}

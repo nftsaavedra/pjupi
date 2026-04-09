@@ -8,6 +8,7 @@ import {
   offset,
   safePolygon,
   shift,
+  useClick,
   useDismiss,
   useFocus,
   useFloating,
@@ -60,12 +61,17 @@ export const FloatingTooltip: React.FC<FloatingTooltipProps> = ({
     delay: { open: 90, close: 60 },
     handleClose: safePolygon({ buffer: 4 }),
   });
+  const press = useClick(context, {
+    event: 'click',
+    toggle: true,
+  });
   const focus = useFocus(context);
   const dismiss = useDismiss(context);
   const role = useRole(context, { role: 'tooltip' });
 
   const { getReferenceProps, getFloatingProps } = useInteractions([
     hover,
+    press,
     focus,
     dismiss,
     role,

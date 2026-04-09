@@ -1,5 +1,6 @@
 export {
   buscarDocentePorDni,
+  consultarRenacytDocente,
   consultarDniReniec,
   crearDocente,
   eliminarDocente,
@@ -14,5 +15,6 @@ export type {
   Docente,
   DocenteDetalle,
   EliminarDocenteResultado,
+  RenacytLookupResult,
   ReniecDniLookupResult,
 } from '../../services/tauri/types';

@@ -20,6 +20,13 @@ pub struct ReniecConfig {
     pub token: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct RenacytConfig {
+    pub api_base_url: String,
+    pub acto_version: String,
+    pub ficha_base_url: String,
+}
+
 impl DatabaseConfig {
     pub fn from_env() -> Self {
         let sqlite_url = env::var("PJUPI_SQLITE_URL").unwrap_or_else(|_| "sqlite:database.db".to_string());
@@ -58,5 +65,22 @@ impl ReniecConfig {
             .filter(|value| !value.is_empty());
 
         Self { api_base_url, token }
+    }
+}
+
+impl RenacytConfig {
+    pub fn from_env() -> Self {
+        let api_base_url = env::var("PJUPI_RENACYT_API_BASE_URL")
+            .unwrap_or_else(|_| "https://renacyt.concytec.gob.pe/renacyt-backend".to_string());
+        let acto_version = env::var("PJUPI_RENACYT_ACTO_VERSION")
+            .unwrap_or_else(|_| "2021".to_string());
+        let ficha_base_url = env::var("PJUPI_RENACYT_FICHA_BASE_URL")
+            .unwrap_or_else(|_| "https://servicio-renacyt.concytec.gob.pe/ficha-renacyt/".to_string());
+
+        Self {
+            api_base_url,
+            acto_version,
+            ficha_base_url,
+        }
     }
 }

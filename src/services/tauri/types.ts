@@ -7,6 +7,18 @@ export interface Docente {
   apellido_paterno?: string | null;
   apellido_materno?: string | null;
   activo?: number;
+  renacyt_codigo_registro?: string | null;
+  renacyt_id_investigador?: string | null;
+  renacyt_nivel?: string | null;
+  renacyt_grupo?: string | null;
+  renacyt_condicion?: string | null;
+  renacyt_fecha_informe_calificacion?: number | null;
+  renacyt_fecha_registro?: number | null;
+  renacyt_fecha_ultima_revision?: number | null;
+  renacyt_orcid?: string | null;
+  renacyt_scopus_author_id?: string | null;
+  renacyt_fecha_ultima_sincronizacion?: number | null;
+  renacyt_ficha_url?: string | null;
 }
 
 export interface DocenteDetalle {
@@ -20,6 +32,34 @@ export interface DocenteDetalle {
   cantidad_proyectos: number;
   proyectos: string | null;
   activo: number;
+  renacyt_codigo_registro?: string | null;
+  renacyt_id_investigador?: string | null;
+  renacyt_nivel?: string | null;
+  renacyt_grupo?: string | null;
+  renacyt_condicion?: string | null;
+  renacyt_fecha_informe_calificacion?: number | null;
+  renacyt_fecha_registro?: number | null;
+  renacyt_fecha_ultima_revision?: number | null;
+  renacyt_orcid?: string | null;
+  renacyt_scopus_author_id?: string | null;
+  renacyt_fecha_ultima_sincronizacion?: number | null;
+  renacyt_ficha_url?: string | null;
+}
+
+export interface RenacytLookupResult {
+  codigo_registro: string;
+  id_investigador: string;
+  nombre_completo?: string | null;
+  numero_documento?: string | null;
+  nivel?: string | null;
+  grupo?: string | null;
+  condicion?: string | null;
+  fecha_informe_calificacion?: number | null;
+  fecha_registro?: number | null;
+  fecha_ultima_revision?: number | null;
+  orcid?: string | null;
+  scopus_author_id?: string | null;
+  ficha_url: string;
 }
 
 export interface ReniecDniLookupResult {

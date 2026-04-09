@@ -1,6 +1,7 @@
 use tauri::State;
-use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, ReniecDniLookupResult};
+use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RenacytLookupResult, ReniecDniLookupResult};
 use crate::error::AppError;
+use crate::infrastructure::renacyt_client;
 use crate::infrastructure::reniec_client;
 use crate::state::AppState;
 use crate::storage;
@@ -58,4 +59,12 @@ pub async fn consultar_dni_reniec(
     numero: String,
 ) -> Result<ReniecDniLookupResult, AppError> {
     reniec_client::consultar_dni(state.reniec_config(), &numero).await
+}
+
+#[tauri::command]
+pub async fn consultar_renacyt_docente(
+    state: State<'_, AppState>,
+    codigo_o_id: String,
+) -> Result<RenacytLookupResult, AppError> {
+    renacyt_client::consultar_investigador(state.renacyt_config(), &codigo_o_id).await
 }

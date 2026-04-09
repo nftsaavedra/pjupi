@@ -25,6 +25,18 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             apellido_paterno VARCHAR(80),
             apellido_materno VARCHAR(80),
             activo INTEGER NOT NULL DEFAULT 1,
+            renacyt_codigo_registro VARCHAR(20),
+            renacyt_id_investigador VARCHAR(20),
+            renacyt_nivel VARCHAR(20),
+            renacyt_grupo VARCHAR(20),
+            renacyt_condicion VARCHAR(80),
+            renacyt_fecha_informe_calificacion INTEGER,
+            renacyt_fecha_registro INTEGER,
+            renacyt_fecha_ultima_revision INTEGER,
+            renacyt_orcid VARCHAR(40),
+            renacyt_scopus_author_id VARCHAR(40),
+            renacyt_fecha_ultima_sincronizacion INTEGER,
+            renacyt_ficha_url TEXT,
             FOREIGN KEY (id_grado) REFERENCES grado_academico (id_grado)
         );
 
@@ -113,6 +125,32 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
       query("ALTER TABLE docente ADD COLUMN apellido_materno VARCHAR(80)")
           .execute(pool)
           .await?;
+    }
+
+    for (column, statement) in [
+        ("renacyt_codigo_registro", "ALTER TABLE docente ADD COLUMN renacyt_codigo_registro VARCHAR(20)"),
+        ("renacyt_id_investigador", "ALTER TABLE docente ADD COLUMN renacyt_id_investigador VARCHAR(20)"),
+        ("renacyt_nivel", "ALTER TABLE docente ADD COLUMN renacyt_nivel VARCHAR(20)"),
+        ("renacyt_grupo", "ALTER TABLE docente ADD COLUMN renacyt_grupo VARCHAR(20)"),
+        ("renacyt_condicion", "ALTER TABLE docente ADD COLUMN renacyt_condicion VARCHAR(80)"),
+        ("renacyt_fecha_informe_calificacion", "ALTER TABLE docente ADD COLUMN renacyt_fecha_informe_calificacion INTEGER"),
+        ("renacyt_fecha_registro", "ALTER TABLE docente ADD COLUMN renacyt_fecha_registro INTEGER"),
+        ("renacyt_fecha_ultima_revision", "ALTER TABLE docente ADD COLUMN renacyt_fecha_ultima_revision INTEGER"),
+        ("renacyt_orcid", "ALTER TABLE docente ADD COLUMN renacyt_orcid VARCHAR(40)"),
+        ("renacyt_scopus_author_id", "ALTER TABLE docente ADD COLUMN renacyt_scopus_author_id VARCHAR(40)"),
+        ("renacyt_fecha_ultima_sincronizacion", "ALTER TABLE docente ADD COLUMN renacyt_fecha_ultima_sincronizacion INTEGER"),
+        ("renacyt_ficha_url", "ALTER TABLE docente ADD COLUMN renacyt_ficha_url TEXT"),
+    ] {
+        let column_count: (i64,) = query_as(
+            "SELECT COUNT(*) FROM pragma_table_info('docente') WHERE name = ?"
+        )
+        .bind(column)
+        .fetch_one(pool)
+        .await?;
+
+        if column_count.0 == 0 {
+            query(statement).execute(pool).await?;
+        }
     }
 
     let proyecto_activo_col_count: (i64,) = query_as(

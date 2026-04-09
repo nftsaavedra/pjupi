@@ -1,5 +1,19 @@
 import { invoke } from './client';
-import type { Docente, DocenteDetalle, EliminarDocenteResultado, ReniecDniLookupResult } from './types';
+import type { Docente, DocenteDetalle, EliminarDocenteResultado, RenacytLookupResult, ReniecDniLookupResult } from './types';
+
+interface CreateDocenteRenacytPayload {
+  codigo_registro: string;
+  id_investigador: string;
+  nivel?: string | null;
+  grupo?: string | null;
+  condicion?: string | null;
+  fecha_informe_calificacion?: number | null;
+  fecha_registro?: number | null;
+  fecha_ultima_revision?: number | null;
+  orcid?: string | null;
+  scopus_author_id?: string | null;
+  ficha_url: string;
+}
 
 export const crearDocente = async (
   dni: string,
@@ -7,9 +21,17 @@ export const crearDocente = async (
   nombres: string,
   apellido_paterno: string,
   apellido_materno?: string,
+  renacyt?: CreateDocenteRenacytPayload | null,
 ): Promise<Docente> => {
   return await invoke('crear_docente', {
-    request: { dni, id_grado, nombres, apellido_paterno, apellido_materno: apellido_materno?.trim() ? apellido_materno : null },
+    request: {
+      dni,
+      id_grado,
+      nombres,
+      apellido_paterno,
+      apellido_materno: apellido_materno?.trim() ? apellido_materno : null,
+      renacyt: renacyt ?? null,
+    },
   });
 };
 
@@ -23,6 +45,10 @@ export const buscarDocentePorDni = async (dni: string): Promise<Docente | null> 
 
 export const consultarDniReniec = async (numero: string): Promise<ReniecDniLookupResult> => {
   return await invoke('consultar_dni_reniec', { numero });
+};
+
+export const consultarRenacytDocente = async (codigo_o_id: string): Promise<RenacytLookupResult> => {
+  return await invoke('consultar_renacyt_docente', { codigoOId: codigo_o_id });
 };
 
 export const getAllDocentesConProyectos = async (): Promise<DocenteDetalle[]> => {
