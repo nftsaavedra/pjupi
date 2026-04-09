@@ -1,7 +1,7 @@
 import React, { type ButtonHTMLAttributes } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { FloatingTooltip } from '../overlays/FloatingTooltip';
 import { AppIcon } from './AppIcon';
-import { FloatingTooltip } from './FloatingTooltip';
 
 interface TableActionButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   icon: LucideIcon;

@@ -10,14 +10,14 @@ import {
 } from '../services/tauriApi';
 import { useFetchUsuarios } from '../hooks/useFetch';
 import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from './AppIcon';
-import { ConfirmDialog } from './ConfirmDialog';
-import { FormModal } from './FormModal';
-import { FormInput } from './FormInput';
-import { FormSelect } from './FormSelect';
-import { SkeletonTable } from './Skeleton';
 import { toast } from '../services/toast';
-import { TableActionButton } from './TableActionButton';
+import { FormInput } from '../shared/forms/FormInput';
+import { FormModal } from '../shared/forms/FormModal';
+import { FormSelect } from '../shared/forms/FormSelect';
+import { ConfirmDialog } from '../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../shared/ui/AppIcon';
+import { SkeletonTable } from '../shared/ui/Skeleton';
+import { TableActionButton } from '../shared/ui/TableActionButton';
 
 interface UsuariosTabProps {
   onUsuarioModified: () => void;

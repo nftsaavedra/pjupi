@@ -4,12 +4,12 @@ import { crearGrado, actualizarGrado, eliminarGrado, reactivarGrado, getTauriErr
 import { toast } from '../services/toast';
 import { useFetchGrados } from '../hooks/useFetch';
 import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from './AppIcon';
-import { FormModal } from './FormModal';
-import { FormInput } from './FormInput';
-import { ConfirmDialog } from './ConfirmDialog';
-import { SkeletonTable } from './Skeleton';
-import { TableActionButton } from './TableActionButton';
+import { FormInput } from '../shared/forms/FormInput';
+import { FormModal } from '../shared/forms/FormModal';
+import { ConfirmDialog } from '../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../shared/ui/AppIcon';
+import { SkeletonTable } from '../shared/ui/Skeleton';
+import { TableActionButton } from '../shared/ui/TableActionButton';
 
 interface GradosTabProps {
   onGradoModified: () => void;

@@ -1,33 +1,33 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
-import { AppIcon } from './components/AppIcon';
+import { AppIcon } from './shared/ui/AppIcon';
 import { getAuthStatus, type Usuario } from './services/tauriApi';
 import { AuthScreen } from './components/AuthScreen';
-import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './components/Skeleton';
-import { ToastContainer } from './components/ToastContainer';
-import { FloatingTooltip } from './components/FloatingTooltip';
-import { TabNavigation, type Tab } from './components/TabNavigation';
+import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
+import { ToastContainer } from './shared/feedback/ToastContainer';
+import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
+import { TabNavigation, type Tab } from './shared/navigation/TabNavigation';
 import { toast } from './services/toast';
 import './App.css';
 
 const DashboardTab = lazy(async () => {
-  const module = await import('./components/DashboardTab');
+  const module = await import('./features/dashboard/DashboardTab');
   return { default: module.DashboardTab };
 });
 
 const ProyectosTab = lazy(async () => {
-  const module = await import('./components/ProyectosTab');
+  const module = await import('./features/proyectos/ProyectosTab');
   return { default: module.ProyectosTab };
 });
 
-const DocentesTab = lazy(async () => {
-  const module = await import('./components/DocentesTab');
-  return { default: module.DocentesTab };
+const DocenteCreateModal = lazy(async () => {
+  const module = await import('./features/docentes/components/DocenteCreateModal');
+  return { default: module.DocenteCreateModal };
 });
 
-const DocentesTabMejorada = lazy(async () => {
-  const module = await import('./components/DocentesTabMejorada');
-  return { default: module.DocentesTabMejorada };
+const DocentesTable = lazy(async () => {
+  const module = await import('./features/docentes/components/DocentesTable');
+  return { default: module.DocentesTable };
 });
 
 const ReportesTab = lazy(async () => {
@@ -178,13 +178,13 @@ function App() {
         return (
           <Suspense fallback={<FormAndTableFallback columns={6} />}>
             <div className="module-shell docentes-module">
-              <DocentesTab
+              <DocenteCreateModal
                 open={docenteFormOpen}
                 onClose={() => setDocenteFormOpen(false)}
                 onDocenteCreated={handleDataModified}
                 refreshTrigger={refreshTrigger}
               />
-              <DocentesTabMejorada
+              <DocentesTable
                 onCreateClick={() => setDocenteFormOpen(true)}
                 refreshTrigger={refreshTrigger}
               />

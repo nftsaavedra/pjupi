@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FolderOpen, Link2Off, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { useFetchDocentes, useStableFetchData } from '../../hooks/useFetch';
+import { useRefreshToast } from '../../hooks/useRefreshToast';
 import {
   crearProyectoConParticipantes,
   eliminarProyecto,
@@ -8,17 +10,15 @@ import {
   getTauriErrorMessage,
   reactivarProyecto,
   type ProyectoDetalle,
-} from '../services/tauriApi';
-import { toast } from '../services/toast';
-import { useFetchDocentes, useStableFetchData } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { FormModal } from './FormModal';
-import { FormInput } from './FormInput';
-import { DocentesChecklist } from './DocentesChecklist';
-import { ConfirmDialog } from './ConfirmDialog';
-import { SkeletonTable } from './Skeleton';
-import { AppIcon } from './AppIcon';
-import { TableActionButton } from './TableActionButton';
+} from '../../services/tauriApi';
+import { toast } from '../../services/toast';
+import { FormInput } from '../../shared/forms/FormInput';
+import { FormModal } from '../../shared/forms/FormModal';
+import { ConfirmDialog } from '../../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../../shared/ui/AppIcon';
+import { SkeletonTable } from '../../shared/ui/Skeleton';
+import { TableActionButton } from '../../shared/ui/TableActionButton';
+import { DocentesChecklist } from './components/DocentesChecklist';
 
 interface ProyectosTabProps {
   onProyectoCreated: () => void;

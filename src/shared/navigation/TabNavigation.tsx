@@ -1,7 +1,7 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AppIcon } from './AppIcon';
-import { FloatingTooltip } from './FloatingTooltip';
+import { FloatingTooltip } from '../overlays/FloatingTooltip';
+import { AppIcon } from '../ui/AppIcon';
 
 export interface Tab {
   id: string;

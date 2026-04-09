@@ -1,6 +1,6 @@
 import React, { useEffect, useId } from 'react';
 import { X } from 'lucide-react';
-import { AppIcon } from './AppIcon';
+import { AppIcon } from '../ui/AppIcon';
 
 interface FormModalProps {
   open: boolean;

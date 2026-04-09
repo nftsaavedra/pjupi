@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Eye, GraduationCap, Plus, RotateCcw, TriangleAlert, Trash2, UserRound, X } from 'lucide-react';
-import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, type DocenteDetalle } from '../services/tauriApi';
-import { AppIcon } from './AppIcon';
-import { ConfirmDialog } from './ConfirmDialog';
-import { TableActionButton } from './TableActionButton';
-import { toast } from '../services/toast';
-import { useStableFetchData } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { SkeletonTable } from './Skeleton';
+import { useStableFetchData } from '../../../hooks/useFetch';
+import { useRefreshToast } from '../../../hooks/useRefreshToast';
+import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, type DocenteDetalle } from '../../../services/tauriApi';
+import { toast } from '../../../services/toast';
+import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
+import { AppIcon } from '../../../shared/ui/AppIcon';
+import { SkeletonTable } from '../../../shared/ui/Skeleton';
+import { TableActionButton } from '../../../shared/ui/TableActionButton';
 
 interface DocenteDetalleModalProps {
   docente: DocenteDetalle;
@@ -85,12 +85,12 @@ const DocenteDetalleModal: React.FC<DocenteDetalleModalProps> = ({ docente, onCl
   );
 };
 
-interface DocentesTabMejoradaProps {
+interface DocentesTableProps {
   onCreateClick: () => void;
   refreshTrigger?: number;
 }
 
-export const DocentesTabMejorada: React.FC<DocentesTabMejoradaProps> = ({
+export const DocentesTable: React.FC<DocentesTableProps> = ({
   onCreateClick,
   refreshTrigger = 0,
 }) => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { AppIcon } from './AppIcon';
-import { FloatingTooltip } from './FloatingTooltip';
+import { FloatingTooltip } from '../overlays/FloatingTooltip';
+import { AppIcon } from '../ui/AppIcon';
 
 interface FieldHelpTooltipProps {
   content: React.ReactNode;

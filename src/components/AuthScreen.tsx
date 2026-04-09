@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useState } from 'react';
 import { LogIn, ShieldCheck } from 'lucide-react';
-import { AppIcon } from './AppIcon';
+import { AppIcon } from '../shared/ui/AppIcon';
 import { getTauriErrorMessage, loginUsuario, registrarPrimerUsuario, type Usuario } from '../services/tauriApi';
 import { toast } from '../services/toast';
 

@@ -12,12 +12,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { getKpisDashboard, getEstadisticasProyectosXDocente, type KpisDashboard, type DocenteProyectosCount } from '../services/tauriApi';
-import { useStableFetchData } from '../hooks/useFetch';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from './AppIcon';
-import { KPICard } from './KPICard';
-import { SkeletonChart, SkeletonKpiGrid } from './Skeleton';
+import { useStableFetchData } from '../../hooks/useFetch';
+import { useRefreshToast } from '../../hooks/useRefreshToast';
+import { getEstadisticasProyectosXDocente, getKpisDashboard, type DocenteProyectosCount, type KpisDashboard } from '../../services/tauriApi';
+import { AppIcon } from '../../shared/ui/AppIcon';
+import { SkeletonChart, SkeletonKpiGrid } from '../../shared/ui/Skeleton';
+import { KPICard } from './components/KPICard';
 
 interface DashboardTabProps {
   refreshTrigger?: number;
@@ -191,30 +191,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
         </>
       ) : (
         <>
-
           <div className="kpi-grid dashboard-kpi-grid content-shell">
             {kpis && (
               <>
-                <KPICard
-                  label="Total Docentes"
-                  value={kpis.total_docentes}
-                  icon={Users}
-                />
-                <KPICard
-                  label="Total Proyectos"
-                  value={kpis.total_proyectos}
-                  icon={FolderOpen}
-                />
-                <KPICard
-                  label="Docentes Sin Proyectos"
-                  value={docentesSinProyectos}
-                  icon={TriangleAlert}
-                />
-                <KPICard
-                  label="Promedio Proyectos/Docente"
-                  value={promedioProyectos}
-                  icon={TrendingUp}
-                />
+                <KPICard label="Total Docentes" value={kpis.total_docentes} icon={Users} />
+                <KPICard label="Total Proyectos" value={kpis.total_proyectos} icon={FolderOpen} />
+                <KPICard label="Docentes Sin Proyectos" value={docentesSinProyectos} icon={TriangleAlert} />
+                <KPICard label="Promedio Proyectos/Docente" value={promedioProyectos} icon={TrendingUp} />
               </>
             )}
           </div>
@@ -223,27 +206,27 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
             <div className="chart-container dashboard-primary-chart">
               <h2>Top docentes por cantidad de proyectos</h2>
               <div ref={topChart.ref} className="dashboard-chart-stage dashboard-chart-stage-lg">
-              {showTopRanking ? (
-                topChart.ready ? (
-                  <BarChart width={topChart.width} height={topChart.height} data={topDocentes} margin={chartMargin}>
-                    <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="nombre"
-                      angle={isCompact ? -18 : 0}
-                      textAnchor={isCompact ? 'end' : 'middle'}
-                      height={isCompact ? 58 : 40}
-                      tick={{ fontSize: isCompact ? 11 : 12, fill: '#64748b' }}
-                      interval={0}
-                    />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                    <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="cantidad" fill="#2196F3" name="Cantidad de Proyectos" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                ) : chartLoadingState
-              ) : (
-                <div className="empty-state">Aun no hay proyectos asignados a docentes para este ranking.</div>
-              )}
+                {showTopRanking ? (
+                  topChart.ready ? (
+                    <BarChart width={topChart.width} height={topChart.height} data={topDocentes} margin={chartMargin}>
+                      <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="nombre"
+                        angle={isCompact ? -18 : 0}
+                        textAnchor={isCompact ? 'end' : 'middle'}
+                        height={isCompact ? 58 : 40}
+                        tick={{ fontSize: isCompact ? 11 : 12, fill: '#64748b' }}
+                        interval={0}
+                      />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="cantidad" fill="#2196F3" name="Cantidad de Proyectos" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  ) : chartLoadingState
+                ) : (
+                  <div className="empty-state">Aun no hay proyectos asignados a docentes para este ranking.</div>
+                )}
               </div>
             </div>
 
@@ -265,53 +248,53 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
             <div className="chart-container">
               <h2>Distribución de carga por docente</h2>
               <div ref={distributionChart.ref} className="dashboard-chart-stage dashboard-chart-stage-md">
-              {distribucionConDatos.length > 0 ? (
-                distributionChart.ready ? (
-                  <BarChart width={distributionChart.width} height={distributionChart.height} data={distribucionConDatos} margin={chartMargin}>
-                    <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="rango" tick={{ fontSize: 12, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                    <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="cantidad" fill="#0ea5e9" name="Docentes" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                ) : chartLoadingState
-              ) : (
-                <div className="empty-state">No hay docentes activos registrados para calcular la distribución.</div>
-              )}
+                {distribucionConDatos.length > 0 ? (
+                  distributionChart.ready ? (
+                    <BarChart width={distributionChart.width} height={distributionChart.height} data={distribucionConDatos} margin={chartMargin}>
+                      <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="rango" tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="cantidad" fill="#0ea5e9" name="Docentes" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  ) : chartLoadingState
+                ) : (
+                  <div className="empty-state">No hay docentes activos registrados para calcular la distribución.</div>
+                )}
               </div>
             </div>
 
             <div className="chart-container">
               <h2>Docentes con y sin proyectos</h2>
               <div ref={pieChart.ref} className="dashboard-chart-stage dashboard-chart-stage-md">
-              {pieHasVisibleData ? (
-                pieChart.ready ? (
-                  <PieChart width={pieChart.width} height={pieChart.height}>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={Math.max(pieOuterRadius - 28, 24)}
-                      outerRadius={pieOuterRadius}
-                      paddingAngle={pieData.filter((item) => item.value > 0).length > 1 ? 2 : 0}
-                      minAngle={pieData.filter((item) => item.value > 0).length > 1 ? 4 : 0}
-                      labelLine={false}
-                      label={({ name, value }) => value ? `${name}: ${value}` : ''}
-                    >
-                      {pieData.map((entry, idx) => (
-                        <Cell key={`${entry.name}-${idx}`} fill={pieColors[idx % pieColors.length]} stroke="#ffffff" strokeWidth={2} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [value ?? 0, 'Docentes']} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
-                ) : chartLoadingState
-              ) : (
-                <div className="empty-state">No hay docentes activos para comparar asignaciones.</div>
-              )}
+                {pieHasVisibleData ? (
+                  pieChart.ready ? (
+                    <PieChart width={pieChart.width} height={pieChart.height}>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={Math.max(pieOuterRadius - 28, 24)}
+                        outerRadius={pieOuterRadius}
+                        paddingAngle={pieData.filter((item) => item.value > 0).length > 1 ? 2 : 0}
+                        minAngle={pieData.filter((item) => item.value > 0).length > 1 ? 4 : 0}
+                        labelLine={false}
+                        label={({ name, value }) => value ? `${name}: ${value}` : ''}
+                      >
+                        {pieData.map((entry, idx) => (
+                          <Cell key={`${entry.name}-${idx}`} fill={pieColors[idx % pieColors.length]} stroke="#ffffff" strokeWidth={2} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [value ?? 0, 'Docentes']} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
+                  ) : chartLoadingState
+                ) : (
+                  <div className="empty-state">No hay docentes activos para comparar asignaciones.</div>
+                )}
               </div>
             </div>
           </div>
@@ -319,27 +302,27 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
           <div className="chart-container content-shell dashboard-wide-chart">
             <h2>Todos los docentes: proyectos asignados</h2>
             <div ref={allDocentesChart.ref} className="dashboard-chart-stage dashboard-chart-stage-lg">
-            {showAllDocentes ? (
-              allDocentesChart.ready ? (
-                <BarChart width={allDocentesChart.width} height={allDocentesChart.height} data={estadisticas} margin={chartMargin}>
-                  <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="nombre"
-                    interval={allDocentesTickInterval}
-                    angle={isCompact ? -20 : 0}
-                    textAnchor={isCompact ? 'end' : 'middle'}
-                    height={isCompact ? 62 : 40}
-                    tick={{ fontSize: isCompact ? 11 : 12, fill: '#64748b' }}
-                  />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="cantidad" fill="#6366f1" name="Cantidad" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              ) : chartLoadingState
-            ) : (
-              <div className="empty-state">Los docentes existen, pero todavia no tienen proyectos activos asignados.</div>
-            )}
+              {showAllDocentes ? (
+                allDocentesChart.ready ? (
+                  <BarChart width={allDocentesChart.width} height={allDocentesChart.height} data={estadisticas} margin={chartMargin}>
+                    <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="nombre"
+                      interval={allDocentesTickInterval}
+                      angle={isCompact ? -20 : 0}
+                      textAnchor={isCompact ? 'end' : 'middle'}
+                      height={isCompact ? 62 : 40}
+                      tick={{ fontSize: isCompact ? 11 : 12, fill: '#64748b' }}
+                    />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                    <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.12)' }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="cantidad" fill="#6366f1" name="Cantidad" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                ) : chartLoadingState
+              ) : (
+                <div className="empty-state">Los docentes existen, pero todavia no tienen proyectos activos asignados.</div>
+              )}
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GraduationCap, Users } from 'lucide-react';
-import { AppIcon } from './AppIcon';
+import { AppIcon } from '../shared/ui/AppIcon';
 import { GradosTab } from './GradosTab';
 import { UsuariosTab } from './UsuariosTab';
 

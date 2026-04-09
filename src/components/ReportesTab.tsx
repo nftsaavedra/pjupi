@@ -10,8 +10,8 @@ import {
 import { toast } from '../services/toast';
 import { useStableFetchData } from '../hooks/useFetch';
 import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from './AppIcon';
-import { SkeletonTable } from './Skeleton';
+import { AppIcon } from '../shared/ui/AppIcon';
+import { SkeletonTable } from '../shared/ui/Skeleton';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
 

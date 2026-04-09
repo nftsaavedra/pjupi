@@ -1,9 +1,9 @@
 import React, { useDeferredValue, useId, useState } from 'react';
 import { X } from 'lucide-react';
-import { Docente } from '../services/tauriApi';
-import { useRefreshToast } from '../hooks/useRefreshToast';
-import { AppIcon } from './AppIcon';
-import { SkeletonChecklist } from './Skeleton';
+import { useRefreshToast } from '../../../hooks/useRefreshToast';
+import { type Docente } from '../../../services/tauriApi';
+import { AppIcon } from '../../../shared/ui/AppIcon';
+import { SkeletonChecklist } from '../../../shared/ui/Skeleton';
 
 interface DocentesChecklistProps {
   docentes: Docente[];
