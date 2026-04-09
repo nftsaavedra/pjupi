@@ -1,9 +1,10 @@
-use sqlx::{query, query_as, SqlitePool};
+use sqlx::{query, query_as, Row, SqlitePool};
 use crate::domain::proyecto::{
     Proyecto,
     CreateProyectoRequest,
     CreateProyectoConParticipantesRequest,
     ExportDataConProjectos,
+    ProyectoParticipanteResumen,
     ProyectoDetalle,
     EliminarProyectoResultado,
 };
@@ -48,24 +49,71 @@ pub async fn buscar_proyectos_por_docente(pool: &SqlitePool, id_docente: &str) -
 }
 
 pub async fn get_all_proyectos_detalle(pool: &SqlitePool) -> Result<Vec<ProyectoDetalle>, AppError> {
-    let proyectos = query_as::<_, ProyectoDetalle>(
+    let proyectos = query_as::<_, Proyecto>(
+        "SELECT id_proyecto, titulo_proyecto, activo FROM proyecto ORDER BY titulo_proyecto ASC"
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let participantes_rows = query(
         r#"
         SELECT
-            p.id_proyecto,
-            p.titulo_proyecto,
-            COUNT(pa.id_docente) as cantidad_docentes,
-            GROUP_CONCAT(d.nombres_apellidos, ' | ') as docentes,
-            p.activo as activo
-        FROM proyecto p
-        LEFT JOIN participacion pa ON p.id_proyecto = pa.id_proyecto
-        LEFT JOIN docente d ON pa.id_docente = d.id_docente
-        GROUP BY p.id_proyecto
-        ORDER BY p.titulo_proyecto ASC
+            p.id_proyecto as id_proyecto,
+            d.nombres_apellidos as nombre,
+            COALESCE(g.nombre, 'Sin grado') as grado,
+            COALESCE(d.renacyt_nivel, 'Sin nivel RENACYT') as renacyt_nivel
+        FROM participacion pa
+        INNER JOIN proyecto p ON pa.id_proyecto = p.id_proyecto
+        INNER JOIN docente d ON pa.id_docente = d.id_docente
+        LEFT JOIN grado_academico g ON d.id_grado = g.id_grado
+        ORDER BY d.nombres_apellidos ASC
         "#
     )
     .fetch_all(pool)
     .await?;
-    Ok(proyectos)
+
+    let mut participantes_por_proyecto: std::collections::HashMap<String, Vec<ProyectoParticipanteResumen>> = std::collections::HashMap::new();
+
+    for row in participantes_rows {
+        let id_proyecto: String = row.try_get("id_proyecto")?;
+        let nombre: String = row.try_get("nombre")?;
+        let grado: String = row.try_get("grado")?;
+        let renacyt_nivel: String = row.try_get("renacyt_nivel")?;
+
+        participantes_por_proyecto
+            .entry(id_proyecto)
+            .or_default()
+            .push(ProyectoParticipanteResumen { nombre, grado, renacyt_nivel });
+    }
+
+    let detalles = proyectos
+        .into_iter()
+        .map(|proyecto| {
+            let participantes = participantes_por_proyecto.remove(&proyecto.id_proyecto).unwrap_or_default();
+            let cantidad_docentes = participantes.len() as i64;
+            let docentes = if participantes.is_empty() {
+                None
+            } else {
+                Some(participantes.iter().map(|participante| format!("{} ({} · {})", participante.nombre, participante.grado, participante.renacyt_nivel)).collect::<Vec<_>>().join(" | "))
+            };
+            let participantes_json = if participantes.is_empty() {
+                None
+            } else {
+                serde_json::to_string(&participantes).ok()
+            };
+
+            ProyectoDetalle {
+                id_proyecto: proyecto.id_proyecto,
+                titulo_proyecto: proyecto.titulo_proyecto,
+                cantidad_docentes,
+                docentes,
+                participantes_json,
+                activo: proyecto.activo,
+            }
+        })
+        .collect();
+
+    Ok(detalles)
 }
 
 pub async fn eliminar_relacion_proyecto_docente(
@@ -199,6 +247,7 @@ pub async fn get_data_exportacion_plana(pool: &SqlitePool) -> Result<Vec<ExportD
         SELECT
             p.titulo_proyecto as "proyecto",
             g.nombre as "grado",
+            COALESCE(d.renacyt_nivel, 'No registrado') as "renacyt_nivel",
             d.nombres_apellidos as "docente",
             d.dni as "dni"
         FROM proyecto p
@@ -221,6 +270,7 @@ pub async fn get_data_exportacion_agrupada_docente(pool: &SqlitePool) -> Result<
             d.nombres_apellidos as "docente",
             d.dni as "dni",
             g.nombre as "grado",
+            COALESCE(d.renacyt_nivel, 'No registrado') as "renacyt_nivel",
             COUNT(p.id_proyecto) as "cantidad_proyectos",
             GROUP_CONCAT(p.titulo_proyecto, ' | ') as "proyectos"
         FROM docente d

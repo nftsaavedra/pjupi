@@ -6,6 +6,7 @@ mod db;
 mod domain;
 mod error;
 mod infrastructure;
+mod audit;
 mod state;
 mod storage;
 

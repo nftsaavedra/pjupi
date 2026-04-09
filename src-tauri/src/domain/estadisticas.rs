@@ -20,6 +20,7 @@ pub struct KpisDashboard {
 pub struct ExportData {
     pub proyecto: String,
     pub grado: String,
+    pub renacyt_nivel: String,
     pub docente: String,
     pub dni: String,
 }

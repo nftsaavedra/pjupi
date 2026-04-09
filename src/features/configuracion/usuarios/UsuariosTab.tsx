@@ -8,19 +8,18 @@ import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { SkeletonTable } from '../../../shared/ui/Skeleton';
 import { TableActionButton } from '../../../shared/ui/TableActionButton';
+import { getRoleDefinition, getRoleLabel, getRoleOptions } from '../../../shared/auth/permissions';
+import type { Usuario } from '../../auth/api';
 
 interface UsuariosTabProps {
+  currentUser: Usuario;
   onUsuarioModified: () => void;
   refreshTrigger?: number;
 }
 
-const roles = [
-  { value: 'admin', label: 'Administrador' },
-  { value: 'operador', label: 'Operador' },
-  { value: 'consulta', label: 'Consulta' },
-];
+const roles = getRoleOptions();
 
-export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, refreshTrigger = 0 }) => {
+export const UsuariosTab: React.FC<UsuariosTabProps> = ({ currentUser, onUsuarioModified, refreshTrigger = 0 }) => {
   const {
     busqueda,
     editingUsuario,
@@ -51,10 +50,31 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
     usuarioToToggle,
     usuarios,
     usuariosFiltrados,
-  } = useUsuariosTab(refreshTrigger, onUsuarioModified);
+  } = useUsuariosTab(currentUser, refreshTrigger, onUsuarioModified);
+
+  const isEditingOwnUser = editingUsuario?.id_usuario === currentUser.id_usuario;
 
   return (
     <div className="tab-panel">
+      <div className="role-matrix-grid">
+        {roles.map((roleOption) => {
+          const definition = getRoleDefinition(roleOption.value);
+
+          return (
+            <article key={roleOption.value} className={`module-aside-card role-matrix-card ${rol === roleOption.value ? 'role-matrix-card-active' : ''}`}>
+              <span className="module-aside-kicker">Rol operativo</span>
+              <strong>{definition.label}</strong>
+              <p>{definition.summary}</p>
+              <div className="role-matrix-list">
+                {definition.capabilities.map((capability) => (
+                  <span key={capability} className="role-matrix-item">{capability}</span>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
       <div className="table-container">
         <div className="section-header">
           <h2>Usuarios registrados</h2>
@@ -122,7 +142,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
                   <td>{usuario.username}</td>
                   <td>{usuario.nombre_completo}</td>
                   <td>
-                    <span className="badge badge-info">{usuario.rol}</span>
+                    <span className="badge badge-info">{getRoleLabel(usuario.rol)}</span>
                   </td>
                   <td>
                     {usuario.activo === 1 ? (
@@ -135,14 +155,15 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
                     <TableActionButton
                       className="btn-edit"
                       icon={Pencil}
-                      label="Editar usuario"
+                      label={usuario.id_usuario === currentUser.id_usuario ? 'Editar su propio usuario' : 'Editar usuario'}
                       onClick={() => handleEditar(usuario)}
                     />
                     <TableActionButton
                       className={usuario.activo === 1 ? 'btn-delete' : 'btn-primary'}
                       icon={usuario.activo === 1 ? Trash2 : RotateCcw}
-                      label={usuario.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
+                      label={usuario.id_usuario === currentUser.id_usuario ? 'No puede cambiar su propio estado' : usuario.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
                       onClick={() => setUsuarioToToggle(usuario)}
+                      disabled={usuario.id_usuario === currentUser.id_usuario}
                     />
                   </td>
                 </tr>
@@ -192,9 +213,17 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ onUsuarioModified, ref
           value={rol}
           onChange={setRol}
           options={roles}
-          help="El rol define los permisos disponibles dentro del sistema. Asigne el mínimo acceso necesario según la función del usuario."
+          help={isEditingOwnUser
+            ? 'No puede cambiar su propio rol. Otro administrador debe realizar esa operación para preservar el control de accesos.'
+            : 'El rol define los permisos disponibles dentro del sistema. Asigne el mínimo acceso necesario según la función del usuario.'}
+          disabled={isEditingOwnUser}
           required
         />
+        {isEditingOwnUser && (
+          <div className="inline-feedback inline-feedback-info">
+            <span>Puede actualizar su nombre o contraseña, pero no cambiar su propio rol ni su estado.</span>
+          </div>
+        )}
         <FormInput
           label={editingUsuario ? 'Nueva contraseña (opcional)' : 'Contraseña'}
           value={password}

@@ -13,4 +13,5 @@ export type {
   EliminarProyectoResultado,
   Proyecto,
   ProyectoDetalle,
+  ProyectoParticipanteResumen,
 } from '../../services/tauri/types';

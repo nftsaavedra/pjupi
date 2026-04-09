@@ -3,14 +3,17 @@ import { useStableFetchData } from '../../../shared/hooks/useStableFetch';
 import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
 import { toast } from '../../../services/toast';
 import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, refrescarFormacionAcademicaRenacytDocente, type DocenteDetalle } from '../api';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../../shared/utils/renacyt';
 
 const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 
-export const useDocentesTable = (refreshTrigger = 0) => {
+export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
   const [selectedDocente, setSelectedDocente] = useState<DocenteDetalle | null>(null);
   const [docenteToDelete, setDocenteToDelete] = useState<DocenteDetalle | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [busqueda, setBusqueda] = useState('');
+  const [gradoFiltro, setGradoFiltro] = useState('todos');
+  const [renacytNivelFiltro, setRenacytNivelFiltro] = useState('todos');
   const [refreshingRenacytDocenteId, setRefreshingRenacytDocenteId] = useState<string | null>(null);
 
   const {
@@ -20,7 +23,7 @@ export const useDocentesTable = (refreshTrigger = 0) => {
     error,
     recargar: cargarDocentes,
   } = useStableFetchData<DocenteDetalle[]>(
-    getAllDocentesConProyectos,
+    () => getAllDocentesConProyectos(actorUserId),
     refreshTrigger,
     'Error cargando docentes',
     [],
@@ -35,7 +38,7 @@ export const useDocentesTable = (refreshTrigger = 0) => {
   const handleEliminarDocente = async () => {
     if (!docenteToDelete) return;
     try {
-      const resultado = await eliminarDocente(docenteToDelete.id_docente);
+      const resultado = await eliminarDocente(actorUserId, docenteToDelete.id_docente);
       toast.info(resultado.mensaje);
       setDocenteToDelete(null);
       await cargarDocentes();
@@ -46,7 +49,7 @@ export const useDocentesTable = (refreshTrigger = 0) => {
 
   const handleReactivarDocente = async (id: string) => {
     try {
-      await reactivarDocente(id);
+      await reactivarDocente(actorUserId, id);
       toast.success('Docente reactivado correctamente');
       await cargarDocentes();
     } catch (error) {
@@ -57,7 +60,7 @@ export const useDocentesTable = (refreshTrigger = 0) => {
   const handleRefreshRenacytFormaciones = async (id: string) => {
     setRefreshingRenacytDocenteId(id);
     try {
-      const resultado = await refrescarFormacionAcademicaRenacytDocente(id);
+      const resultado = await refrescarFormacionAcademicaRenacytDocente(actorUserId, id);
       if (resultado.actualizada) {
         toast.success(resultado.mensaje);
       } else {
@@ -75,20 +78,35 @@ export const useDocentesTable = (refreshTrigger = 0) => {
 
   const totalActivos = useMemo(() => docentes.filter((docente) => docente.activo === 1).length, [docentes]);
   const totalInactivos = useMemo(() => docentes.filter((docente) => docente.activo === 0).length, [docentes]);
+  const gradosDisponibles = useMemo(
+    () => Array.from(new Set(docentes.map((docente) => normalizeText(docente.grado) ? docente.grado : 'Sin grado'))).sort((a, b) => a.localeCompare(b, 'es')),
+    [docentes],
+  );
+  const nivelesRenacytDisponibles = useMemo(
+    () => Array.from(new Set(docentes.map((docente) => formatRenacytNivel(docente.renacyt_nivel) ?? 'Sin nivel RENACYT'))).sort((a, b) => a.localeCompare(b, 'es')),
+    [docentes],
+  );
 
   const docentesFiltrados = useMemo(() => docentes.filter((docente) => {
     if (estadoFiltro === 'activos') return docente.activo === 1;
     if (estadoFiltro === 'inactivos') return docente.activo === 0;
     return true;
   }).filter((docente) => {
+    if (gradoFiltro === 'todos') return true;
+    return (normalizeText(docente.grado) ? docente.grado : 'Sin grado') === gradoFiltro;
+  }).filter((docente) => {
+    if (renacytNivelFiltro === 'todos') return true;
+    return (formatRenacytNivel(docente.renacyt_nivel) ?? 'Sin nivel RENACYT') === renacytNivelFiltro;
+  }).filter((docente) => {
     const texto = normalizeText(busqueda);
     if (!texto) return true;
     return (
       normalizeText(docente.nombres_apellidos).includes(texto) ||
       normalizeText(docente.dni).includes(texto) ||
-      normalizeText(docente.grado).includes(texto)
+      normalizeText(docente.grado).includes(texto) ||
+      normalizeRenacytNivelSearch(docente.renacyt_nivel).includes(texto)
     );
-  }), [busqueda, docentes, estadoFiltro]);
+  }), [busqueda, docentes, estadoFiltro, gradoFiltro, renacytNivelFiltro]);
 
   return {
     busqueda,
@@ -98,15 +116,21 @@ export const useDocentesTable = (refreshTrigger = 0) => {
     docentesFiltrados,
     error,
     estadoFiltro,
+    gradoFiltro,
+    gradosDisponibles,
     handleEliminarDocente,
     handleRefreshRenacytFormaciones,
     handleReactivarDocente,
     loading,
+    nivelesRenacytDisponibles,
+    renacytNivelFiltro,
     refreshingRenacytDocenteId,
     selectedDocente,
     setBusqueda,
     setDocenteToDelete,
     setEstadoFiltro,
+    setGradoFiltro,
+    setRenacytNivelFiltro,
     setSelectedDocente,
     totalActivos,
     totalInactivos,

@@ -19,6 +19,7 @@ use crate::domain::proyecto::{
     ExportDataConProjectos,
     Proyecto,
     ProyectoDetalle,
+    ProyectoParticipanteResumen,
 };
 use crate::domain::usuario::{AuthStatus, BootstrapUsuarioRequest, CreateUsuarioRequest, LoginUsuarioRequest, UpdateUsuarioRequest, Usuario, UsuarioConPassword};
 use crate::error::AppError;
@@ -461,22 +462,44 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
     proyectos.sort_by(|a, b| a.titulo_proyecto.to_lowercase().cmp(&b.titulo_proyecto.to_lowercase()));
 
     let docentes = load_docentes_map(db).await?;
+    let grados = load_grados_map(db).await?;
     let participaciones = load_participaciones(db).await?;
 
     let mut docentes_por_proyecto: HashMap<String, Vec<String>> = HashMap::new();
+    let mut participantes_por_proyecto: HashMap<String, Vec<ProyectoParticipanteResumen>> = HashMap::new();
     for participacion in participaciones {
         if let Some(docente) = docentes.get(&participacion.id_docente) {
+            let proyecto_id = participacion.id_proyecto.clone();
+            let grado = grados
+                .get(&docente.id_grado)
+                .map(|item| item.nombre.clone())
+                .unwrap_or_else(|| "Sin grado".to_string());
+            let nivel_renacyt = docente
+                .renacyt_nivel
+                .clone()
+                .filter(|value| !value.trim().is_empty())
+                .map(|value| format!("RENACYT {value}"))
+                .unwrap_or_else(|| "Sin nivel RENACYT".to_string());
             docentes_por_proyecto
-                .entry(participacion.id_proyecto)
+                .entry(proyecto_id.clone())
                 .or_default()
-                .push(docente.nombres_apellidos.clone());
+                .push(format!("{} ({} · {})", docente.nombres_apellidos, grado, nivel_renacyt));
+            participantes_por_proyecto
+                .entry(proyecto_id)
+                .or_default()
+                .push(ProyectoParticipanteResumen {
+                    nombre: docente.nombres_apellidos.clone(),
+                    grado,
+                    renacyt_nivel: nivel_renacyt,
+                });
         }
     }
 
     let detalles = proyectos
         .into_iter()
         .map(|proyecto| {
-            let docentes_proyecto = docentes_por_proyecto.remove(&proyecto.id_proyecto).unwrap_or_default();
+            let proyecto_id = proyecto.id_proyecto.clone();
+            let docentes_proyecto = docentes_por_proyecto.remove(&proyecto_id).unwrap_or_default();
             ProyectoDetalle {
                 id_proyecto: proyecto.id_proyecto,
                 titulo_proyecto: proyecto.titulo_proyecto,
@@ -485,6 +508,11 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
                     None
                 } else {
                     Some(docentes_proyecto.join(" | "))
+                },
+                participantes_json: if docentes_proyecto.is_empty() {
+                    None
+                } else {
+                    serde_json::to_string(&participantes_por_proyecto.remove(&proyecto_id).unwrap_or_default()).ok()
                 },
                 activo: proyecto.activo,
             }
@@ -615,6 +643,11 @@ pub async fn get_data_exportacion_plana(db: &Database) -> Result<Vec<ExportData>
         data.push(ExportData {
             proyecto: proyecto.titulo_proyecto.clone(),
             grado,
+            renacyt_nivel: docente
+                .renacyt_nivel
+                .clone()
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| "No registrado".to_string()),
             docente: docente.nombres_apellidos.clone(),
             dni: docente.dni.clone(),
         });
@@ -658,6 +691,10 @@ pub async fn get_data_exportacion_agrupada_docente(db: &Database) -> Result<Vec<
                     .get(&docente.id_grado)
                     .map(|grado| grado.nombre.clone())
                     .unwrap_or_else(|| "Sin grado".to_string()),
+                renacyt_nivel: docente
+                    .renacyt_nivel
+                    .filter(|value| !value.trim().is_empty())
+                    .unwrap_or_else(|| "No registrado".to_string()),
                 cantidad_proyectos: proyectos_docente.len() as i64,
                 proyectos: if proyectos_docente.is_empty() {
                     None
@@ -705,6 +742,23 @@ fn validar_usuario(username: &str, nombre_completo: &str, rol: &str) -> Result<(
     Ok(())
 }
 
+async fn validar_actor_admin(db: &Database, actor_user_id: &str) -> Result<UsuarioConPassword, AppError> {
+    let actor = db.collection::<UsuarioConPassword>("usuarios")
+        .find_one(doc! { "id_usuario": actor_user_id })
+        .await?
+        .ok_or_else(|| AppError::NotFound("Usuario no encontrado.".to_string()))?;
+
+    if actor.activo == 0 {
+        return Err(AppError::InternalError("El usuario actual está inactivo y no puede administrar accesos.".to_string()));
+    }
+
+    if actor.rol.trim() != "admin" {
+        return Err(AppError::InternalError("No tiene permisos para administrar usuarios.".to_string()));
+    }
+
+    Ok(actor)
+}
+
 fn hash_password(password: &str) -> Result<String, AppError> {
     use argon2::{password_hash::{PasswordHasher, SaltString}, Argon2};
 
@@ -738,7 +792,8 @@ pub async fn get_auth_status(db: &Database) -> Result<AuthStatus, AppError> {
     })
 }
 
-pub async fn create_usuario(db: &Database, request: CreateUsuarioRequest) -> Result<Usuario, AppError> {
+pub async fn create_usuario(db: &Database, actor_user_id: &str, request: CreateUsuarioRequest) -> Result<Usuario, AppError> {
+    validar_actor_admin(db, actor_user_id).await?;
     validar_usuario(&request.username, &request.nombre_completo, &request.rol)?;
     let password_hash = hash_password(&request.password)?;
     let usuario = UsuarioConPassword::new(request, password_hash);
@@ -751,16 +806,20 @@ pub async fn bootstrap_admin(db: &Database, request: BootstrapUsuarioRequest) ->
         return Err(AppError::InternalError("La configuración inicial ya fue completada.".to_string()));
     }
 
-    create_usuario(
-        db,
+    validar_usuario(&request.username, &request.nombre_completo, "admin")?;
+    let password_hash = hash_password(&request.password)?;
+    let usuario = UsuarioConPassword::new(
         CreateUsuarioRequest {
             username: request.username,
             nombre_completo: request.nombre_completo,
             rol: "admin".to_string(),
             password: request.password,
         },
-    )
-    .await
+        password_hash,
+    );
+
+    db.collection::<UsuarioConPassword>("usuarios").insert_one(&usuario).await?;
+    Ok(usuario.public_view())
 }
 
 pub async fn login_usuario(db: &Database, request: LoginUsuarioRequest) -> Result<Usuario, AppError> {
@@ -777,7 +836,8 @@ pub async fn login_usuario(db: &Database, request: LoginUsuarioRequest) -> Resul
     Ok(usuario.public_view())
 }
 
-pub async fn get_all_usuarios(db: &Database) -> Result<Vec<Usuario>, AppError> {
+pub async fn get_all_usuarios(db: &Database, actor_user_id: &str) -> Result<Vec<Usuario>, AppError> {
+    validar_actor_admin(db, actor_user_id).await?;
     let mut usuarios: Vec<Usuario> = load_usuarios(db)
         .await?
         .into_iter()
@@ -787,8 +847,27 @@ pub async fn get_all_usuarios(db: &Database) -> Result<Vec<Usuario>, AppError> {
     Ok(usuarios)
 }
 
-pub async fn update_usuario(db: &Database, id_usuario: &str, request: UpdateUsuarioRequest) -> Result<Usuario, AppError> {
+pub async fn get_usuario_by_id(db: &Database, id_usuario: &str) -> Result<UsuarioConPassword, AppError> {
+    db.collection::<UsuarioConPassword>("usuarios")
+        .find_one(doc! { "id_usuario": id_usuario })
+        .await?
+        .ok_or_else(|| AppError::NotFound("Usuario no encontrado.".to_string()))
+}
+
+pub async fn update_usuario(db: &Database, actor_user_id: &str, id_usuario: &str, request: UpdateUsuarioRequest) -> Result<Usuario, AppError> {
+    validar_actor_admin(db, actor_user_id).await?;
     validar_usuario(&request.username, &request.nombre_completo, &request.rol)?;
+
+    if actor_user_id == id_usuario {
+        let usuario_actual = db.collection::<UsuarioConPassword>("usuarios")
+            .find_one(doc! { "id_usuario": id_usuario })
+            .await?
+            .ok_or_else(|| AppError::NotFound("Usuario no encontrado.".to_string()))?;
+
+        if usuario_actual.rol.trim() != request.rol.trim() {
+            return Err(AppError::InternalError("No puede cambiar su propio rol. Solicite a otro administrador que lo haga.".to_string()));
+        }
+    }
 
     let mut updates = doc! {
         "username": request.username.trim().to_lowercase(),
@@ -811,7 +890,13 @@ pub async fn update_usuario(db: &Database, id_usuario: &str, request: UpdateUsua
     Ok(usuario.public_view())
 }
 
-pub async fn desactivar_usuario(db: &Database, id_usuario: &str) -> Result<Usuario, AppError> {
+pub async fn desactivar_usuario(db: &Database, actor_user_id: &str, id_usuario: &str) -> Result<Usuario, AppError> {
+    validar_actor_admin(db, actor_user_id).await?;
+
+    if actor_user_id == id_usuario {
+        return Err(AppError::InternalError("No puede cambiar el estado de su propio usuario.".to_string()));
+    }
+
     db.collection::<Document>("usuarios")
         .update_one(doc! { "id_usuario": id_usuario }, doc! { "$set": { "activo": 0i64 } })
         .await?;
@@ -823,7 +908,13 @@ pub async fn desactivar_usuario(db: &Database, id_usuario: &str) -> Result<Usuar
     Ok(usuario.public_view())
 }
 
-pub async fn reactivar_usuario(db: &Database, id_usuario: &str) -> Result<Usuario, AppError> {
+pub async fn reactivar_usuario(db: &Database, actor_user_id: &str, id_usuario: &str) -> Result<Usuario, AppError> {
+    validar_actor_admin(db, actor_user_id).await?;
+
+    if actor_user_id == id_usuario {
+        return Err(AppError::InternalError("No puede cambiar el estado de su propio usuario.".to_string()));
+    }
+
     db.collection::<Document>("usuarios")
         .update_one(doc! { "id_usuario": id_usuario }, doc! { "$set": { "activo": 1i64 } })
         .await?;

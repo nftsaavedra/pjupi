@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
+import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
 import { getAuthStatus, type Usuario } from './features/auth/api';
 import { AuthScreen } from './features/auth/AuthScreen';
 import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
 import { ToastContainer } from './shared/feedback/ToastContainer';
-import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
 import { TabNavigation, type Tab } from './shared/navigation/TabNavigation';
+import { getRoleLabel, hasPermission } from './shared/auth/permissions';
 import { toast } from './services/toast';
 import './App.css';
 
@@ -87,13 +88,14 @@ function App() {
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [docenteFormOpen, setDocenteFormOpen] = useState(false);
+  const currentRole = currentUser?.rol ?? null;
 
   const tabs: Tab[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' },
-    { id: 'proyectos', label: 'Proyectos', icon: FolderOpen, description: 'Alta y seguimiento' },
-    { id: 'docentes', label: 'Docentes', icon: GraduationCap, description: 'Registro y estado' },
-    { id: 'reportes', label: 'Reportes', icon: FileSpreadsheet, description: 'Vista previa y exportación' },
-    { id: 'configuracion', label: 'Configuración', icon: Settings2, description: 'Accesos y catálogos' },
+    ...(hasPermission(currentRole, 'dashboard.view') ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' }] : []),
+    ...(hasPermission(currentRole, 'proyectos.view') ? [{ id: 'proyectos', label: 'Proyectos', icon: FolderOpen, description: 'Alta y seguimiento' }] : []),
+    ...(hasPermission(currentRole, 'docentes.view') ? [{ id: 'docentes', label: 'Docentes', icon: GraduationCap, description: 'Registro y estado' }] : []),
+    ...(hasPermission(currentRole, 'reportes.view') ? [{ id: 'reportes', label: 'Reportes', icon: FileSpreadsheet, description: 'Vista previa y exportación' }] : []),
+    ...(hasPermission(currentRole, 'configuracion.view') ? [{ id: 'configuracion', label: 'Configuración', icon: Settings2, description: 'Accesos y catálogos' }] : []),
   ];
   const tabHeaderMeta: Record<string, { kicker: string; title: string; subtitle: string }> = {
     dashboard: {
@@ -122,7 +124,7 @@ function App() {
       subtitle: 'Accesos y catálogos del sistema.',
     },
   };
-  const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0] ?? { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' };
   const activeHeaderMeta = tabHeaderMeta[activeTabMeta.id] ?? tabHeaderMeta.dashboard;
 
   const handleDataModified = () => {
@@ -161,17 +163,21 @@ function App() {
   };
 
   const renderActiveTab = () => {
+    if (!currentUser) {
+      return null;
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return (
           <Suspense fallback={<DashboardFallback />}>
-            <DashboardTab refreshTrigger={refreshTrigger} />
+            <DashboardTab currentUserId={currentUser.id_usuario} refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       case 'proyectos':
         return (
           <Suspense fallback={<FormAndTableFallback columns={5} />}>
-            <ProyectosTab onProyectoCreated={handleDataModified} refreshTrigger={refreshTrigger} />
+            <ProyectosTab canManage={hasPermission(currentRole, 'proyectos.manage')} currentUserId={currentUser.id_usuario} onProyectoCreated={handleDataModified} refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       case 'docentes':
@@ -179,12 +185,15 @@ function App() {
           <Suspense fallback={<FormAndTableFallback columns={6} />}>
             <div className="module-shell docentes-module">
               <DocentesTable
+                canManage={hasPermission(currentRole, 'docentes.manage')}
+                currentUserId={currentUser.id_usuario}
                 onCreateClick={() => setDocenteFormOpen(true)}
                 refreshTrigger={refreshTrigger}
               />
-              {docenteFormOpen && (
+              {docenteFormOpen && hasPermission(currentRole, 'docentes.manage') && (
                 <Suspense fallback={null}>
                   <DocenteCreateModal
+                    currentUserId={currentUser.id_usuario}
                     open={docenteFormOpen}
                     onClose={() => setDocenteFormOpen(false)}
                     onDocenteCreated={handleDataModified}
@@ -196,19 +205,24 @@ function App() {
           </Suspense>
         );
       case 'configuracion':
+        if (!hasPermission(currentRole, 'configuracion.view')) {
+          return null;
+        }
+
         return (
           <Suspense fallback={<FormAndTableFallback columns={5} />}>
             <ConfiguracionTab
+              currentUser={currentUser}
               onDataModified={handleDataModified}
               refreshTrigger={refreshTrigger}
-              isAdmin={currentUser?.rol === 'admin'}
+              isAdmin={hasPermission(currentRole, 'usuarios.manage')}
             />
           </Suspense>
         );
       case 'reportes':
         return (
           <Suspense fallback={<TableOnlyFallback columns={5} />}>
-            <ReportesTab refreshTrigger={refreshTrigger} />
+            <ReportesTab canExport={hasPermission(currentRole, 'reportes.export')} currentUserId={currentUser.id_usuario} refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       default:
@@ -250,6 +264,14 @@ function App() {
       document.removeEventListener('visibilitychange', triggerRefresh);
     };
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || tabs.length === 0) return;
+
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [activeTab, currentUser, tabs]);
 
   if (authLoading) {
     return (
@@ -326,14 +348,16 @@ function App() {
                 content={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
                 size="sm"
                 placement="right"
-                offsetValue={12}
+                offsetValue={10}
                 renderTrigger={({ ref, triggerProps }) => (
                   <button
                     type="button"
-                    ref={ref}
+                    ref={ref as React.Ref<HTMLButtonElement>}
                     className="sidebar-toggle"
                     onClick={handleToggleSidebar}
                     aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+                    aria-controls="app-sidebar"
+                    aria-expanded={!sidebarCollapsed}
                     {...triggerProps}
                   >
                     <AppIcon icon={sidebarCollapsed ? ChevronRight : ChevronLeft} size={18} />
@@ -357,7 +381,7 @@ function App() {
                 <div className="sidebar-user-copy">
                   <strong>{currentUser.nombre_completo}</strong>
                   <span>@{currentUser.username}</span>
-                  <small>{currentUser.rol}</small>
+                  <small>{getRoleLabel(currentUser.rol)}</small>
                 </div>
               </div>
               <button className="btn-secondary sidebar-logout" onClick={handleLogout}>
@@ -393,7 +417,7 @@ function App() {
                     <span>Menú</span>
                   </span>
                 </button>
-                <span className="status-chip status-chip-total">Rol: {currentUser.rol}</span>
+                <span className="status-chip status-chip-total">Rol: {getRoleLabel(currentUser.rol)}</span>
               </div>
             </header>
 

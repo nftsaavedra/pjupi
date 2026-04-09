@@ -24,10 +24,11 @@ const DashboardChartsFallback = () => (
 );
 
 interface DashboardTabProps {
+  currentUserId: string;
   refreshTrigger?: number;
 }
 
-export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }) => {
+export const DashboardTab: React.FC<DashboardTabProps> = ({ currentUserId, refreshTrigger = 0 }) => {
   const {
     data: dashboardData,
     loading,
@@ -40,8 +41,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
   }>(
     async () => {
       const [kpisRes, estadisticasRes] = await Promise.all([
-        getKpisDashboard(),
-        getEstadisticasProyectosXDocente(),
+        getKpisDashboard(currentUserId),
+        getEstadisticasProyectosXDocente(currentUserId),
       ]);
 
       return { kpis: kpisRes, estadisticas: estadisticasRes };

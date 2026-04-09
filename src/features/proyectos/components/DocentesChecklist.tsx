@@ -1,12 +1,13 @@
 import React, { useDeferredValue, useId, useState } from 'react';
 import { X } from 'lucide-react';
-import { type Docente } from '../../docentes/api';
+import { type DocenteDetalle } from '../../docentes/api';
 import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { SkeletonChecklist } from '../../../shared/ui/Skeleton';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../../shared/utils/renacyt';
 
 interface DocentesChecklistProps {
-  docentes: Docente[];
+  docentes: DocenteDetalle[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   loading?: boolean;
@@ -52,8 +53,10 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
 
         const nombre = normalizeText(docente.nombres_apellidos);
         const dni = normalizeText(docente.dni);
+        const grado = normalizeText(docente.grado);
+        const nivelRenacyt = normalizeRenacytNivelSearch(docente.renacyt_nivel);
 
-        return nombre.includes(deferredQuery) || dni.includes(deferredQuery);
+        return nombre.includes(deferredQuery) || dni.includes(deferredQuery) || grado.includes(deferredQuery) || nivelRenacyt.includes(deferredQuery);
       });
   const docentesVisibles = coincidencias.slice(0, 8);
   const hayMasResultados = coincidencias.length > docentesVisibles.length;
@@ -86,7 +89,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
             className="form-input docentes-selector-search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar docente por nombre o DNI"
+            placeholder="Buscar docente por nombre, DNI, grado o nivel RENACYT"
             aria-describedby={helperId}
             aria-controls={resultsId}
           />
@@ -102,7 +105,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
         </div>
 
         <div id={helperId} className="visually-hidden">
-          Busque docentes por nombre o DNI, use los botones para agregarlos o quitarlos de la selección.
+          Busque docentes por nombre, DNI, grado o nivel RENACYT, y use los botones para agregarlos o quitarlos de la selección.
         </div>
 
         <div className="docentes-selected-list" aria-live="polite">
@@ -115,7 +118,10 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
                 onClick={() => handleToggle(docente.id_docente)}
                 title="Quitar de la selección"
               >
-                <span>{docente.nombres_apellidos}</span>
+                <span className="docente-chip-content">
+                  <span className="docente-chip-name">{docente.nombres_apellidos}</span>
+                  <span className="docente-chip-meta">{docente.grado || 'Sin grado'} · {formatRenacytNivel(docente.renacyt_nivel) ? `RENACYT ${formatRenacytNivel(docente.renacyt_nivel)}` : 'Sin nivel RENACYT'}</span>
+                </span>
                 <span className="docente-chip-remove">
                   <AppIcon icon={X} size={14} />
                 </span>
@@ -155,6 +161,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
                     <div className="docente-option-main">
                       <span className="docente-option-name">{docente.nombres_apellidos}</span>
                       <span className="docente-option-dni">DNI: {docente.dni}</span>
+                      <span className="docente-option-meta">{docente.grado || 'Sin grado'} · {formatRenacytNivel(docente.renacyt_nivel) ? `RENACYT ${formatRenacytNivel(docente.renacyt_nivel)}` : 'Sin nivel RENACYT'}</span>
                     </div>
                     <span className={`badge ${seleccionado ? 'badge-success' : 'badge-info'}`}>
                       {seleccionado ? 'Seleccionado' : 'Agregar'}

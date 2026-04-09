@@ -8,9 +8,10 @@ use crate::storage;
 #[tauri::command]
 pub async fn crear_usuario(
     state: State<'_, AppState>,
+    actor_user_id: String,
     request: CreateUsuarioRequest,
 ) -> Result<Usuario, AppError> {
-    storage::crear_usuario(&state, request).await
+    storage::crear_usuario(&state, &actor_user_id, request).await
 }
 
 #[tauri::command]
@@ -39,31 +40,35 @@ pub async fn login_usuario(
 #[tauri::command]
 pub async fn get_all_usuarios(
     state: State<'_, AppState>,
+    actor_user_id: String,
 ) -> Result<Vec<Usuario>, AppError> {
-    storage::get_all_usuarios(&state).await
+    storage::get_all_usuarios(&state, &actor_user_id).await
 }
 
 #[tauri::command]
 pub async fn actualizar_usuario(
     state: State<'_, AppState>,
+    actor_user_id: String,
     id_usuario: String,
     request: UpdateUsuarioRequest,
 ) -> Result<Usuario, AppError> {
-    storage::actualizar_usuario(&state, &id_usuario, request).await
+    storage::actualizar_usuario(&state, &actor_user_id, &id_usuario, request).await
 }
 
 #[tauri::command]
 pub async fn desactivar_usuario(
     state: State<'_, AppState>,
+    actor_user_id: String,
     id_usuario: String,
 ) -> Result<Usuario, AppError> {
-    storage::desactivar_usuario(&state, &id_usuario).await
+    storage::desactivar_usuario(&state, &actor_user_id, &id_usuario).await
 }
 
 #[tauri::command]
 pub async fn reactivar_usuario(
     state: State<'_, AppState>,
+    actor_user_id: String,
     id_usuario: String,
 ) -> Result<Usuario, AppError> {
-    storage::reactivar_usuario(&state, &id_usuario).await
+    storage::reactivar_usuario(&state, &actor_user_id, &id_usuario).await
 }

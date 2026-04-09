@@ -3,9 +3,12 @@ import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, Refres
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { DocenteDetalle, RenacytFormacionAcademicaResumen } from '../api';
 import { AppIcon } from '../../../shared/ui/AppIcon';
+import { InlineIconButton } from '../../../shared/ui/InlineIconButton';
 import { toast } from '../../../services/toast';
+import { formatRenacytNivel } from '../../../shared/utils/renacyt';
 
 interface DocenteDetailModalProps {
+  canRefreshRenacyt: boolean;
   docente: DocenteDetalle;
   onClose: () => void;
   onRefreshRenacytFormaciones: (id: string) => void;
@@ -15,6 +18,7 @@ interface DocenteDetailModalProps {
 type ExternalBrand = 'renacyt' | 'orcid' | 'scopus';
 
 export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
+  canRefreshRenacyt,
   docente,
   onClose,
   onRefreshRenacytFormaciones,
@@ -53,14 +57,30 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
     : null;
   const formacionesAcademicas = parseFormacionesAcademicas(docente.renacyt_formaciones_academicas_json);
 
-  const renderBrandLabel = (label: string, brand?: ExternalBrand) => (
+  const renderBrandLabel = (
+    label: string,
+    brand?: ExternalBrand,
+    action?: {
+      tooltip: string;
+      onClick: () => void;
+    },
+  ) => (
     <span className="renacyt-detail-label-row">
-      {brand && (
-        <span className={`brand-mark brand-mark-${brand}`} aria-hidden="true">
-          {brand === 'renacyt' ? 'R' : brand === 'orcid' ? 'O' : 'S'}
-        </span>
+      <span className="renacyt-detail-label-main">
+        {brand && (
+          <span className={`brand-mark brand-mark-${brand}`} aria-hidden="true">
+            {brand === 'renacyt' ? 'R' : brand === 'orcid' ? 'O' : 'S'}
+          </span>
+        )}
+        <span className="renacyt-detail-label">{label}</span>
+      </span>
+      {action && (
+        <InlineIconButton
+          icon={ExternalLink}
+          label={action.tooltip}
+          onClick={action.onClick}
+        />
       )}
-      <span className="renacyt-detail-label">{label}</span>
     </span>
   );
 
@@ -85,21 +105,12 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
     brand?: ExternalBrand,
   ) => (
     <div className="renacyt-detail-item renacyt-detail-item-linked">
-      {renderBrandLabel(label, brand)}
+      {renderBrandLabel(label, brand, url ? {
+        tooltip: actionLabel,
+        onClick: () => void handleOpenExternalUrl(url, errorMessage),
+      } : undefined)}
       <div className="renacyt-detail-item-content">
         <strong>{value ?? 'No disponible'}</strong>
-        {url && (
-          <button
-            type="button"
-            className="renacyt-inline-link"
-            onClick={() => void handleOpenExternalUrl(url, errorMessage)}
-          >
-            <span className="button-with-icon">
-              <AppIcon icon={ExternalLink} size={14} />
-              <span>{actionLabel}</span>
-            </span>
-          </button>
-        )}
       </div>
     </div>
   );
@@ -177,7 +188,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                   )}
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Nivel</span>
-                    <strong>{docente.renacyt_nivel ?? 'No disponible'}</strong>
+                    <strong>{formatRenacytNivel(docente.renacyt_nivel) ?? 'No disponible'}</strong>
                   </div>
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Grupo</span>
@@ -221,27 +232,29 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                   )}
                 </div>
 
-                <div className="renacyt-detail-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => onRefreshRenacytFormaciones(docente.id_docente)}
-                    disabled={isRefreshingRenacyt}
-                  >
-                    <span className="button-with-icon">
-                      <AppIcon icon={RefreshCw} size={16} />
-                      <span>
-                        {isRefreshingRenacyt
-                          ? 'Actualizando formación...'
-                          : formacionesAcademicas.length > 0
-                            ? 'Actualizar formación académica'
-                            : 'Reintentar formación académica'}
+                {canRefreshRenacyt && (
+                  <div className="renacyt-detail-actions">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => onRefreshRenacytFormaciones(docente.id_docente)}
+                      disabled={isRefreshingRenacyt}
+                    >
+                      <span className="button-with-icon">
+                        <AppIcon icon={RefreshCw} size={16} />
+                        <span>
+                          {isRefreshingRenacyt
+                            ? 'Actualizando formación...'
+                            : formacionesAcademicas.length > 0
+                              ? 'Actualizar formación académica'
+                              : 'Reintentar formación académica'}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                </div>
+                    </button>
+                  </div>
+                )}
 
-                {formacionesAcademicas.length === 0 && (
+                {canRefreshRenacyt && formacionesAcademicas.length === 0 && (
                   <div className="inline-feedback inline-feedback-info renacyt-formaciones-feedback">
                     <span>No hay formación académica RENACYT sincronizada para este docente. Puede reintentar la consulta.</span>
                   </div>

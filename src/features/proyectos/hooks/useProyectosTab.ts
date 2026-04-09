@@ -13,7 +13,7 @@ import {
   type ProyectoDetalle,
 } from '../api';
 
-export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => void) => {
+export const useProyectosTab = (actorUserId: string, refreshTrigger = 0, onProyectoCreated: () => void) => {
   const [titulo, setTitulo] = useState('');
   const [docentesSeleccionados, setDocentesSeleccionados] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -27,7 +27,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     docentes,
     loading: loadingDocentes,
     refreshing: refreshingDocentes,
-  } = useFetchDocentes(refreshTrigger);
+  } = useFetchDocentes(actorUserId, refreshTrigger);
 
   const {
     data: proyectos,
@@ -36,7 +36,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     error: proyectosError,
     recargar: cargarProyectos,
   } = useStableFetchData<ProyectoDetalle[]>(
-    getAllProyectosDetalle,
+    () => getAllProyectosDetalle(actorUserId),
     refreshTrigger,
     'Error cargando proyectos',
     [],
@@ -79,7 +79,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
 
     setIsLoading(true);
     try {
-      await crearProyectoConParticipantes(titulo, docentesSeleccionados);
+      await crearProyectoConParticipantes(actorUserId, titulo, docentesSeleccionados);
       toast.success('Proyecto creado exitosamente');
       resetForm();
       setIsFormOpen(false);
@@ -95,7 +95,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   const handleDesvincularDocentes = async () => {
     if (!proyectoToDetach) return;
     try {
-      await eliminarRelacionesProyecto(proyectoToDetach.id_proyecto);
+      await eliminarRelacionesProyecto(actorUserId, proyectoToDetach.id_proyecto);
       toast.success('Se eliminaron las relaciones docente-proyecto');
       setProyectoToDetach(null);
       await cargarProyectos();
@@ -108,7 +108,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   const handleEliminarProyecto = async () => {
     if (!proyectoToDelete) return;
     try {
-      const resultado = await eliminarProyecto(proyectoToDelete.id_proyecto);
+      const resultado = await eliminarProyecto(actorUserId, proyectoToDelete.id_proyecto);
       toast.info(resultado.mensaje);
       setProyectoToDelete(null);
       await cargarProyectos();
@@ -120,7 +120,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
 
   const handleReactivarProyecto = async (id: string) => {
     try {
-      await reactivarProyecto(id);
+      await reactivarProyecto(actorUserId, id);
       toast.success('Proyecto reactivado correctamente');
       await cargarProyectos();
       onProyectoCreated();

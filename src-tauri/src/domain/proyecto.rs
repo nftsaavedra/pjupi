@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProyectoParticipanteResumen {
+    pub nombre: String,
+    pub grado: String,
+    pub renacyt_nivel: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Proyecto {
     pub id_proyecto: String,
@@ -26,6 +33,7 @@ pub struct ProyectoDetalle {
     pub titulo_proyecto: String,
     pub cantidad_docentes: i64,
     pub docentes: Option<String>,
+    pub participantes_json: Option<String>,
     pub activo: i64,
 }
 
@@ -41,6 +49,7 @@ pub struct ExportDataConProjectos {
     pub docente: String,
     pub dni: String,
     pub grado: String,
+    pub renacyt_nivel: String,
     pub cantidad_proyectos: i64,
     pub proyectos: Option<String>, // comma-separated project titles
 }

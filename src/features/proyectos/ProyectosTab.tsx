@@ -8,11 +8,13 @@ import { ProyectosTableGrid } from './components/ProyectosTableGrid';
 import { ProyectosToolbar } from './components/ProyectosToolbar';
 
 interface ProyectosTabProps {
+  canManage: boolean;
+  currentUserId: string;
   onProyectoCreated: () => void;
   refreshTrigger?: number;
 }
 
-export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, refreshTrigger = 0 }) => {
+export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, currentUserId, onProyectoCreated, refreshTrigger = 0 }) => {
   const {
     busqueda,
     cargarProyectos,
@@ -44,21 +46,23 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, r
     titulo,
     totalActivos,
     totalInactivos,
-  } = useProyectosTab(refreshTrigger, onProyectoCreated);
+  } = useProyectosTab(currentUserId, refreshTrigger, onProyectoCreated);
 
   return (
     <div className="tab-panel module-shell proyectos-module">
       <div className="table-container">
         <div className="section-header">
           <h2>Proyectos Registrados</h2>
-          <div className="section-header-actions">
-            <button type="button" className="btn-primary" onClick={handleOpenCreate}>
-              <span className="button-with-icon">
-                <AppIcon icon={Plus} size={18} />
-                <span>Nuevo proyecto</span>
-              </span>
-            </button>
-          </div>
+          {canManage && (
+            <div className="section-header-actions">
+              <button type="button" className="btn-primary" onClick={handleOpenCreate}>
+                <span className="button-with-icon">
+                  <AppIcon icon={Plus} size={18} />
+                  <span>Nuevo proyecto</span>
+                </span>
+              </button>
+            </div>
+          )}
         </div>
         {proyectosError && (
           <div className="inline-feedback inline-feedback-warning">
@@ -66,6 +70,11 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, r
             <button type="button" className="btn-secondary" onClick={() => void cargarProyectos()}>
               Reintentar
             </button>
+          </div>
+        )}
+        {!canManage && (
+          <div className="inline-feedback inline-feedback-info">
+            <span>Modo consulta: puede revisar proyectos y participantes, pero no crear, desvincular, desactivar ni reactivar.</span>
           </div>
         )}
         <ProyectosToolbar
@@ -84,42 +93,49 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ onProyectoCreated, r
           onDeactivate={setProyectoToDelete}
           onDetach={setProyectoToDetach}
           onReactivate={handleReactivarProyecto}
+          canManage={canManage}
         />
       </div>
 
-      <ProyectoCreateModal
-        docentes={docentes}
-        docentesSeleccionados={docentesSeleccionados}
-        isLoading={isLoading}
-        loadingDocentes={loadingDocentes}
-        open={isFormOpen}
-        refreshingDocentes={refreshingDocentes}
-        titulo={titulo}
-        onChangeDocentes={setDocentesSeleccionados}
-        onClose={handleCloseForm}
-        onSubmit={handleSubmit}
-        onTituloChange={setTitulo}
-      />
+      {canManage && (
+        <ProyectoCreateModal
+          docentes={docentes}
+          docentesSeleccionados={docentesSeleccionados}
+          isLoading={isLoading}
+          loadingDocentes={loadingDocentes}
+          open={isFormOpen}
+          refreshingDocentes={refreshingDocentes}
+          titulo={titulo}
+          onChangeDocentes={setDocentesSeleccionados}
+          onClose={handleCloseForm}
+          onSubmit={handleSubmit}
+          onTituloChange={setTitulo}
+        />
+      )}
 
-      <ConfirmDialog
-        open={Boolean(proyectoToDetach)}
-        title="Desvincular docentes del proyecto"
-        message={`Se eliminarán todas las relaciones docentes del proyecto "${proyectoToDetach?.titulo_proyecto ?? ''}".`}
-        confirmText="Sí, desvincular"
-        cancelText="Cancelar"
-        onConfirm={handleDesvincularDocentes}
-        onCancel={() => setProyectoToDetach(null)}
-      />
+      {canManage && (
+        <ConfirmDialog
+          open={Boolean(proyectoToDetach)}
+          title="Desvincular docentes del proyecto"
+          message={`Se eliminarán todas las relaciones docentes del proyecto "${proyectoToDetach?.titulo_proyecto ?? ''}".`}
+          confirmText="Sí, desvincular"
+          cancelText="Cancelar"
+          onConfirm={handleDesvincularDocentes}
+          onCancel={() => setProyectoToDetach(null)}
+        />
+      )}
 
-      <ConfirmDialog
-        open={Boolean(proyectoToDelete)}
-        title="Desactivar proyecto"
-        message={`¿Desea desactivar el proyecto "${proyectoToDelete?.titulo_proyecto ?? ''}"? Solo se desactivará si no tiene docentes relacionados.`}
-        confirmText="Sí, desactivar"
-        cancelText="Cancelar"
-        onConfirm={handleEliminarProyecto}
-        onCancel={() => setProyectoToDelete(null)}
-      />
+      {canManage && (
+        <ConfirmDialog
+          open={Boolean(proyectoToDelete)}
+          title="Desactivar proyecto"
+          message={`¿Desea desactivar el proyecto "${proyectoToDelete?.titulo_proyecto ?? ''}"? Solo se desactivará si no tiene docentes relacionados.`}
+          confirmText="Sí, desactivar"
+          cancelText="Cancelar"
+          onConfirm={handleEliminarProyecto}
+          onCancel={() => setProyectoToDelete(null)}
+        />
+      )}
     </div>
   );
 };

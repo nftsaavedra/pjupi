@@ -12,16 +12,19 @@ import { useStableFetchData } from '../../shared/hooks/useStableFetch';
 import { useRefreshToast } from '../../shared/hooks/useRefreshToast';
 import { AppIcon } from '../../shared/ui/AppIcon';
 import { SkeletonTable } from '../../shared/ui/Skeleton';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../shared/utils/renacyt';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
 
 const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 
 interface ReportesTabProps {
+  canExport?: boolean;
+  currentUserId: string;
   refreshTrigger?: number;
 }
 
-export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) => {
+export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, currentUserId, refreshTrigger = 0 }) => {
   const [tipo, setTipo] = useState<TipoReporte>('agrupado_docente');
   const [query, setQuery] = useState('');
   const {
@@ -31,7 +34,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
     error,
     recargar: cargarPreview,
   } = useStableFetchData<DatosExportDocenteAgrupado[]>(
-    getDataExportacionAgrupada,
+    () => getDataExportacionAgrupada(currentUserId),
     refreshTrigger,
     'Error cargando vista previa de reportes',
     [],
@@ -50,12 +53,17 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
       let rows: Array<ExportData | DatosExportDocenteAgrupado>;
       let sheetName: string;
       if (tipo === 'agrupado_docente') {
-        rows = await getDataExportacionAgrupada();
+        rows = await getDataExportacionAgrupada(currentUserId);
         sheetName = 'Docentes_Proyectos';
       } else {
-        rows = await getDataExportacionPlana();
+        rows = await getDataExportacionPlana(currentUserId);
         sheetName = 'Detalle_Plano';
       }
+
+      rows = rows.map((row) => ({
+        ...row,
+        renacyt_nivel: formatRenacytNivel(row.renacyt_nivel) ?? row.renacyt_nivel,
+      }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
@@ -71,7 +79,8 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
   const filtrados = preview.filter((d) =>
     normalizeText(d.docente).includes(normalizedQuery) ||
     normalizeText(d.dni).includes(normalizedQuery) ||
-    normalizeText(d.grado).includes(normalizedQuery)
+    normalizeText(d.grado).includes(normalizedQuery) ||
+    normalizeRenacytNivelSearch(d.renacyt_nivel).includes(normalizedQuery)
   );
 
   return (
@@ -93,12 +102,14 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
               </select>
             </div>
 
-            <button className="btn-primary" onClick={exportar}>
-              <span className="button-with-icon">
-                <AppIcon icon={Download} size={18} />
-                <span>Exportar Excel</span>
-              </span>
-            </button>
+            {canExport && (
+              <button className="btn-primary" onClick={exportar}>
+                <span className="button-with-icon">
+                  <AppIcon icon={Download} size={18} />
+                  <span>Exportar Excel</span>
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -110,7 +121,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
           </p>
           <div className="module-aside-meta">
             <span className="badge badge-info">Consulta actual: {query ? 'Filtrada' : 'Completa'}</span>
-            <span className="badge badge-success">Actualización activa</span>
+            <span className={`badge ${canExport ? 'badge-success' : 'badge-warning'}`}>{canExport ? 'Exportación habilitada' : 'Solo vista previa'}</span>
           </div>
         </aside>
       </div>
@@ -127,18 +138,23 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
             </button>
           </div>
         )}
+        {!canExport && (
+          <div className="inline-feedback inline-feedback-info">
+            <span>Modo consulta: puede revisar la vista previa de reportes, pero la exportación a Excel está deshabilitada para su rol.</span>
+          </div>
+        )}
         <div className="form-group" style={{ marginBottom: '1rem' }}>
           <input
             className="form-input"
-            placeholder="Buscar por docente, DNI o grado"
+            placeholder="Buscar por docente, DNI, grado o nivel RENACYT"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Buscar en la vista previa por docente, DNI o grado"
+            aria-label="Buscar en la vista previa por docente, DNI, grado o nivel RENACYT"
           />
         </div>
 
         {loading ? (
-          <SkeletonTable columns={5} rows={6} />
+          <SkeletonTable columns={6} rows={6} />
         ) : filtrados.length === 0 ? (
           <div className="empty-state">No hay datos para mostrar</div>
         ) : (
@@ -148,6 +164,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
                 <th>Docente</th>
                 <th>DNI</th>
                 <th>Grado</th>
+                <th>Nivel RENACYT</th>
                 <th>Cantidad Proyectos</th>
                 <th>Proyectos</th>
               </tr>
@@ -158,6 +175,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ refreshTrigger = 0 }) 
                   <td>{row.docente}</td>
                   <td>{row.dni}</td>
                   <td>{row.grado}</td>
+                  <td>{formatRenacytNivel(row.renacyt_nivel) ?? 'No disponible'}</td>
                   <td>{row.cantidad_proyectos}</td>
                   <td>{row.proyectos || '-'}</td>
                 </tr>

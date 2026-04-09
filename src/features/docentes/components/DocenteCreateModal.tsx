@@ -6,8 +6,10 @@ import { FormInput } from '../../../shared/forms/FormInput';
 import { FormModal } from '../../../shared/forms/FormModal';
 import { FormSelect } from '../../../shared/forms/FormSelect';
 import { AppIcon } from '../../../shared/ui/AppIcon';
+import { formatRenacytNivel } from '../../../shared/utils/renacyt';
 
 interface DocenteCreateModalProps {
+  currentUserId: string;
   open: boolean;
   onClose: () => void;
   onDocenteCreated: () => void;
@@ -40,6 +42,7 @@ const countFormacionesAcademicas = (value?: string | null) => {
 };
 
 export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
+  currentUserId,
   open,
   onClose,
   onDocenteCreated,
@@ -75,7 +78,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
     setApellidoPaterno,
     setIdGrado,
     setNombres,
-  } = useDocenteCreateForm(refreshTrigger, onDocenteCreated, onClose);
+  } = useDocenteCreateForm(currentUserId, refreshTrigger, onDocenteCreated, onClose);
 
   return (
     <FormModal
@@ -189,7 +192,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
                   <span className="badge badge-info">{renacytData.codigo_registro}</span>
                 </div>
                 <div className="renacyt-summary-grid">
-                  <span><strong>Nivel:</strong> {renacytData.nivel ?? 'No disponible'}</span>
+                  <span><strong>Nivel:</strong> {formatRenacytNivel(renacytData.nivel) ?? 'No disponible'}</span>
                   <span><strong>Condición:</strong> {renacytData.condicion ?? 'No disponible'}</span>
                   <span><strong>ORCID:</strong> {renacytData.orcid ?? 'No disponible'}</span>
                   <span><strong>Scopus:</strong> {renacytData.scopus_author_id ?? 'No disponible'}</span>

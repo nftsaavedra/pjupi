@@ -1,13 +1,13 @@
 import React from 'react';
 import { FolderOpen, Plus } from 'lucide-react';
-import type { Docente } from '../../docentes/api';
+import type { DocenteDetalle } from '../../docentes/api';
 import { FormInput } from '../../../shared/forms/FormInput';
 import { FormModal } from '../../../shared/forms/FormModal';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { DocentesChecklist } from './DocentesChecklist';
 
 interface ProyectoCreateModalProps {
-  docentes: Docente[];
+  docentes: DocenteDetalle[];
   docentesSeleccionados: string[];
   isLoading: boolean;
   loadingDocentes: boolean;

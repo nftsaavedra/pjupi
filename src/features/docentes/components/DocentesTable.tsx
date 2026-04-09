@@ -8,11 +8,15 @@ import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 
 interface DocentesTableProps {
+  canManage: boolean;
+  currentUserId: string;
   onCreateClick: () => void;
   refreshTrigger?: number;
 }
 
 export const DocentesTable: React.FC<DocentesTableProps> = ({
+  canManage,
+  currentUserId,
   onCreateClick,
   refreshTrigger = 0,
 }) => {
@@ -24,19 +28,25 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
     docentesFiltrados,
     error,
     estadoFiltro,
+    gradoFiltro,
+    gradosDisponibles,
     handleEliminarDocente,
     handleRefreshRenacytFormaciones,
     handleReactivarDocente,
     loading,
+    nivelesRenacytDisponibles,
+    renacytNivelFiltro,
     refreshingRenacytDocenteId,
     selectedDocente,
     setBusqueda,
     setDocenteToDelete,
     setEstadoFiltro,
+    setGradoFiltro,
+    setRenacytNivelFiltro,
     setSelectedDocente,
     totalActivos,
     totalInactivos,
-  } = useDocentesTable(refreshTrigger);
+  } = useDocentesTable(currentUserId, refreshTrigger);
 
   return (
     <div className="tab-panel docentes-list-panel">
@@ -46,14 +56,16 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
             <AppIcon icon={GraduationCap} size={20} />
             <span>Docentes Registrados</span>
           </h2>
-          <div className="section-header-actions">
-            <button type="button" className="btn-primary" onClick={onCreateClick}>
-              <span className="button-with-icon">
-                <AppIcon icon={Plus} size={18} />
-                <span>Nuevo docente</span>
-              </span>
-            </button>
-          </div>
+          {canManage && (
+            <div className="section-header-actions">
+              <button type="button" className="btn-primary" onClick={onCreateClick}>
+                <span className="button-with-icon">
+                  <AppIcon icon={Plus} size={18} />
+                  <span>Nuevo docente</span>
+                </span>
+              </button>
+            </div>
+          )}
         </div>
         {error && (
           <div className="inline-feedback inline-feedback-warning">
@@ -63,15 +75,26 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
             </button>
           </div>
         )}
+        {!canManage && (
+          <div className="inline-feedback inline-feedback-info">
+            <span>Modo consulta: puede revisar docentes y su detalle, pero no crear, desactivar, reactivar ni refrescar información RENACYT.</span>
+          </div>
+        )}
         <DocentesTableToolbar
           busqueda={busqueda}
           estadoFiltro={estadoFiltro}
+          gradoFiltro={gradoFiltro}
+          gradosDisponibles={gradosDisponibles}
+          nivelesRenacytDisponibles={nivelesRenacytDisponibles}
+          renacytNivelFiltro={renacytNivelFiltro}
           totalVisibles={docentesFiltrados.length}
           totalTodos={docentes.length}
           totalActivos={totalActivos}
           totalInactivos={totalInactivos}
           onBusquedaChange={setBusqueda}
           onEstadoFiltroChange={setEstadoFiltro}
+          onGradoFiltroChange={setGradoFiltro}
+          onRenacytNivelFiltroChange={setRenacytNivelFiltro}
         />
         <DocentesTableGrid
           docentes={docentesFiltrados}
@@ -81,6 +104,7 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           onReactivate={handleReactivarDocente}
           onDeactivate={setDocenteToDelete}
           refreshingRenacytDocenteId={refreshingRenacytDocenteId}
+          canManage={canManage}
         />
       </div>
 
@@ -90,18 +114,21 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           onClose={() => setSelectedDocente(null)}
           onRefreshRenacytFormaciones={handleRefreshRenacytFormaciones}
           isRefreshingRenacyt={refreshingRenacytDocenteId === selectedDocente.id_docente}
+          canRefreshRenacyt={canManage}
         />
       )}
 
-      <ConfirmDialog
-        open={Boolean(docenteToDelete)}
-        title="Desactivar docente"
-        message={`¿Desea desactivar al docente "${docenteToDelete?.nombres_apellidos ?? ''}"? Su historial y relaciones se conservarán para mantener la trazabilidad.`}
-        confirmText="Sí, desactivar"
-        cancelText="Cancelar"
-        onConfirm={handleEliminarDocente}
-        onCancel={() => setDocenteToDelete(null)}
-      />
+      {canManage && (
+        <ConfirmDialog
+          open={Boolean(docenteToDelete)}
+          title="Desactivar docente"
+          message={`¿Desea desactivar al docente "${docenteToDelete?.nombres_apellidos ?? ''}"? Su historial y relaciones se conservarán para mantener la trazabilidad.`}
+          confirmText="Sí, desactivar"
+          cancelText="Cancelar"
+          onConfirm={handleEliminarDocente}
+          onCancel={() => setDocenteToDelete(null)}
+        />
+      )}
     </div>
   );
 };

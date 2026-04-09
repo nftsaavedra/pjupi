@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { GraduationCap, Users } from 'lucide-react';
+import type { Usuario } from '../auth/api';
 import { AppIcon } from '../../shared/ui/AppIcon';
 import { SkeletonBlock, SkeletonTable } from '../../shared/ui/Skeleton';
 
@@ -16,6 +17,7 @@ const UsuariosTab = lazy(async () => {
 type ConfigSection = 'grados' | 'usuarios';
 
 interface ConfiguracionTabProps {
+  currentUser: Usuario | null;
   refreshTrigger?: number;
   isAdmin: boolean;
   onDataModified: () => void;
@@ -31,6 +33,7 @@ const ConfigSectionFallback = () => (
 );
 
 export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
+  currentUser,
   refreshTrigger = 0,
   isAdmin,
   onDataModified,
@@ -100,11 +103,11 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
           >
             <Suspense fallback={<ConfigSectionFallback />}>
               {activeSection === 'grados' && (
-                <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} />
+                currentUser ? <GradosTab currentUserId={currentUser.id_usuario} onGradoModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
               )}
 
               {activeSection === 'usuarios' && isAdmin && (
-                <UsuariosTab onUsuarioModified={onDataModified} refreshTrigger={refreshTrigger} />
+                currentUser ? <UsuariosTab currentUser={currentUser} onUsuarioModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
               )}
             </Suspense>
           </div>

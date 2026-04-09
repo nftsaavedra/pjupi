@@ -1,9 +1,9 @@
 import { getAllUsuarios, type Usuario } from '../../api';
 import { useStableFetch } from '../../../../shared/hooks/useStableFetch';
 
-export const useFetchUsuarios = (refreshTrigger = 0) => {
+export const useFetchUsuarios = (actorUserId: string, refreshTrigger = 0) => {
   const { data, loading, refreshing, error, recargar } = useStableFetch<Usuario[]>(
-    getAllUsuarios,
+    () => getAllUsuarios(actorUserId),
     refreshTrigger,
     'Error cargando usuarios',
     [],

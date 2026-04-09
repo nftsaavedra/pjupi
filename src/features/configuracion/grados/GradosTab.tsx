@@ -12,11 +12,12 @@ import { TableActionButton } from '../../../shared/ui/TableActionButton';
 import { actualizarGrado, crearGrado, eliminarGrado, getTauriErrorMessage, reactivarGrado, type GradoAcademico } from '../api';
 
 interface GradosTabProps {
+  currentUserId: string;
   onGradoModified: () => void;
   refreshTrigger?: number;
 }
 
-export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTrigger = 0 }) => {
+export const GradosTab: React.FC<GradosTabProps> = ({ currentUserId, onGradoModified, refreshTrigger = 0 }) => {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [editingGrado, setEditingGrado] = useState<GradoAcademico | null>(null);
@@ -26,7 +27,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [busqueda, setBusqueda] = useState('');
 
-  const { grados, loading, refreshing, error, recargar } = useFetchGrados(refreshTrigger);
+  const { grados, loading, refreshing, error, recargar } = useFetchGrados(currentUserId, refreshTrigger);
 
   useRefreshToast({
     refreshing,
@@ -45,10 +46,10 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
     setIsLoading(true);
     try {
       if (editingGrado) {
-        await actualizarGrado(editingGrado.id_grado, nombre, descripcion || undefined);
+        await actualizarGrado(currentUserId, editingGrado.id_grado, nombre, descripcion || undefined);
         toast.success('Grado actualizado');
       } else {
-        await crearGrado(nombre, descripcion || undefined);
+        await crearGrado(currentUserId, nombre, descripcion || undefined);
         toast.success('Grado creado');
       }
       setNombre('');
@@ -91,7 +92,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
   const handleEliminar = async () => {
     if (!gradoToDelete) return;
     try {
-      const resultado = await eliminarGrado(gradoToDelete.id_grado);
+      const resultado = await eliminarGrado(currentUserId, gradoToDelete.id_grado);
       if (resultado.accion === 'desactivado') {
         toast.info(resultado.mensaje);
       } else {
@@ -107,7 +108,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
 
   const handleReactivar = async (id: string) => {
     try {
-      await reactivarGrado(id);
+      await reactivarGrado(currentUserId, id);
       toast.success('Grado reactivado correctamente');
       await recargar();
       onGradoModified();

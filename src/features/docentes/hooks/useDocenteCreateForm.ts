@@ -6,7 +6,7 @@ import { buscarDocentePorDni, consultarDniReniec, consultarRenacytDocente, crear
 type DniValidationStatus = 'idle' | 'checking' | 'duplicate' | 'validated' | 'error';
 type RenacytValidationStatus = 'idle' | 'checking' | 'validated' | 'error';
 
-export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () => void, onClose: () => void) => {
+export const useDocenteCreateForm = (actorUserId: string, refreshTrigger = 0, onDocenteCreated: () => void, onClose: () => void) => {
   const [dni, setDni] = useState('');
   const [idGrado, setIdGrado] = useState('');
   const [nombres, setNombres] = useState('');
@@ -22,7 +22,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
   const [validatedRenacytQuery, setValidatedRenacytQuery] = useState('');
   const [renacytData, setRenacytData] = useState<RenacytLookupResult | null>(null);
 
-  const { grados } = useFetchGrados(refreshTrigger);
+  const { grados } = useFetchGrados(actorUserId, refreshTrigger);
 
   const formatearTextoReniec = (value: string) => value
     .trim()
@@ -105,7 +105,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
     setDniValidationStatus('checking');
     setDniValidationMessage('Validando DNI contra la base principal y consultando RENIEC...');
     try {
-      const docenteExistente = await buscarDocentePorDni(dniLimpio);
+      const docenteExistente = await buscarDocentePorDni(actorUserId, dniLimpio);
       if (docenteExistente) {
         clearValidatedIdentity();
         resetRenacyt(true);
@@ -119,7 +119,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
         return;
       }
 
-      const data = await consultarDniReniec(dniLimpio);
+      const data = await consultarDniReniec(actorUserId, dniLimpio);
       setNombres(formatearTextoReniec(data.first_name));
       setApellidoPaterno(formatearTextoReniec(data.first_last_name));
       setApellidoMaterno(formatearTextoReniec(data.second_last_name));
@@ -151,7 +151,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
     setRenacytValidationMessage('Consultando RENACYT y verificando coincidencia con el DNI validado...');
 
     try {
-      const result = await consultarRenacytDocente(renacytQueryNormalizado);
+      const result = await consultarRenacytDocente(actorUserId, renacytQueryNormalizado);
 
       if (result.numero_documento && result.numero_documento.trim() !== dniLimpio) {
         resetRenacyt(true);
@@ -209,6 +209,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
     setIsLoading(true);
     try {
       await crearDocente(
+        actorUserId,
         dniLimpio,
         idGrado,
         nombresLimpio,

@@ -108,7 +108,14 @@ export interface ProyectoDetalle {
   titulo_proyecto: string;
   cantidad_docentes: number;
   docentes: string | null;
+  participantes_json?: string | null;
   activo: number;
+}
+
+export interface ProyectoParticipanteResumen {
+  nombre: string;
+  grado: string;
+  renacyt_nivel: string;
 }
 
 export interface EliminarProyectoResultado {
@@ -143,6 +150,7 @@ export interface KpisDashboard {
 export interface ExportData {
   proyecto: string;
   grado: string;
+  renacyt_nivel: string;
   docente: string;
   dni: string;
 }
@@ -151,6 +159,7 @@ export interface DatosExportDocenteAgrupado {
   docente: string;
   dni: string;
   grado: string;
+  renacyt_nivel: string;
   cantidad_proyectos: number;
   proyectos: string | null;
 }

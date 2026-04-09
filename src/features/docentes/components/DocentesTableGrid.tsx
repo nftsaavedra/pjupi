@@ -3,8 +3,10 @@ import { Eye, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import type { DocenteDetalle } from '../api';
 import { SkeletonTable } from '../../../shared/ui/Skeleton';
 import { TableActionButton } from '../../../shared/ui/TableActionButton';
+import { formatRenacytNivel } from '../../../shared/utils/renacyt';
 
 interface DocentesTableGridProps {
+  canManage: boolean;
   docentes: DocenteDetalle[];
   loading: boolean;
   onView: (docente: DocenteDetalle) => void;
@@ -15,6 +17,7 @@ interface DocentesTableGridProps {
 }
 
 export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
+  canManage,
   docentes,
   loading,
   onView,
@@ -35,9 +38,9 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
     <table className="table table-interactive" aria-label="Tabla de docentes registrados">
       <thead>
         <tr>
-          <th>Nombre</th>
           <th>DNI</th>
-          <th>Grado Académico</th>
+          <th>Perfil Académico</th>
+          <th>Nombre</th>
           <th>Proyectos</th>
           <th>Estado</th>
           <th>Acciones</th>
@@ -49,15 +52,23 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
             const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
             const tieneFormaciones = Boolean(docente.renacyt_formaciones_academicas_json?.trim());
             const estaActualizando = refreshingRenacytDocenteId === docente.id_docente;
+            const nivelRenacyt = formatRenacytNivel(docente.renacyt_nivel);
 
             return (
           <tr
             key={docente.id_docente}
             className={docente.cantidad_proyectos === 0 ? 'unassigned' : ''}
           >
-            <td className="font-semibold">{docente.nombres_apellidos || 'Sin nombre registrado'}</td>
             <td>{docente.dni || 'Sin DNI'}</td>
-            <td>{docente.grado || 'Sin grado'}</td>
+            <td>
+              <div className="docente-profile-cell">
+                <strong>{docente.grado || 'Sin grado'}</strong>
+                <span className={`badge ${nivelRenacyt ? 'badge-info' : 'badge-warning'}`}>
+                  {nivelRenacyt ? `RENACYT ${nivelRenacyt}` : 'Sin nivel RENACYT'}
+                </span>
+              </div>
+            </td>
+            <td className="font-semibold">{docente.nombres_apellidos || 'Sin nombre registrado'}</td>
             <td>
               <span
                 className={`badge badge-${
@@ -81,7 +92,7 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                 label="Ver detalles"
                 onClick={() => onView(docente)}
               />
-              {tieneRenacyt && (
+              {canManage && tieneRenacyt && (
                 <TableActionButton
                   className="btn-secondary"
                   icon={RefreshCw}
@@ -90,7 +101,7 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                   disabled={estaActualizando}
                 />
               )}
-              {docente.activo === 0 && (
+              {canManage && docente.activo === 0 && (
                 <TableActionButton
                   className="btn-primary"
                   icon={RotateCcw}
@@ -99,7 +110,7 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                   onClick={() => onReactivate(docente.id_docente)}
                 />
               )}
-              {docente.activo === 1 && (
+              {canManage && docente.activo === 1 && (
                 <TableActionButton
                   className="btn-delete"
                   icon={Trash2}
