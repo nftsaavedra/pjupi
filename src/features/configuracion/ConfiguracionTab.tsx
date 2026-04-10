@@ -103,7 +103,7 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
           >
             <Suspense fallback={<ConfigSectionFallback />}>
               {activeSection === 'grados' && (
-                currentUser ? <GradosTab currentUserId={currentUser.id_usuario} onGradoModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
+                currentUser ? <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
               )}
 
               {activeSection === 'usuarios' && isAdmin && (

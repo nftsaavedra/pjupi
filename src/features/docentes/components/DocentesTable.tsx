@@ -9,14 +9,12 @@ import { AppIcon } from '../../../shared/ui/AppIcon';
 
 interface DocentesTableProps {
   canManage: boolean;
-  currentUserId: string;
   onCreateClick: () => void;
   refreshTrigger?: number;
 }
 
 export const DocentesTable: React.FC<DocentesTableProps> = ({
   canManage,
-  currentUserId,
   onCreateClick,
   refreshTrigger = 0,
 }) => {
@@ -46,7 +44,7 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
     setSelectedDocente,
     totalActivos,
     totalInactivos,
-  } = useDocentesTable(currentUserId, refreshTrigger);
+  } = useDocentesTable(refreshTrigger);
 
   return (
     <div className="tab-panel docentes-list-panel">

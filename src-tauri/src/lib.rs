@@ -81,6 +81,8 @@ pub fn run() {
                 get_auth_status,
                 registrar_primer_usuario,
                 login_usuario,
+                get_current_session,
+                logout_usuario,
                 get_all_usuarios,
                 actualizar_usuario,
                 desactivar_usuario,

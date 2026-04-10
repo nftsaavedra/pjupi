@@ -1,8 +1,59 @@
+use std::collections::HashMap;
+
+use chrono::Utc;
 use mongodb::Database;
 use sqlx::SqlitePool;
+use tokio::sync::RwLock;
 
 use crate::config::{DatabaseBackend, RenacytConfig, ReniecConfig};
 use crate::error::AppError;
+
+#[derive(Clone)]
+pub struct SessionEntry {
+    pub user_id: String,
+    pub last_activity_at: i64,
+}
+
+pub struct SessionStore {
+    sessions: RwLock<HashMap<String, SessionEntry>>,
+}
+
+impl SessionStore {
+    pub fn new() -> Self {
+        Self {
+            sessions: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub async fn set_user_session(&self, window_label: &str, user_id: String) {
+        let now = Utc::now().timestamp();
+        let mut sessions = self.sessions.write().await;
+        sessions.insert(
+            window_label.to_string(),
+            SessionEntry {
+                user_id,
+                last_activity_at: now,
+            },
+        );
+    }
+
+    pub async fn get_user_session(&self, window_label: &str) -> Option<SessionEntry> {
+        let sessions = self.sessions.read().await;
+        sessions.get(window_label).cloned()
+    }
+
+    pub async fn touch_user_session(&self, window_label: &str) {
+        let mut sessions = self.sessions.write().await;
+        if let Some(session) = sessions.get_mut(window_label) {
+            session.last_activity_at = Utc::now().timestamp();
+        }
+    }
+
+    pub async fn clear_user_session(&self, window_label: &str) {
+        let mut sessions = self.sessions.write().await;
+        sessions.remove(window_label);
+    }
+}
 
 pub struct AppState {
     pub backend: DatabaseBackend,
@@ -10,6 +61,7 @@ pub struct AppState {
     pub mongo: Option<Database>,
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
+    sessions: SessionStore,
 }
 
 impl AppState {
@@ -20,7 +72,14 @@ impl AppState {
         reniec: ReniecConfig,
         renacyt: RenacytConfig,
     ) -> Self {
-        Self { backend, sqlite, mongo, reniec, renacyt }
+        Self {
+            backend,
+            sqlite,
+            mongo,
+            reniec,
+            renacyt,
+            sessions: SessionStore::new(),
+        }
     }
 
     pub fn sqlite_pool(&self) -> Result<&SqlitePool, AppError> {
@@ -41,5 +100,24 @@ impl AppState {
 
     pub fn renacyt_config(&self) -> &RenacytConfig {
         &self.renacyt
+    }
+
+    pub async fn set_current_session(&self, window_label: &str, user_id: String) {
+        self.sessions.set_user_session(window_label, user_id).await;
+    }
+
+    pub async fn get_current_session_user_id(&self, window_label: &str) -> Option<String> {
+        self.sessions
+            .get_user_session(window_label)
+            .await
+            .map(|session| session.user_id)
+    }
+
+    pub async fn touch_current_session(&self, window_label: &str) {
+        self.sessions.touch_user_session(window_label).await;
+    }
+
+    pub async fn clear_current_session(&self, window_label: &str) {
+        self.sessions.clear_user_session(window_label).await;
     }
 }

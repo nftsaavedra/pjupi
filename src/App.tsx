@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
 import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
-import { getAuthStatus, type Usuario } from './features/auth/api';
+import { getAuthStatus, getCurrentSession, logoutUsuario, type Usuario } from './features/auth/api';
 import { AuthScreen } from './features/auth/AuthScreen';
 import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
 import { ToastContainer } from './shared/feedback/ToastContainer';
@@ -134,8 +134,9 @@ function App() {
   const cargarAuthStatus = async () => {
     setAuthLoading(true);
     try {
-      const status = await getAuthStatus();
+      const [status, session] = await Promise.all([getAuthStatus(), getCurrentSession()]);
       setRequiresSetup(status.requires_setup);
+      setCurrentUser(session);
     } catch (error) {
       toast.error(String(error));
     } finally {
@@ -149,9 +150,15 @@ function App() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setActiveTab('dashboard');
+  const handleLogout = async () => {
+    try {
+      await logoutUsuario();
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      setCurrentUser(null);
+      setActiveTab('dashboard');
+    }
   };
 
   const handleToggleSidebar = () => {
@@ -171,13 +178,13 @@ function App() {
       case 'dashboard':
         return (
           <Suspense fallback={<DashboardFallback />}>
-            <DashboardTab currentUserId={currentUser.id_usuario} refreshTrigger={refreshTrigger} />
+            <DashboardTab refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       case 'proyectos':
         return (
           <Suspense fallback={<FormAndTableFallback columns={5} />}>
-            <ProyectosTab canManage={hasPermission(currentRole, 'proyectos.manage')} currentUserId={currentUser.id_usuario} onProyectoCreated={handleDataModified} refreshTrigger={refreshTrigger} />
+            <ProyectosTab canManage={hasPermission(currentRole, 'proyectos.manage')} onProyectoCreated={handleDataModified} refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       case 'docentes':
@@ -186,14 +193,12 @@ function App() {
             <div className="module-shell docentes-module">
               <DocentesTable
                 canManage={hasPermission(currentRole, 'docentes.manage')}
-                currentUserId={currentUser.id_usuario}
                 onCreateClick={() => setDocenteFormOpen(true)}
                 refreshTrigger={refreshTrigger}
               />
               {docenteFormOpen && hasPermission(currentRole, 'docentes.manage') && (
                 <Suspense fallback={null}>
                   <DocenteCreateModal
-                    currentUserId={currentUser.id_usuario}
                     open={docenteFormOpen}
                     onClose={() => setDocenteFormOpen(false)}
                     onDocenteCreated={handleDataModified}
@@ -222,7 +227,7 @@ function App() {
       case 'reportes':
         return (
           <Suspense fallback={<TableOnlyFallback columns={5} />}>
-            <ReportesTab canExport={hasPermission(currentRole, 'reportes.export')} currentUserId={currentUser.id_usuario} refreshTrigger={refreshTrigger} />
+            <ReportesTab canExport={hasPermission(currentRole, 'reportes.export')} refreshTrigger={refreshTrigger} />
           </Suspense>
         );
       default:
@@ -384,7 +389,7 @@ function App() {
                   <small>{getRoleLabel(currentUser.rol)}</small>
                 </div>
               </div>
-              <button className="btn-secondary sidebar-logout" onClick={handleLogout}>
+              <button className="btn-secondary sidebar-logout" onClick={() => void handleLogout()}>
                 <span className="sidebar-logout-icon">
                   <AppIcon icon={LogOut} size={18} />
                 </span>

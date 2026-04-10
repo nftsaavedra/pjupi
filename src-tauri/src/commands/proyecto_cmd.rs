@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{State, Window};
 use crate::domain::proyecto::{
     Proyecto,
     CreateProyectoConParticipantesRequest,
@@ -11,63 +11,63 @@ use crate::storage;
 
 #[tauri::command]
 pub async fn crear_proyecto_con_participantes(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     request: CreateProyectoConParticipantesRequest,
 ) -> Result<Proyecto, AppError> {
-    storage::crear_proyecto_con_participantes(&state, &actor_user_id, request).await
+    storage::crear_proyecto_con_participantes(&state, window.label(), request).await
 }
 
 #[tauri::command]
 pub async fn buscar_proyectos_por_docente(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     id_docente: String,
 ) -> Result<Vec<Proyecto>, AppError> {
-    storage::buscar_proyectos_por_docente(&state, &actor_user_id, &id_docente).await
+    storage::buscar_proyectos_por_docente(&state, window.label(), &id_docente).await
 }
 
 #[tauri::command]
 pub async fn get_all_proyectos_detalle(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
 ) -> Result<Vec<ProyectoDetalle>, AppError> {
-    storage::get_all_proyectos_detalle(&state, &actor_user_id).await
+    storage::get_all_proyectos_detalle(&state, window.label()).await
 }
 
 #[tauri::command]
 pub async fn eliminar_relacion_proyecto_docente(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     id_proyecto: String,
     id_docente: String,
 ) -> Result<(), AppError> {
-    storage::eliminar_relacion_proyecto_docente(&state, &actor_user_id, &id_proyecto, &id_docente).await
+    storage::eliminar_relacion_proyecto_docente(&state, window.label(), &id_proyecto, &id_docente).await
 }
 
 #[tauri::command]
 pub async fn eliminar_relaciones_proyecto(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     id_proyecto: String,
 ) -> Result<(), AppError> {
-    storage::eliminar_relaciones_proyecto(&state, &actor_user_id, &id_proyecto).await
+    storage::eliminar_relaciones_proyecto(&state, window.label(), &id_proyecto).await
 }
 
 #[tauri::command]
 pub async fn eliminar_proyecto(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     id_proyecto: String,
 ) -> Result<EliminarProyectoResultado, AppError> {
-    storage::eliminar_proyecto(&state, &actor_user_id, &id_proyecto).await
+    storage::eliminar_proyecto(&state, window.label(), &id_proyecto).await
 }
 
 #[tauri::command]
 pub async fn reactivar_proyecto(
+    window: Window,
     state: State<'_, AppState>,
-    actor_user_id: String,
     id_proyecto: String,
 ) -> Result<Proyecto, AppError> {
-    storage::reactivar_proyecto(&state, &actor_user_id, &id_proyecto).await
+    storage::reactivar_proyecto(&state, window.label(), &id_proyecto).await
 }

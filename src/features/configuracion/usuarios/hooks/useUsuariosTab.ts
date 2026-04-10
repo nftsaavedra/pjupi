@@ -16,7 +16,7 @@ export const useUsuariosTab = (currentUser: Usuario, refreshTrigger = 0, onUsuar
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [busqueda, setBusqueda] = useState('');
 
-  const { usuarios, loading, refreshing, error, recargar } = useFetchUsuarios(currentUser.id_usuario, refreshTrigger);
+  const { usuarios, loading, refreshing, error, recargar } = useFetchUsuarios(refreshTrigger);
 
   useRefreshToast({
     refreshing,
@@ -58,12 +58,11 @@ export const useUsuariosTab = (currentUser: Usuario, refreshTrigger = 0, onUsuar
           username,
           nombreCompleto,
           rol,
-          currentUser.id_usuario,
           password || undefined,
         );
         toast.success('Usuario actualizado correctamente');
       } else {
-        await crearUsuario(username, nombreCompleto, rol, password, currentUser.id_usuario);
+        await crearUsuario(username, nombreCompleto, rol, password);
         toast.success('Usuario creado correctamente');
       }
 
@@ -108,10 +107,10 @@ export const useUsuariosTab = (currentUser: Usuario, refreshTrigger = 0, onUsuar
 
     try {
       if (usuarioToToggle.activo === 1) {
-        await desactivarUsuario(usuarioToToggle.id_usuario, currentUser.id_usuario);
+        await desactivarUsuario(usuarioToToggle.id_usuario);
         toast.info('Usuario desactivado correctamente');
       } else {
-        await reactivarUsuario(usuarioToToggle.id_usuario, currentUser.id_usuario);
+        await reactivarUsuario(usuarioToToggle.id_usuario);
         toast.success('Usuario reactivado correctamente');
       }
 

@@ -1,6 +1,8 @@
 export {
   getAuthStatus,
+  getCurrentSession,
   loginUsuario,
+  logoutUsuario,
   registrarPrimerUsuario,
 } from '../../services/tauri/auth';
 

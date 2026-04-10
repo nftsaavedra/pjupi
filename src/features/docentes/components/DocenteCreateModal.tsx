@@ -9,7 +9,6 @@ import { AppIcon } from '../../../shared/ui/AppIcon';
 import { formatRenacytNivel } from '../../../shared/utils/renacyt';
 
 interface DocenteCreateModalProps {
-  currentUserId: string;
   open: boolean;
   onClose: () => void;
   onDocenteCreated: () => void;
@@ -42,7 +41,6 @@ const countFormacionesAcademicas = (value?: string | null) => {
 };
 
 export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
-  currentUserId,
   open,
   onClose,
   onDocenteCreated,
@@ -78,7 +76,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
     setApellidoPaterno,
     setIdGrado,
     setNombres,
-  } = useDocenteCreateForm(currentUserId, refreshTrigger, onDocenteCreated, onClose);
+  } = useDocenteCreateForm(refreshTrigger, onDocenteCreated, onClose);
 
   return (
     <FormModal

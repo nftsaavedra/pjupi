@@ -20,11 +20,10 @@ const normalizeText = (value: string | null | undefined) => (value ?? '').trim()
 
 interface ReportesTabProps {
   canExport?: boolean;
-  currentUserId: string;
   refreshTrigger?: number;
 }
 
-export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, currentUserId, refreshTrigger = 0 }) => {
+export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refreshTrigger = 0 }) => {
   const [tipo, setTipo] = useState<TipoReporte>('agrupado_docente');
   const [query, setQuery] = useState('');
   const {
@@ -34,7 +33,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, curr
     error,
     recargar: cargarPreview,
   } = useStableFetchData<DatosExportDocenteAgrupado[]>(
-    () => getDataExportacionAgrupada(currentUserId),
+    () => getDataExportacionAgrupada(),
     refreshTrigger,
     'Error cargando vista previa de reportes',
     [],
@@ -53,10 +52,10 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, curr
       let rows: Array<ExportData | DatosExportDocenteAgrupado>;
       let sheetName: string;
       if (tipo === 'agrupado_docente') {
-        rows = await getDataExportacionAgrupada(currentUserId);
+        rows = await getDataExportacionAgrupada();
         sheetName = 'Docentes_Proyectos';
       } else {
-        rows = await getDataExportacionPlana(currentUserId);
+        rows = await getDataExportacionPlana();
         sheetName = 'Detalle_Plano';
       }
 

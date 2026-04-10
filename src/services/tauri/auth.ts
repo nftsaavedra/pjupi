@@ -5,6 +5,10 @@ export const getAuthStatus = async (): Promise<AuthStatus> => {
   return await invoke('get_auth_status');
 };
 
+export const getCurrentSession = async (): Promise<Usuario | null> => {
+  return await invoke('get_current_session');
+};
+
 export const registrarPrimerUsuario = async (
   username: string,
   nombre_completo: string,
@@ -18,4 +22,8 @@ export const loginUsuario = async (
   password: string,
 ): Promise<Usuario> => {
   return await invoke('login_usuario', { request: { username, password } });
+};
+
+export const logoutUsuario = async (): Promise<void> => {
+  return await invoke('logout_usuario');
 };

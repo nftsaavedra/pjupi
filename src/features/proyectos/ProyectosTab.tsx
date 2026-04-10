@@ -9,12 +9,11 @@ import { ProyectosToolbar } from './components/ProyectosToolbar';
 
 interface ProyectosTabProps {
   canManage: boolean;
-  currentUserId: string;
   onProyectoCreated: () => void;
   refreshTrigger?: number;
 }
 
-export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, currentUserId, onProyectoCreated, refreshTrigger = 0 }) => {
+export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyectoCreated, refreshTrigger = 0 }) => {
   const {
     busqueda,
     cargarProyectos,
@@ -46,7 +45,7 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, currentUs
     titulo,
     totalActivos,
     totalInactivos,
-  } = useProyectosTab(currentUserId, refreshTrigger, onProyectoCreated);
+  } = useProyectosTab(refreshTrigger, onProyectoCreated);
 
   return (
     <div className="tab-panel module-shell proyectos-module">

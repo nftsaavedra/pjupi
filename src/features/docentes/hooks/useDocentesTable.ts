@@ -7,7 +7,7 @@ import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../../shared
 
 const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 
-export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
+export const useDocentesTable = (refreshTrigger = 0) => {
   const [selectedDocente, setSelectedDocente] = useState<DocenteDetalle | null>(null);
   const [docenteToDelete, setDocenteToDelete] = useState<DocenteDetalle | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('todos');
@@ -23,7 +23,7 @@ export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
     error,
     recargar: cargarDocentes,
   } = useStableFetchData<DocenteDetalle[]>(
-    () => getAllDocentesConProyectos(actorUserId),
+    () => getAllDocentesConProyectos(),
     refreshTrigger,
     'Error cargando docentes',
     [],
@@ -38,7 +38,7 @@ export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
   const handleEliminarDocente = async () => {
     if (!docenteToDelete) return;
     try {
-      const resultado = await eliminarDocente(actorUserId, docenteToDelete.id_docente);
+      const resultado = await eliminarDocente(docenteToDelete.id_docente);
       toast.info(resultado.mensaje);
       setDocenteToDelete(null);
       await cargarDocentes();
@@ -49,7 +49,7 @@ export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
 
   const handleReactivarDocente = async (id: string) => {
     try {
-      await reactivarDocente(actorUserId, id);
+      await reactivarDocente(id);
       toast.success('Docente reactivado correctamente');
       await cargarDocentes();
     } catch (error) {
@@ -60,7 +60,7 @@ export const useDocentesTable = (actorUserId: string, refreshTrigger = 0) => {
   const handleRefreshRenacytFormaciones = async (id: string) => {
     setRefreshingRenacytDocenteId(id);
     try {
-      const resultado = await refrescarFormacionAcademicaRenacytDocente(actorUserId, id);
+      const resultado = await refrescarFormacionAcademicaRenacytDocente(id);
       if (resultado.actualizada) {
         toast.success(resultado.mensaje);
       } else {
