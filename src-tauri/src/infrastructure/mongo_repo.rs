@@ -20,6 +20,7 @@ use crate::domain::proyecto::{
     Proyecto,
     ProyectoDetalle,
     ProyectoParticipanteResumen,
+    UpdateProyectoConParticipantesRequest,
 };
 use crate::domain::usuario::{AuthStatus, BootstrapUsuarioRequest, CreateUsuarioRequest, LoginUsuarioRequest, UpdateUsuarioRequest, Usuario, UsuarioConPassword};
 use crate::error::AppError;
@@ -30,6 +31,73 @@ struct ParticipacionRecord {
     id: String,
     id_proyecto: String,
     id_docente: String,
+    #[serde(default)]
+    es_responsable: bool,
+}
+
+fn normalize_docente_ids(docentes_ids: &[String]) -> Result<Vec<String>, AppError> {
+    let mut normalized_ids = Vec::new();
+    let mut seen = HashSet::new();
+
+    for docente_id in docentes_ids {
+        let normalized = docente_id.trim();
+        if normalized.is_empty() {
+            return Err(AppError::InternalError("La lista de docentes contiene valores inválidos.".to_string()));
+        }
+
+        if seen.insert(normalized.to_string()) {
+            normalized_ids.push(normalized.to_string());
+        }
+    }
+
+    Ok(normalized_ids)
+}
+
+fn normalize_responsable_id(docente_responsable_id: Option<String>) -> Option<String> {
+    docente_responsable_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn validate_responsable(docentes_ids: &[String], docente_responsable_id: &Option<String>) -> Result<(), AppError> {
+    if docentes_ids.is_empty() {
+        if docente_responsable_id.is_some() {
+            return Err(AppError::InternalError(
+                "No puede asignar un docente responsable cuando el proyecto no tiene docentes vinculados.".to_string(),
+            ));
+        }
+        return Ok(());
+    }
+
+    let Some(responsable_id) = docente_responsable_id.as_ref() else {
+        return Err(AppError::InternalError(
+            "Seleccione un docente responsable para el proyecto.".to_string(),
+        ));
+    };
+
+    if !docentes_ids.iter().any(|docente_id| docente_id == responsable_id) {
+        return Err(AppError::InternalError(
+            "El docente responsable debe formar parte de los docentes asignados al proyecto.".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+async fn validate_docentes_activos(db: &Database, docentes_ids: &[String]) -> Result<(), AppError> {
+    let docentes_activos = db.collection::<Docente>("docentes")
+        .find(doc! { "id_docente": { "$in": docentes_ids }, "activo": 1i64 })
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    if docentes_activos.len() != docentes_ids.len() {
+        return Err(AppError::InternalError(
+            "Uno o más docentes seleccionados no existen o están inactivos.".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 pub async fn ensure_indexes(db: &Database) -> Result<(), AppError> {
@@ -407,29 +475,75 @@ pub async fn reactivar_docente(db: &Database, id_docente: &str) -> Result<Docent
 }
 
 pub async fn create_proyecto_con_participantes(db: &Database, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {
-    let docentes_activos = db.collection::<Docente>("docentes")
-        .find(doc! { "id_docente": { "$in": &request.docentes_ids }, "activo": 1i64 })
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-
-    if docentes_activos.len() != request.docentes_ids.len() {
-        return Err(AppError::InternalError("Uno o más docentes seleccionados no existen o están inactivos.".to_string()));
+    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
+    if docentes_ids.is_empty() {
+        return Err(AppError::InternalError("Seleccione al menos un docente para crear el proyecto.".to_string()));
     }
+
+    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
+    validate_responsable(&docentes_ids, &docente_responsable_id)?;
+    validate_docentes_activos(db, &docentes_ids).await?;
 
     let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: request.titulo_proyecto });
     db.collection::<Proyecto>("proyectos").insert_one(&proyecto).await?;
 
     let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
-    for docente_id in request.docentes_ids {
+    for docente_id in docentes_ids {
         participaciones_collection.insert_one(ParticipacionRecord {
             id: format!("{}:{}", proyecto.id_proyecto, docente_id),
             id_proyecto: proyecto.id_proyecto.clone(),
+            es_responsable: docente_responsable_id.as_deref() == Some(docente_id.as_str()),
             id_docente: docente_id,
         }).await?;
     }
 
     Ok(proyecto)
+}
+
+pub async fn update_proyecto_con_participantes(
+    db: &Database,
+    id_proyecto: &str,
+    request: UpdateProyectoConParticipantesRequest,
+) -> Result<Proyecto, AppError> {
+    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
+    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
+
+    validate_responsable(&docentes_ids, &docente_responsable_id)?;
+    validate_docentes_activos(db, &docentes_ids).await?;
+
+    let proyecto_exists = db.collection::<Proyecto>("proyectos")
+        .find_one(doc! { "id_proyecto": id_proyecto })
+        .await?;
+
+    if proyecto_exists.is_none() {
+        return Err(AppError::NotFound("Proyecto no encontrado.".to_string()));
+    }
+
+    db.collection::<Document>("proyectos")
+        .update_one(
+            doc! { "id_proyecto": id_proyecto },
+            doc! { "$set": { "titulo_proyecto": request.titulo_proyecto.trim() } },
+        )
+        .await?;
+
+    db.collection::<Document>("participaciones")
+        .delete_many(doc! { "id_proyecto": id_proyecto })
+        .await?;
+
+    let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
+    for docente_id in docentes_ids {
+        participaciones_collection.insert_one(ParticipacionRecord {
+            id: format!("{}:{}", id_proyecto, docente_id),
+            id_proyecto: id_proyecto.to_string(),
+            es_responsable: docente_responsable_id.as_deref() == Some(docente_id.as_str()),
+            id_docente: docente_id,
+        }).await?;
+    }
+
+    db.collection::<Proyecto>("proyectos")
+        .find_one(doc! { "id_proyecto": id_proyecto })
+        .await?
+        .ok_or_else(|| AppError::NotFound("Proyecto no encontrado.".to_string()))
 }
 
 pub async fn buscar_proyectos_por_docente(db: &Database, id_docente: &str) -> Result<Vec<Proyecto>, AppError> {
@@ -478,8 +592,7 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
                 .renacyt_nivel
                 .clone()
                 .filter(|value| !value.trim().is_empty())
-                .map(|value| format!("RENACYT {value}"))
-                .unwrap_or_else(|| "Sin nivel RENACYT".to_string());
+                .unwrap_or_else(|| "No registrado".to_string());
             docentes_por_proyecto
                 .entry(proyecto_id.clone())
                 .or_default()
@@ -488,9 +601,11 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
                 .entry(proyecto_id)
                 .or_default()
                 .push(ProyectoParticipanteResumen {
+                    id_docente: docente.id_docente.clone(),
                     nombre: docente.nombres_apellidos.clone(),
                     grado,
                     renacyt_nivel: nivel_renacyt,
+                    es_responsable: participacion.es_responsable,
                 });
         }
     }
@@ -500,10 +615,17 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
         .map(|proyecto| {
             let proyecto_id = proyecto.id_proyecto.clone();
             let docentes_proyecto = docentes_por_proyecto.remove(&proyecto_id).unwrap_or_default();
+            let mut participantes = participantes_por_proyecto.remove(&proyecto_id).unwrap_or_default();
+            participantes.sort_by(|a, b| b.es_responsable.cmp(&a.es_responsable).then_with(|| a.nombre.to_lowercase().cmp(&b.nombre.to_lowercase())));
+            let docente_responsable = participantes
+                .iter()
+                .find(|participante| participante.es_responsable)
+                .map(|participante| participante.nombre.clone());
             ProyectoDetalle {
                 id_proyecto: proyecto.id_proyecto,
                 titulo_proyecto: proyecto.titulo_proyecto,
                 cantidad_docentes: docentes_proyecto.len() as i64,
+                docente_responsable,
                 docentes: if docentes_proyecto.is_empty() {
                     None
                 } else {
@@ -512,7 +634,7 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
                 participantes_json: if docentes_proyecto.is_empty() {
                     None
                 } else {
-                    serde_json::to_string(&participantes_por_proyecto.remove(&proyecto_id).unwrap_or_default()).ok()
+                    serde_json::to_string(&participantes).ok()
                 },
                 activo: proyecto.activo,
             }

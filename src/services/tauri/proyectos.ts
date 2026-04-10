@@ -1,8 +1,25 @@
 import { invoke } from './client';
 import type { EliminarProyectoResultado, Proyecto, ProyectoDetalle } from './types';
 
-export const crearProyectoConParticipantes = async (titulo_proyecto: string, docentes_ids: string[]): Promise<Proyecto> => {
-  return await invoke('crear_proyecto_con_participantes', { request: { titulo_proyecto, docentes_ids } });
+export interface ProyectoParticipantesPayload {
+  titulo_proyecto: string;
+  docentes_ids: string[];
+  docente_responsable_id?: string | null;
+}
+
+export const crearProyectoConParticipantes = async (
+  titulo_proyecto: string,
+  docentes_ids: string[],
+  docente_responsable_id?: string | null,
+): Promise<Proyecto> => {
+  return await invoke('crear_proyecto_con_participantes', { request: { titulo_proyecto, docentes_ids, docente_responsable_id } });
+};
+
+export const actualizarProyectoConParticipantes = async (
+  id_proyecto: string,
+  payload: ProyectoParticipantesPayload,
+): Promise<Proyecto> => {
+  return await invoke('actualizar_proyecto_con_participantes', { idProyecto: id_proyecto, request: payload });
 };
 
 export const buscarProyectosPorDocente = async (id_docente: string): Promise<Proyecto[]> => {

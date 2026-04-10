@@ -4,16 +4,68 @@ import react from "@vitejs/plugin-react";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+const getPdfVendorChunk = (id: string) => {
+  const packageMatch = id.match(/node_modules\/(?:\.pnpm\/)?((?:@[^/]+\/[^/]+)|[^/]+)/);
+  const packageName = packageMatch?.[1] ?? null;
+
+  if (packageName?.startsWith('@react-pdf/')) {
+    return `pdf-${packageName.split('/')[1].replace(/[^a-z0-9-]/gi, '-')}`;
+  }
+
+  if (
+    packageName === 'pdfkit'
+    || packageName === 'png-js'
+    || packageName === 'crypto-js'
+    || packageName === 'dfa'
+    || packageName === 'clone'
+  ) {
+    return 'pdf-engine';
+  }
+
+  if (
+    packageName === 'fontkit'
+    || packageName === 'unicode-properties'
+    || packageName === 'unicode-trie'
+    || packageName === 'tiny-inflate'
+    || packageName === 'restructure'
+    || packageName === 'brotli'
+    || packageName === 'linebreak'
+  ) {
+    return 'pdf-fonts';
+  }
+
+  if (packageName === 'yoga-layout') {
+    return 'pdf-layout';
+  }
+
+  return null;
+};
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'charts-vendor': ['recharts'],
-          'xlsx-vendor': ['xlsx'],
-          'tauri-vendor': ['@tauri-apps/api/core'],
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts')) {
+            return 'charts-vendor';
+          }
+
+          if (id.includes('node_modules/xlsx')) {
+            return 'xlsx-vendor';
+          }
+
+          if (id.includes('@tauri-apps/api/core')) {
+            return 'tauri-vendor';
+          }
+
+          const pdfChunk = getPdfVendorChunk(id);
+          if (pdfChunk) {
+            return pdfChunk;
+          }
+
+          return undefined;
         },
       },
     },

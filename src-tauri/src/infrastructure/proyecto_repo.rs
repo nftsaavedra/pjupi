@@ -1,8 +1,10 @@
 use sqlx::{query, query_as, Row, SqlitePool};
+use std::collections::{HashMap, HashSet};
 use crate::domain::proyecto::{
     Proyecto,
     CreateProyectoRequest,
     CreateProyectoConParticipantesRequest,
+    UpdateProyectoConParticipantesRequest,
     ExportDataConProjectos,
     ProyectoParticipanteResumen,
     ProyectoDetalle,
@@ -11,7 +13,82 @@ use crate::domain::proyecto::{
 use crate::domain::estadisticas::{DocenteProyectosCount, KpisDashboard, ExportData};
 use crate::error::AppError;
 
+fn normalize_docente_ids(docentes_ids: &[String]) -> Result<Vec<String>, AppError> {
+    let mut normalized_ids = Vec::new();
+    let mut seen = HashSet::new();
+
+    for docente_id in docentes_ids {
+        let normalized = docente_id.trim();
+        if normalized.is_empty() {
+            return Err(AppError::InternalError("La lista de docentes contiene valores inválidos.".to_string()));
+        }
+
+        if seen.insert(normalized.to_string()) {
+            normalized_ids.push(normalized.to_string());
+        }
+    }
+
+    Ok(normalized_ids)
+}
+
+fn normalize_responsable_id(docente_responsable_id: Option<String>) -> Option<String> {
+    docente_responsable_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+async fn validate_docentes_activos(pool: &SqlitePool, docentes_ids: &[String]) -> Result<(), AppError> {
+    for docente_id in docentes_ids {
+        let docente_exists = query("SELECT id_docente FROM docente WHERE id_docente = ? AND activo = 1")
+            .bind(docente_id)
+            .fetch_optional(pool)
+            .await?;
+
+        if docente_exists.is_none() {
+            return Err(AppError::InternalError(
+                "Uno o más docentes seleccionados no existen o están inactivos.".to_string(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_responsable(docentes_ids: &[String], docente_responsable_id: &Option<String>) -> Result<(), AppError> {
+    if docentes_ids.is_empty() {
+        if docente_responsable_id.is_some() {
+            return Err(AppError::InternalError(
+                "No puede asignar un docente responsable cuando el proyecto no tiene docentes vinculados.".to_string(),
+            ));
+        }
+        return Ok(());
+    }
+
+    let Some(responsable_id) = docente_responsable_id.as_ref() else {
+        return Err(AppError::InternalError(
+            "Seleccione un docente responsable para el proyecto.".to_string(),
+        ));
+    };
+
+    if !docentes_ids.iter().any(|docente_id| docente_id == responsable_id) {
+        return Err(AppError::InternalError(
+            "El docente responsable debe formar parte de los docentes asignados al proyecto.".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 pub async fn create_proyecto_con_participantes(pool: &SqlitePool, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {
+    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
+    if docentes_ids.is_empty() {
+        return Err(AppError::InternalError("Seleccione al menos un docente para crear el proyecto.".to_string()));
+    }
+
+    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
+    validate_responsable(&docentes_ids, &docente_responsable_id)?;
+    validate_docentes_activos(pool, &docentes_ids).await?;
+
     let mut tx = pool.begin().await?;
     let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: request.titulo_proyecto });
     query("INSERT INTO proyecto (id_proyecto, titulo_proyecto, activo) VALUES (?, ?, ?)")
@@ -21,15 +98,70 @@ pub async fn create_proyecto_con_participantes(pool: &SqlitePool, request: Creat
         .execute(&mut *tx)
         .await?;
 
-    for docente_id in request.docentes_ids {
-        query("INSERT INTO participacion (id_proyecto, id_docente) VALUES (?, ?)")
+    for docente_id in docentes_ids {
+        query("INSERT INTO participacion (id_proyecto, id_docente, es_responsable) VALUES (?, ?, ?)")
             .bind(&proyecto.id_proyecto)
             .bind(&docente_id)
+            .bind((docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
             .execute(&mut *tx)
             .await?;
     }
 
     tx.commit().await?;
+    Ok(proyecto)
+}
+
+pub async fn update_proyecto_con_participantes(
+    pool: &SqlitePool,
+    id_proyecto: &str,
+    request: UpdateProyectoConParticipantesRequest,
+) -> Result<Proyecto, AppError> {
+    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
+    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
+
+    validate_responsable(&docentes_ids, &docente_responsable_id)?;
+    validate_docentes_activos(pool, &docentes_ids).await?;
+
+    let mut tx = pool.begin().await?;
+
+    let proyecto_exists = query("SELECT id_proyecto FROM proyecto WHERE id_proyecto = ?")
+        .bind(id_proyecto)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+    if proyecto_exists.is_none() {
+        return Err(AppError::NotFound("Proyecto no encontrado.".to_string()));
+    }
+
+    query("UPDATE proyecto SET titulo_proyecto = ? WHERE id_proyecto = ?")
+        .bind(request.titulo_proyecto.trim())
+        .bind(id_proyecto)
+        .execute(&mut *tx)
+        .await?;
+
+    query("DELETE FROM participacion WHERE id_proyecto = ?")
+        .bind(id_proyecto)
+        .execute(&mut *tx)
+        .await?;
+
+    for docente_id in docentes_ids {
+        query("INSERT INTO participacion (id_proyecto, id_docente, es_responsable) VALUES (?, ?, ?)")
+            .bind(id_proyecto)
+            .bind(&docente_id)
+            .bind((docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    tx.commit().await?;
+
+    let proyecto = query_as::<_, Proyecto>(
+        "SELECT id_proyecto, titulo_proyecto, activo FROM proyecto WHERE id_proyecto = ?"
+    )
+    .bind(id_proyecto)
+    .fetch_one(pool)
+    .await?;
+
     Ok(proyecto)
 }
 
@@ -59,31 +191,41 @@ pub async fn get_all_proyectos_detalle(pool: &SqlitePool) -> Result<Vec<Proyecto
         r#"
         SELECT
             p.id_proyecto as id_proyecto,
+            d.id_docente as id_docente,
             d.nombres_apellidos as nombre,
             COALESCE(g.nombre, 'Sin grado') as grado,
-            COALESCE(d.renacyt_nivel, 'Sin nivel RENACYT') as renacyt_nivel
+            COALESCE(d.renacyt_nivel, 'No registrado') as renacyt_nivel,
+            COALESCE(pa.es_responsable, 0) as es_responsable
         FROM participacion pa
         INNER JOIN proyecto p ON pa.id_proyecto = p.id_proyecto
         INNER JOIN docente d ON pa.id_docente = d.id_docente
         LEFT JOIN grado_academico g ON d.id_grado = g.id_grado
-        ORDER BY d.nombres_apellidos ASC
+        ORDER BY pa.es_responsable DESC, d.nombres_apellidos ASC
         "#
     )
     .fetch_all(pool)
     .await?;
 
-    let mut participantes_por_proyecto: std::collections::HashMap<String, Vec<ProyectoParticipanteResumen>> = std::collections::HashMap::new();
+    let mut participantes_por_proyecto: HashMap<String, Vec<ProyectoParticipanteResumen>> = HashMap::new();
 
     for row in participantes_rows {
         let id_proyecto: String = row.try_get("id_proyecto")?;
+        let id_docente: String = row.try_get("id_docente")?;
         let nombre: String = row.try_get("nombre")?;
         let grado: String = row.try_get("grado")?;
         let renacyt_nivel: String = row.try_get("renacyt_nivel")?;
+        let es_responsable = row.try_get::<i64, _>("es_responsable")? == 1;
 
         participantes_por_proyecto
             .entry(id_proyecto)
             .or_default()
-            .push(ProyectoParticipanteResumen { nombre, grado, renacyt_nivel });
+            .push(ProyectoParticipanteResumen {
+                id_docente,
+                nombre,
+                grado,
+                renacyt_nivel,
+                es_responsable,
+            });
     }
 
     let detalles = proyectos
@@ -91,6 +233,10 @@ pub async fn get_all_proyectos_detalle(pool: &SqlitePool) -> Result<Vec<Proyecto
         .map(|proyecto| {
             let participantes = participantes_por_proyecto.remove(&proyecto.id_proyecto).unwrap_or_default();
             let cantidad_docentes = participantes.len() as i64;
+            let docente_responsable = participantes
+                .iter()
+                .find(|participante| participante.es_responsable)
+                .map(|participante| participante.nombre.clone());
             let docentes = if participantes.is_empty() {
                 None
             } else {
@@ -106,6 +252,7 @@ pub async fn get_all_proyectos_detalle(pool: &SqlitePool) -> Result<Vec<Proyecto
                 id_proyecto: proyecto.id_proyecto,
                 titulo_proyecto: proyecto.titulo_proyecto,
                 cantidad_docentes,
+                docente_responsable,
                 docentes,
                 participantes_json,
                 activo: proyecto.activo,

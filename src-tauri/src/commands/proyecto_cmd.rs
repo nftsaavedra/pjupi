@@ -2,6 +2,7 @@ use tauri::{State, Window};
 use crate::domain::proyecto::{
     Proyecto,
     CreateProyectoConParticipantesRequest,
+    UpdateProyectoConParticipantesRequest,
     ProyectoDetalle,
     EliminarProyectoResultado,
 };
@@ -25,6 +26,16 @@ pub async fn buscar_proyectos_por_docente(
     id_docente: String,
 ) -> Result<Vec<Proyecto>, AppError> {
     storage::buscar_proyectos_por_docente(&state, window.label(), &id_docente).await
+}
+
+#[tauri::command]
+pub async fn actualizar_proyecto_con_participantes(
+    window: Window,
+    state: State<'_, AppState>,
+    id_proyecto: String,
+    request: UpdateProyectoConParticipantesRequest,
+) -> Result<Proyecto, AppError> {
+    storage::update_proyecto_con_participantes(&state, window.label(), &id_proyecto, request).await
 }
 
 #[tauri::command]

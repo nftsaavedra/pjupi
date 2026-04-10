@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import {
-  getDataExportacionPlana,
   getDataExportacionAgrupada,
   getTauriErrorMessage,
-  type ExportData,
   type DatosExportDocenteAgrupado,
 } from './api';
 import { toast } from '../../services/toast';
@@ -12,6 +10,7 @@ import { useStableFetchData } from '../../shared/hooks/useStableFetch';
 import { useRefreshToast } from '../../shared/hooks/useRefreshToast';
 import { AppIcon } from '../../shared/ui/AppIcon';
 import { SkeletonTable } from '../../shared/ui/Skeleton';
+import { saveDesktopFile } from '../../shared/utils/saveDesktopFile';
 import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../shared/utils/renacyt';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
@@ -26,6 +25,7 @@ interface ReportesTabProps {
 export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refreshTrigger = 0 }) => {
   const [tipo, setTipo] = useState<TipoReporte>('agrupado_docente');
   const [query, setQuery] = useState('');
+  const [exportingFormat, setExportingFormat] = useState<'xlsx' | 'pdf' | null>(null);
   const {
     data: preview,
     loading,
@@ -46,31 +46,38 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refr
     cooldownMs: 120000,
   });
 
-  const exportar = async () => {
+  const exportar = async (format: 'xlsx' | 'pdf') => {
+    setExportingFormat(format);
+
     try {
-      const XLSX = await import('xlsx');
-      let rows: Array<ExportData | DatosExportDocenteAgrupado>;
-      let sheetName: string;
-      if (tipo === 'agrupado_docente') {
-        rows = await getDataExportacionAgrupada();
-        sheetName = 'Docentes_Proyectos';
-      } else {
-        rows = await getDataExportacionPlana();
-        sheetName = 'Detalle_Plano';
+      const exportPayload = format === 'xlsx'
+        ? await import('./reportExport').then(({ buildExcelReport }) => buildExcelReport(tipo))
+        : await import('./reportExportPdf').then(({ buildPdfReport }) => buildPdfReport(tipo));
+
+      const savedFilePath = await saveDesktopFile({
+        suggestedName: exportPayload.suggestedName,
+        bytes: exportPayload.bytes,
+        filters: [
+          {
+            name: format === 'xlsx' ? 'Archivo Excel' : 'Documento PDF',
+            extensions: [format],
+          },
+        ],
+        mimeType: format === 'xlsx'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/pdf',
+      });
+
+      if (!savedFilePath) {
+        toast.info('Exportación cancelada');
+        return;
       }
 
-      rows = rows.map((row) => ({
-        ...row,
-        renacyt_nivel: formatRenacytNivel(row.renacyt_nivel) ?? row.renacyt_nivel,
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      XLSX.writeFile(wb, `reporte-${tipo}-${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Reporte exportado exitosamente');
+      toast.success(`Reporte ${format === 'xlsx' ? 'Excel' : 'PDF'} exportado exitosamente`);
     } catch (error) {
       toast.error('Error exportando reporte: ' + getTauriErrorMessage(error));
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -102,12 +109,28 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refr
             </div>
 
             {canExport && (
-              <button className="btn-primary" onClick={exportar}>
-                <span className="button-with-icon">
-                  <AppIcon icon={Download} size={18} />
-                  <span>Exportar Excel</span>
-                </span>
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => void exportar('xlsx')}
+                  disabled={exportingFormat !== null}
+                >
+                  <span className="button-with-icon">
+                    <AppIcon icon={Download} size={18} />
+                    <span>{exportingFormat === 'xlsx' ? 'Exportando Excel...' : 'Exportar Excel'}</span>
+                  </span>
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => void exportar('pdf')}
+                  disabled={exportingFormat !== null}
+                >
+                  <span className="button-with-icon">
+                    <AppIcon icon={Download} size={18} />
+                    <span>{exportingFormat === 'pdf' ? 'Exportando PDF...' : 'Exportar PDF'}</span>
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </div>

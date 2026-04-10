@@ -46,6 +46,38 @@ npm install
 npm run tauri:dev
 ```
 
+## Build de Escritorio en Windows
+
+Para evitar fallos de empaquetado cuando la red está restringida o GitHub no es resoluble:
+
+```bash
+npm run tauri:build:exe
+```
+
+Ese comando compila el ejecutable sin generar instalador.
+
+Si necesita instalador, el flujo recomendado ahora es NSIS por defecto:
+
+```bash
+npm run tauri:build:installer
+```
+
+Comandos explícitos:
+
+```bash
+npm run tauri:build:nsis
+npm run tauri:build:msi
+```
+
+Notas:
+
+- `msi` requiere WiX Toolset disponible localmente o acceso de red para descargarlo si no está cacheado.
+- `nsis` evita la dependencia de WiX y es el bundle por defecto del proyecto.
+- Los scripts de build intentan reutilizar las herramientas cacheadas por Tauri en Windows antes de intentar cualquier descarga.
+- La PC destino no necesita Rust instalado para ejecutar el instalador o el `.exe` generado.
+- En Windows, Tauri requiere Microsoft Edge WebView2 Runtime. Si la PC destino no lo tiene, la app puede no abrir hasta instalarlo.
+- El backend SQLite local ahora se guarda por defecto en la carpeta de usuario (`%LOCALAPPDATA%\pjupi\database.db` en Windows), no dentro del directorio de instalación.
+
 ## Verificación
 
 ```bash

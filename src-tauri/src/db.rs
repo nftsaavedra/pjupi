@@ -1,5 +1,5 @@
 use mongodb::{Client, Database};
-use sqlx::{query, SqlitePool};
+use sqlx::{query, Row, SqlitePool};
 
 use crate::config::DatabaseConfig;
 use crate::error::AppError;
@@ -59,6 +59,7 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS participacion (
             id_proyecto TEXT NOT NULL,
             id_docente TEXT NOT NULL,
+            es_responsable INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (id_proyecto, id_docente),
             FOREIGN KEY (id_proyecto) REFERENCES proyecto (id_proyecto) ON DELETE CASCADE,
             FOREIGN KEY (id_docente) REFERENCES docente (id_docente) ON DELETE CASCADE
@@ -66,6 +67,19 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     "#)
     .execute(pool)
     .await?;
+
+    let participacion_columns = query("PRAGMA table_info(participacion)")
+        .fetch_all(pool)
+        .await?;
+    let has_es_responsable = participacion_columns
+        .iter()
+        .any(|column| column.try_get::<String, _>("name").map(|name| name == "es_responsable").unwrap_or(false));
+
+    if !has_es_responsable {
+        query("ALTER TABLE participacion ADD COLUMN es_responsable INTEGER NOT NULL DEFAULT 0")
+            .execute(pool)
+            .await?;
+    }
 
     Ok(())
 }

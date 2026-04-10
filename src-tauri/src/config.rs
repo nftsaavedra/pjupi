@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fs, path::{Path, PathBuf}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatabaseBackend {
@@ -29,7 +29,7 @@ pub struct RenacytConfig {
 
 impl DatabaseConfig {
     pub fn from_env() -> Self {
-        let sqlite_url = env::var("PJUPI_SQLITE_URL").unwrap_or_else(|_| "sqlite:database.db".to_string());
+        let sqlite_url = env::var("PJUPI_SQLITE_URL").unwrap_or_else(|_| default_sqlite_url());
         let mongodb_uri = env::var("PJUPI_MONGODB_URI").ok();
         let backend_value = env::var("PJUPI_DB_BACKEND").ok();
 
@@ -52,6 +52,58 @@ impl DatabaseConfig {
 
     pub fn requires_mongodb(&self) -> bool {
         self.backend == DatabaseBackend::MongoDb
+    }
+}
+
+fn default_sqlite_url() -> String {
+    let app_dir = resolve_local_data_dir().join("pjupi");
+
+    if let Err(error) = fs::create_dir_all(&app_dir) {
+        eprintln!("No se pudo crear el directorio local de datos en {:?}: {}", app_dir, error);
+        return "sqlite:database.db".to_string();
+    }
+
+    let database_path = app_dir.join("database.db");
+    sqlite_url_from_path(&database_path)
+}
+
+fn sqlite_url_from_path(path: &Path) -> String {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+
+    if normalized.starts_with('/') {
+        format!("sqlite://{}", normalized)
+    } else {
+        format!("sqlite:///{}", normalized)
+    }
+}
+
+fn resolve_local_data_dir() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .or_else(|| env::var_os("APPDATA").map(PathBuf::from))
+            .unwrap_or_else(env::temp_dir)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        env::var_os("HOME")
+            .map(PathBuf::from)
+            .map(|home| home.join("Library").join("Application Support"))
+            .unwrap_or_else(env::temp_dir)
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| {
+                env::var_os("HOME")
+                    .map(PathBuf::from)
+                    .map(|home| home.join(".local").join("share"))
+            })
+            .unwrap_or_else(env::temp_dir)
     }
 }
 

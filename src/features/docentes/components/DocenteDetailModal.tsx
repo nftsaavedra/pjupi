@@ -293,8 +293,12 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                             <div className="renacyt-formacion-grid">
                               <span><strong>Grado:</strong> {formacion.grado_academico ?? 'No disponible'}</span>
                               <span><strong>Centro:</strong> {formacion.centro_estudios ?? 'No disponible'}</span>
-                              <span><strong>Inicio:</strong> {renderFormacionDate(formacion.fecha_inicio)}</span>
-                              <span><strong>Fin:</strong> {renderFormacionDate(formacion.fecha_fin)}</span>
+                              {hasFormacionDate(formacion.fecha_inicio) && (
+                                <span><strong>Inicio:</strong> {renderFormacionDate(formacion.fecha_inicio)}</span>
+                              )}
+                              {hasFormacionDate(formacion.fecha_fin) && (
+                                <span><strong>Fin:</strong> {renderFormacionDate(formacion.fecha_fin)}</span>
+                              )}
                               <span><strong>Puntaje:</strong> {formacion.puntaje_obtenido ?? 'No disponible'}</span>
                               <span><strong>Origen:</strong> {formacion.indicador_importado ? 'Importado' : 'Manual'}</span>
                             </div>
@@ -359,4 +363,8 @@ const parseFormacionesAcademicas = (value?: string | null): RenacytFormacionAcad
   } catch {
     return [];
   }
+};
+
+const hasFormacionDate = (value?: number | null) => {
+  return Boolean(value && value > 0);
 };

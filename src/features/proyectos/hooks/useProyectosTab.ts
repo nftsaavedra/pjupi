@@ -4,22 +4,24 @@ import { useStableFetchData } from '../../../shared/hooks/useStableFetch';
 import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
 import { toast } from '../../../services/toast';
 import {
+  actualizarProyectoConParticipantes,
   crearProyectoConParticipantes,
   eliminarProyecto,
-  eliminarRelacionesProyecto,
   getAllProyectosDetalle,
   getTauriErrorMessage,
   reactivarProyecto,
+  type ProyectoParticipantesPayload,
   type ProyectoDetalle,
 } from '../api';
 
 export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => void) => {
   const [titulo, setTitulo] = useState('');
   const [docentesSeleccionados, setDocentesSeleccionados] = useState<string[]>([]);
+  const [docenteResponsableId, setDocenteResponsableId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [proyectoToDelete, setProyectoToDelete] = useState<ProyectoDetalle | null>(null);
-  const [proyectoToDetach, setProyectoToDetach] = useState<ProyectoDetalle | null>(null);
+  const [proyectoToEdit, setProyectoToEdit] = useState<ProyectoDetalle | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [busqueda, setBusqueda] = useState('');
 
@@ -51,6 +53,20 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   const resetForm = () => {
     setTitulo('');
     setDocentesSeleccionados([]);
+    setDocenteResponsableId(null);
+  };
+
+  const handleChangeDocentesSeleccionados = (ids: string[]) => {
+    setDocentesSeleccionados(ids);
+    setDocenteResponsableId((current) => {
+      if (ids.length === 0) {
+        return null;
+      }
+      if (current && ids.includes(current)) {
+        return current;
+      }
+      return ids[0] ?? null;
+    });
   };
 
   const handleOpenCreate = () => {
@@ -77,9 +93,14 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
       return;
     }
 
+    if (!docenteResponsableId) {
+      toast.warning('Seleccione un docente responsable para el proyecto');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await crearProyectoConParticipantes(titulo, docentesSeleccionados);
+      await crearProyectoConParticipantes(titulo, docentesSeleccionados, docenteResponsableId);
       toast.success('Proyecto creado exitosamente');
       resetForm();
       setIsFormOpen(false);
@@ -92,16 +113,28 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     }
   };
 
-  const handleDesvincularDocentes = async () => {
-    if (!proyectoToDetach) return;
+  const handleActualizarProyecto = async (idProyecto: string, payload: ProyectoParticipantesPayload) => {
+    if (!payload.titulo_proyecto.trim()) {
+      toast.warning('Ingrese el título del proyecto');
+      return;
+    }
+
+    if (payload.docentes_ids.length > 0 && !payload.docente_responsable_id) {
+      toast.warning('Seleccione un docente responsable antes de guardar los cambios');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await eliminarRelacionesProyecto(proyectoToDetach.id_proyecto);
-      toast.success('Se eliminaron las relaciones docente-proyecto');
-      setProyectoToDetach(null);
+      await actualizarProyectoConParticipantes(idProyecto, payload);
+      toast.success('Proyecto actualizado correctamente');
+      setProyectoToEdit(null);
       await cargarProyectos();
       onProyectoCreated();
     } catch (error) {
-      toast.error(getTauriErrorMessage(error));
+      toast.error('Error actualizando proyecto: ' + getTauriErrorMessage(error));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -141,6 +174,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     if (!texto) return true;
     return (
       proyecto.titulo_proyecto.toLowerCase().includes(texto) ||
+      (proyecto.docente_responsable || '').toLowerCase().includes(texto) ||
       (proyecto.docentes || '').toLowerCase().includes(texto)
     );
   }), [busqueda, estadoFiltro, proyectos]);
@@ -148,10 +182,12 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   return {
     busqueda,
     docentes,
+    docenteResponsableId,
     docentesSeleccionados,
     estadoFiltro,
     handleCloseForm,
-    handleDesvincularDocentes,
+    handleActualizarProyecto,
+    handleChangeDocentesSeleccionados,
     handleEliminarProyecto,
     handleOpenCreate,
     handleReactivarProyecto,
@@ -161,16 +197,16 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     loadingDocentes,
     loadingProyectos,
     proyectoToDelete,
-    proyectoToDetach,
+    proyectoToEdit,
     proyectos,
     proyectosError,
     proyectosFiltrados,
     refreshingDocentes,
     setBusqueda,
-    setDocentesSeleccionados,
+    setDocenteResponsableId,
     setEstadoFiltro,
     setProyectoToDelete,
-    setProyectoToDetach,
+    setProyectoToEdit,
     setTitulo,
     titulo,
     totalActivos,

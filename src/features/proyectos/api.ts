@@ -1,4 +1,5 @@
 export {
+  actualizarProyectoConParticipantes,
   crearProyectoConParticipantes,
   eliminarProyecto,
   eliminarRelacionProyectoDocente,
@@ -15,3 +16,5 @@ export type {
   ProyectoDetalle,
   ProyectoParticipanteResumen,
 } from '../../services/tauri/types';
+
+export type { ProyectoParticipantesPayload } from '../../services/tauri/proyectos';

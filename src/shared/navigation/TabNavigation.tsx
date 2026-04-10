@@ -47,11 +47,11 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                 <button
                   type="button"
                   ref={ref}
+                  {...triggerProps}
                   className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
                   onClick={() => onTabChange(tab.id)}
                   aria-current={activeTab === tab.id ? 'page' : undefined}
                   aria-label={tabAriaLabel}
-                  {...triggerProps}
                 >
                   {tab.icon && (
                     <span className="tab-icon">

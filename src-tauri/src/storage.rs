@@ -8,6 +8,7 @@ use crate::domain::proyecto::{
     ExportDataConProjectos,
     Proyecto,
     ProyectoDetalle,
+    UpdateProyectoConParticipantesRequest,
 };
 use crate::domain::usuario::{AuthStatus, BootstrapUsuarioRequest, CreateUsuarioRequest, LoginUsuarioRequest, UpdateUsuarioRequest, Usuario};
 use crate::error::AppError;
@@ -239,6 +240,19 @@ pub async fn crear_proyecto_con_participantes(state: &AppState, window_label: &s
     match state.backend {
         DatabaseBackend::Sqlite => proyecto_repo::create_proyecto_con_participantes(state.sqlite_pool()?, request).await,
         DatabaseBackend::MongoDb => mongo_repo::create_proyecto_con_participantes(state.mongo_db()?, request).await,
+    }
+}
+
+pub async fn update_proyecto_con_participantes(
+    state: &AppState,
+    window_label: &str,
+    id_proyecto: &str,
+    request: UpdateProyectoConParticipantesRequest,
+) -> Result<Proyecto, AppError> {
+    require_permission(state, window_label, AppPermission::ProyectosManage).await?;
+    match state.backend {
+        DatabaseBackend::Sqlite => proyecto_repo::update_proyecto_con_participantes(state.sqlite_pool()?, id_proyecto, request).await,
+        DatabaseBackend::MongoDb => mongo_repo::update_proyecto_con_participantes(state.mongo_db()?, id_proyecto, request).await,
     }
 }
 

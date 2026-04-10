@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Link2Off, RotateCcw, Trash2, Users, X } from 'lucide-react';
+import { Pencil, RotateCcw, Trash2, Users, X } from 'lucide-react';
 import type { ProyectoDetalle, ProyectoParticipanteResumen } from '../api';
 import { SkeletonTable } from '../../../shared/ui/Skeleton';
 import { TableActionButton } from '../../../shared/ui/TableActionButton';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { formatRenacytNivel } from '../../../shared/utils/renacyt';
+import { getResponsableProyecto, parseParticipantesProyecto } from '../participantes';
 
 interface ProyectosTableGridProps {
   canManage: boolean;
   loading: boolean;
   proyectos: ProyectoDetalle[];
   onDeactivate: (proyecto: ProyectoDetalle) => void;
-  onDetach: (proyecto: ProyectoDetalle) => void;
+  onEdit: (proyecto: ProyectoDetalle) => void;
   onReactivate: (id: string) => void;
 }
 
@@ -20,7 +21,7 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
   loading,
   proyectos,
   onDeactivate,
-  onDetach,
+  onEdit,
   onReactivate,
 }) => {
   const [selectedProyecto, setSelectedProyecto] = useState<{
@@ -42,7 +43,7 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
         <thead>
           <tr>
             <th>Título</th>
-            <th>Docentes relacionados</th>
+            <th>Responsable</th>
             <th>Docentes</th>
             <th>Estado</th>
             <th>Acciones</th>
@@ -50,42 +51,33 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
         </thead>
         <tbody>
           {proyectos.map((proyecto) => {
-            const participantes = parseParticipantes(proyecto.participantes_json);
-            const participantesPreview = participantes.slice(0, 2);
-            const showResumenCompacto = participantes.length > 2;
+            const participantes = parseParticipantesProyecto(proyecto.participantes_json);
+            const responsable = getResponsableProyecto(participantes);
 
             return (
               <tr key={proyecto.id_proyecto}>
                 <td>{proyecto.titulo_proyecto}</td>
-                <td>{proyecto.cantidad_docentes}</td>
                 <td>
-                  {participantes.length > 0 ? (
-                    <div className="project-participants-preview">
-                      <div className="project-participants-list project-participants-list-compact">
-                        {participantesPreview.map((participante, index) => (
-                          <article key={`${proyecto.id_proyecto}-${participante.nombre}-${index}`} className="project-participant-card">
-                            <strong>{participante.nombre}</strong>
-                            <span>{participante.grado}</span>
-                            <span>{formatRenacytNivel(participante.renacyt_nivel) ?? 'Sin nivel RENACYT'}</span>
-                          </article>
-                        ))}
-                      </div>
-                      {showResumenCompacto && (
-                        <button
-                          type="button"
-                          className="project-participants-more"
-                          onClick={() => setSelectedProyecto({ titulo: proyecto.titulo_proyecto, participantes })}
-                        >
-                          <span className="button-with-icon">
-                            <AppIcon icon={Users} size={15} />
-                            <span>Ver {participantes.length} participantes</span>
-                          </span>
-                        </button>
-                      )}
+                  {responsable ? (
+                    <div className="project-responsable-cell">
+                      <strong>{responsable.nombre}</strong>
                     </div>
                   ) : (
-                    proyecto.docentes || '-'
+                    <span className="project-responsable-empty">Sin responsable</span>
                   )}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="project-docentes-trigger"
+                    onClick={() => setSelectedProyecto({ titulo: proyecto.titulo_proyecto, participantes })}
+                    disabled={participantes.length === 0}
+                  >
+                    <span className="button-with-icon">
+                      <AppIcon icon={Users} size={15} />
+                      <span>{proyecto.cantidad_docentes} docente{proyecto.cantidad_docentes === 1 ? '' : 's'}</span>
+                    </span>
+                  </button>
                 </td>
                 <td>
                   {proyecto.activo === 1 ? (
@@ -97,13 +89,14 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
                 <td className="table-actions">
                   {canManage ? (
                     <>
-                      <TableActionButton
-                        className="btn-secondary"
-                        icon={Link2Off}
-                        label="Desvincular docentes del proyecto"
-                        onClick={() => onDetach(proyecto)}
-                        disabled={proyecto.activo === 0}
-                      />
+                      {proyecto.activo === 1 && (
+                        <TableActionButton
+                          className="btn-secondary"
+                          icon={Pencil}
+                          label="Editar proyecto"
+                          onClick={() => onEdit(proyecto)}
+                        />
+                      )}
                       {proyecto.activo === 0 && (
                         <TableActionButton
                           className="btn-primary"
@@ -150,7 +143,10 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
               <div className="project-participants-list">
                 {selectedProyecto.participantes.map((participante, index) => (
                   <article key={`${selectedProyecto.titulo}-${participante.nombre}-${index}`} className="project-participant-card">
-                    <strong>{participante.nombre}</strong>
+                    <div className="project-participant-card-head">
+                      <strong>{participante.nombre}</strong>
+                      {participante.es_responsable && <span className="badge badge-info">Responsable</span>}
+                    </div>
                     <span>{participante.grado}</span>
                     <span>{formatRenacytNivel(participante.renacyt_nivel) ?? 'Sin nivel RENACYT'}</span>
                   </article>
@@ -168,17 +164,4 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
       )}
     </>
   );
-};
-
-const parseParticipantes = (value?: string | null): ProyectoParticipanteResumen[] => {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed as ProyectoParticipanteResumen[] : [];
-  } catch {
-    return [];
-  }
 };

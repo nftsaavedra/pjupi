@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
-import { FloatingTooltip } from './shared/overlays/FloatingTooltip';
 import { getAuthStatus, getCurrentSession, logoutUsuario, type Usuario } from './features/auth/api';
 import { AuthScreen } from './features/auth/AuthScreen';
 import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
@@ -349,26 +348,16 @@ function App() {
               <div className="sidebar-brand-copy">
                 <div className="sidebar-kicker">Research</div>
               </div>
-              <FloatingTooltip
-                content={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-                size="sm"
-                placement="right"
-                offsetValue={10}
-                renderTrigger={({ ref, triggerProps }) => (
-                  <button
-                    type="button"
-                    ref={ref as React.Ref<HTMLButtonElement>}
-                    className="sidebar-toggle"
-                    onClick={handleToggleSidebar}
-                    aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-                    aria-controls="app-sidebar"
-                    aria-expanded={!sidebarCollapsed}
-                    {...triggerProps}
-                  >
-                    <AppIcon icon={sidebarCollapsed ? ChevronRight : ChevronLeft} size={18} />
-                  </button>
-                )}
-              />
+              <button
+                type="button"
+                className="sidebar-toggle"
+                onClick={handleToggleSidebar}
+                aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+                aria-controls="app-sidebar"
+                aria-expanded={!sidebarCollapsed}
+              >
+                <AppIcon icon={sidebarCollapsed ? ChevronRight : ChevronLeft} size={18} />
+              </button>
             </div>
 
             <TabNavigation

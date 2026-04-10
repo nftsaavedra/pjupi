@@ -49,6 +49,7 @@ pub fn run() {
         let app_state = AppState::new(config.backend, sqlite_pool, mongo_db, reniec_config, renacyt_config);
 
         tauri::Builder::default()
+            .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_opener::init())
             .manage(app_state)
             .invoke_handler(tauri::generate_handler![
@@ -62,6 +63,7 @@ pub fn run() {
                 consultar_renacyt_docente,
                 refrescar_formacion_academica_renacyt_docente,
                 crear_proyecto_con_participantes,
+                actualizar_proyecto_con_participantes,
                 buscar_proyectos_por_docente,
                 get_all_proyectos_detalle,
                 eliminar_relacion_proyecto_docente,
@@ -72,6 +74,7 @@ pub fn run() {
                 get_kpis_dashboard,
                 get_data_exportacion_plana,
                 get_data_exportacion_agrupada_docente,
+                write_export_file,
                 get_all_grados,
                 crear_grado,
                 actualizar_grado,

@@ -4,6 +4,7 @@ import { useProyectosTab } from './hooks/useProyectosTab';
 import { ConfirmDialog } from '../../shared/overlays/ConfirmDialog';
 import { AppIcon } from '../../shared/ui/AppIcon';
 import { ProyectoCreateModal } from './components/ProyectoCreateModal';
+import { ProyectoEditModal } from './components/ProyectoEditModal';
 import { ProyectosTableGrid } from './components/ProyectosTableGrid';
 import { ProyectosToolbar } from './components/ProyectosToolbar';
 
@@ -18,10 +19,12 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
     busqueda,
     cargarProyectos,
     docentes,
+    docenteResponsableId,
     docentesSeleccionados,
     estadoFiltro,
+    handleActualizarProyecto,
+    handleChangeDocentesSeleccionados,
     handleCloseForm,
-    handleDesvincularDocentes,
     handleEliminarProyecto,
     handleOpenCreate,
     handleReactivarProyecto,
@@ -31,16 +34,16 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
     loadingDocentes,
     loadingProyectos,
     proyectoToDelete,
-    proyectoToDetach,
+    proyectoToEdit,
     proyectos,
     proyectosError,
     proyectosFiltrados,
     refreshingDocentes,
     setBusqueda,
-    setDocentesSeleccionados,
+    setDocenteResponsableId,
     setEstadoFiltro,
     setProyectoToDelete,
-    setProyectoToDetach,
+    setProyectoToEdit,
     setTitulo,
     titulo,
     totalActivos,
@@ -90,7 +93,7 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           loading={loadingProyectos}
           proyectos={proyectosFiltrados}
           onDeactivate={setProyectoToDelete}
-          onDetach={setProyectoToDetach}
+          onEdit={setProyectoToEdit}
           onReactivate={handleReactivarProyecto}
           canManage={canManage}
         />
@@ -100,12 +103,14 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
         <ProyectoCreateModal
           docentes={docentes}
           docentesSeleccionados={docentesSeleccionados}
+          docenteResponsableId={docenteResponsableId}
           isLoading={isLoading}
           loadingDocentes={loadingDocentes}
           open={isFormOpen}
           refreshingDocentes={refreshingDocentes}
           titulo={titulo}
-          onChangeDocentes={setDocentesSeleccionados}
+          onChangeDocentes={handleChangeDocentesSeleccionados}
+          onChangeResponsable={setDocenteResponsableId}
           onClose={handleCloseForm}
           onSubmit={handleSubmit}
           onTituloChange={setTitulo}
@@ -113,14 +118,15 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
       )}
 
       {canManage && (
-        <ConfirmDialog
-          open={Boolean(proyectoToDetach)}
-          title="Desvincular docentes del proyecto"
-          message={`Se eliminarán todas las relaciones docentes del proyecto "${proyectoToDetach?.titulo_proyecto ?? ''}".`}
-          confirmText="Sí, desvincular"
-          cancelText="Cancelar"
-          onConfirm={handleDesvincularDocentes}
-          onCancel={() => setProyectoToDetach(null)}
+        <ProyectoEditModal
+          docentes={docentes}
+          isLoading={isLoading}
+          loadingDocentes={loadingDocentes}
+          open={Boolean(proyectoToEdit)}
+          proyecto={proyectoToEdit}
+          refreshingDocentes={refreshingDocentes}
+          onClose={() => setProyectoToEdit(null)}
+          onSubmit={handleActualizarProyecto}
         />
       )}
 

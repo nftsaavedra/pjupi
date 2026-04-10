@@ -10,8 +10,12 @@ interface DocentesChecklistProps {
   docentes: DocenteDetalle[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  onToggleDocente?: (docente: DocenteDetalle, nextSelected: boolean) => void;
+  responsableId?: string | null;
   loading?: boolean;
   refreshing?: boolean;
+  showSelectedMeta?: boolean;
+  showRequiredError?: boolean;
 }
 
 const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
@@ -20,8 +24,12 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
   docentes,
   selectedIds,
   onChange,
+  onToggleDocente,
+  responsableId = null,
   loading = false,
   refreshing = false,
+  showSelectedMeta = true,
+  showRequiredError = true,
 }) => {
   const searchId = useId();
   const helperId = useId();
@@ -37,6 +45,17 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
   });
 
   const handleToggle = (id: string) => {
+    const docente = docentes.find((item) => item.id_docente === id);
+    if (!docente) {
+      return;
+    }
+
+    const nextSelected = !selectedIds.includes(id);
+    if (onToggleDocente) {
+      onToggleDocente(docente, nextSelected);
+      return;
+    }
+
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter((x) => x !== id));
     } else {
@@ -120,7 +139,15 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
               >
                 <span className="docente-chip-content">
                   <span className="docente-chip-name">{docente.nombres_apellidos}</span>
-                  <span className="docente-chip-meta">{docente.grado || 'Sin grado'} · {formatRenacytNivel(docente.renacyt_nivel) ? `RENACYT ${formatRenacytNivel(docente.renacyt_nivel)}` : 'Sin nivel RENACYT'}</span>
+                  {showSelectedMeta && (
+                    <span className="docente-chip-meta">
+                      {docente.grado || 'Sin grado'} · {formatRenacytNivel(docente.renacyt_nivel) ? `RENACYT ${formatRenacytNivel(docente.renacyt_nivel)}` : 'Sin nivel RENACYT'}
+                      {responsableId === docente.id_docente ? ' · Responsable' : ''}
+                    </span>
+                  )}
+                  {!showSelectedMeta && responsableId === docente.id_docente && (
+                    <span className="docente-chip-meta docente-chip-meta-compact">Responsable actual</span>
+                  )}
                 </span>
                 <span className="docente-chip-remove">
                   <AppIcon icon={X} size={14} />
@@ -163,9 +190,11 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
                       <span className="docente-option-dni">DNI: {docente.dni}</span>
                       <span className="docente-option-meta">{docente.grado || 'Sin grado'} · {formatRenacytNivel(docente.renacyt_nivel) ? `RENACYT ${formatRenacytNivel(docente.renacyt_nivel)}` : 'Sin nivel RENACYT'}</span>
                     </div>
-                    <span className={`badge ${seleccionado ? 'badge-success' : 'badge-info'}`}>
-                      {seleccionado ? 'Seleccionado' : 'Agregar'}
-                    </span>
+                    <div className="docente-option-actions">
+                      <span className={`badge ${seleccionado ? 'badge-success' : 'badge-info'}`}>
+                        {seleccionado ? 'Seleccionado' : 'Agregar'}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
@@ -178,7 +207,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
           )}
         </div>
       </div>
-      {selectedIds.length === 0 && (
+      {showRequiredError && selectedIds.length === 0 && (
         <small className="field-error">
           Seleccione al menos un docente
         </small>

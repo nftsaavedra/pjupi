@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use tauri::{State, Window};
 use crate::domain::estadisticas::{DocenteProyectosCount, KpisDashboard, ExportData};
 use crate::domain::proyecto::ExportDataConProjectos;
@@ -36,4 +38,31 @@ pub async fn get_data_exportacion_agrupada_docente(
     state: State<'_, AppState>,
 ) -> Result<Vec<ExportDataConProjectos>, AppError> {
     storage::get_data_exportacion_agrupada_docente(&state, window.label()).await
+}
+
+#[tauri::command]
+pub async fn write_export_file(
+    file_path: String,
+    bytes: Vec<u8>,
+) -> Result<(), AppError> {
+    let trimmed_path = file_path.trim();
+    if trimmed_path.is_empty() {
+        return Err(AppError::ConfigurationError(
+            "La ruta de exportacion es invalida.".to_string(),
+        ));
+    }
+
+    if let Some(parent) = Path::new(trimmed_path).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|error| {
+                AppError::InternalError(format!(
+                    "No se pudo preparar la carpeta de exportacion: {error}"
+                ))
+            })?;
+        }
+    }
+
+    std::fs::write(trimmed_path, bytes).map_err(|error| {
+        AppError::InternalError(format!("No se pudo guardar el archivo exportado: {error}"))
+    })
 }

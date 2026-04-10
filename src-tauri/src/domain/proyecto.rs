@@ -4,9 +4,11 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProyectoParticipanteResumen {
+    pub id_docente: String,
     pub nombre: String,
     pub grado: String,
     pub renacyt_nivel: String,
+    pub es_responsable: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -25,6 +27,14 @@ pub struct CreateProyectoRequest {
 pub struct CreateProyectoConParticipantesRequest {
     pub titulo_proyecto: String,
     pub docentes_ids: Vec<String>,
+    pub docente_responsable_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateProyectoConParticipantesRequest {
+    pub titulo_proyecto: String,
+    pub docentes_ids: Vec<String>,
+    pub docente_responsable_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, FromRow)]
@@ -32,6 +42,7 @@ pub struct ProyectoDetalle {
     pub id_proyecto: String,
     pub titulo_proyecto: String,
     pub cantidad_docentes: i64,
+    pub docente_responsable: Option<String>,
     pub docentes: Option<String>,
     pub participantes_json: Option<String>,
     pub activo: i64,
