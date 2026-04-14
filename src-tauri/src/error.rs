@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AppError {
@@ -61,3 +62,18 @@ impl From<reqwest::Error> for AppError {
         AppError::ExternalServiceError(err.to_string())
     }
 }
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::DatabaseError(message)
+            | AppError::UniqueConstraintViolation(message)
+            | AppError::NotFound(message)
+            | AppError::InternalError(message)
+            | AppError::ConfigurationError(message)
+            | AppError::ExternalServiceError(message) => f.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}

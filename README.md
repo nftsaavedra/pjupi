@@ -62,6 +62,19 @@ Si necesita instalador, el flujo recomendado ahora es NSIS por defecto:
 npm run tauri:build:installer
 ```
 
+Si necesita una version portable sin instalador:
+
+```bash
+npm run tauri:build:portable
+```
+
+Ese comando genera:
+
+- una carpeta portable con `pjupi.exe`
+- un lanzador `Iniciar PJUPI.cmd`
+- un `LEEME-PORTABLE.txt`
+- un ZIP listo para copiar a otra PC
+
 Comandos explícitos:
 
 ```bash
@@ -75,8 +88,35 @@ Notas:
 - `nsis` evita la dependencia de WiX y es el bundle por defecto del proyecto.
 - Los scripts de build intentan reutilizar las herramientas cacheadas por Tauri en Windows antes de intentar cualquier descarga.
 - La PC destino no necesita Rust instalado para ejecutar el instalador o el `.exe` generado.
-- En Windows, Tauri requiere Microsoft Edge WebView2 Runtime. Si la PC destino no lo tiene, la app puede no abrir hasta instalarlo.
+- El instalador NSIS ahora incluye el flujo oficial de Tauri para asegurar WebView2 en Windows usando `webviewInstallMode`.
 - El backend SQLite local ahora se guarda por defecto en la carpeta de usuario (`%LOCALAPPDATA%\pjupi\database.db` en Windows), no dentro del directorio de instalación.
+
+## Configuración en Producción
+
+En desarrollo, la app sigue leyendo `.env` del workspace si existe.
+
+En build instalado o portable, la app ya no depende del `.env` del proyecto:
+
+1. Tauri empaqueta `.env` como recurso interno siguiendo el mecanismo oficial `bundle.resources`.
+2. En el primer arranque, la app copia esa configuración a un archivo editable por usuario.
+3. Desde entonces, la app lee la configuración desde ese archivo local y las variables de entorno del sistema, si existen, tienen prioridad.
+
+Ubicación esperada del archivo editable en Windows:
+
+```text
+%APPDATA%\com.upic.pjupi\pjupi.env
+```
+
+Esto permite un flujo más razonable para desktop:
+
+- valores por defecto empaquetados para validación inicial
+- configuración editable luego de instalar
+- posibilidad de reemplazar credenciales sin recompilar
+
+Importante:
+
+- Para una versión preliminar, esto ayuda a validar despliegue.
+- Para producción real, no es recomendable distribuir credenciales sensibles de MongoDB o tokens de terceros dentro del cliente de escritorio. Lo correcto es mover esos secretos a un backend controlado o a un flujo de provisión seguro.
 
 ## Verificación
 
