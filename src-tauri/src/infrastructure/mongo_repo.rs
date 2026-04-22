@@ -24,6 +24,7 @@ use crate::domain::proyecto::{
 };
 use crate::domain::usuario::{AuthStatus, BootstrapUsuarioRequest, CreateUsuarioRequest, LoginUsuarioRequest, UpdateUsuarioRequest, Usuario, UsuarioConPassword};
 use crate::error::AppError;
+use crate::services::{docente_service, proyecto_service};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 struct ParticipacionRecord {
@@ -33,55 +34,6 @@ struct ParticipacionRecord {
     id_docente: String,
     #[serde(default)]
     es_responsable: bool,
-}
-
-fn normalize_docente_ids(docentes_ids: &[String]) -> Result<Vec<String>, AppError> {
-    let mut normalized_ids = Vec::new();
-    let mut seen = HashSet::new();
-
-    for docente_id in docentes_ids {
-        let normalized = docente_id.trim();
-        if normalized.is_empty() {
-            return Err(AppError::InternalError("La lista de docentes contiene valores inválidos.".to_string()));
-        }
-
-        if seen.insert(normalized.to_string()) {
-            normalized_ids.push(normalized.to_string());
-        }
-    }
-
-    Ok(normalized_ids)
-}
-
-fn normalize_responsable_id(docente_responsable_id: Option<String>) -> Option<String> {
-    docente_responsable_id
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-}
-
-fn validate_responsable(docentes_ids: &[String], docente_responsable_id: &Option<String>) -> Result<(), AppError> {
-    if docentes_ids.is_empty() {
-        if docente_responsable_id.is_some() {
-            return Err(AppError::InternalError(
-                "No puede asignar un docente responsable cuando el proyecto no tiene docentes vinculados.".to_string(),
-            ));
-        }
-        return Ok(());
-    }
-
-    let Some(responsable_id) = docente_responsable_id.as_ref() else {
-        return Err(AppError::InternalError(
-            "Seleccione un docente responsable para el proyecto.".to_string(),
-        ));
-    };
-
-    if !docentes_ids.iter().any(|docente_id| docente_id == responsable_id) {
-        return Err(AppError::InternalError(
-            "El docente responsable debe formar parte de los docentes asignados al proyecto.".to_string(),
-        ));
-    }
-
-    Ok(())
 }
 
 async fn validate_docentes_activos(db: &Database, docentes_ids: &[String]) -> Result<(), AppError> {
@@ -450,17 +402,7 @@ pub async fn delete_docente(db: &Database, id_docente: &str) -> Result<EliminarD
         .update_one(doc! { "id_docente": id_docente }, doc! { "$set": { "activo": 0i64 } })
         .await?;
 
-    if participaciones > 0 {
-        return Ok(EliminarDocenteResultado {
-            accion: "desactivado".to_string(),
-            mensaje: "Docente desactivado. Mantiene trazabilidad porque tiene proyectos relacionados.".to_string(),
-        });
-    }
-
-    Ok(EliminarDocenteResultado {
-        accion: "desactivado".to_string(),
-        mensaje: "Docente desactivado correctamente.".to_string(),
-    })
+    Ok(docente_service::build_delete_result(participaciones > 0))
 }
 
 pub async fn reactivar_docente(db: &Database, id_docente: &str) -> Result<Docente, AppError> {
@@ -475,24 +417,18 @@ pub async fn reactivar_docente(db: &Database, id_docente: &str) -> Result<Docent
 }
 
 pub async fn create_proyecto_con_participantes(db: &Database, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {
-    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
-    if docentes_ids.is_empty() {
-        return Err(AppError::InternalError("Seleccione al menos un docente para crear el proyecto.".to_string()));
-    }
+    let prepared = proyecto_service::prepare_create_input(request)?;
+    validate_docentes_activos(db, &prepared.docentes_ids).await?;
 
-    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
-    validate_responsable(&docentes_ids, &docente_responsable_id)?;
-    validate_docentes_activos(db, &docentes_ids).await?;
-
-    let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: request.titulo_proyecto });
+    let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: prepared.titulo_proyecto });
     db.collection::<Proyecto>("proyectos").insert_one(&proyecto).await?;
 
     let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
-    for docente_id in docentes_ids {
+    for docente_id in prepared.docentes_ids {
         participaciones_collection.insert_one(ParticipacionRecord {
             id: format!("{}:{}", proyecto.id_proyecto, docente_id),
             id_proyecto: proyecto.id_proyecto.clone(),
-            es_responsable: docente_responsable_id.as_deref() == Some(docente_id.as_str()),
+            es_responsable: prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str()),
             id_docente: docente_id,
         }).await?;
     }
@@ -505,11 +441,8 @@ pub async fn update_proyecto_con_participantes(
     id_proyecto: &str,
     request: UpdateProyectoConParticipantesRequest,
 ) -> Result<Proyecto, AppError> {
-    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
-    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
-
-    validate_responsable(&docentes_ids, &docente_responsable_id)?;
-    validate_docentes_activos(db, &docentes_ids).await?;
+    let prepared = proyecto_service::prepare_update_input(request)?;
+    validate_docentes_activos(db, &prepared.docentes_ids).await?;
 
     let proyecto_exists = db.collection::<Proyecto>("proyectos")
         .find_one(doc! { "id_proyecto": id_proyecto })
@@ -522,7 +455,7 @@ pub async fn update_proyecto_con_participantes(
     db.collection::<Document>("proyectos")
         .update_one(
             doc! { "id_proyecto": id_proyecto },
-            doc! { "$set": { "titulo_proyecto": request.titulo_proyecto.trim() } },
+            doc! { "$set": { "titulo_proyecto": &prepared.titulo_proyecto } },
         )
         .await?;
 
@@ -531,11 +464,11 @@ pub async fn update_proyecto_con_participantes(
         .await?;
 
     let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
-    for docente_id in docentes_ids {
+    for docente_id in prepared.docentes_ids {
         participaciones_collection.insert_one(ParticipacionRecord {
             id: format!("{}:{}", id_proyecto, docente_id),
             id_proyecto: id_proyecto.to_string(),
-            es_responsable: docente_responsable_id.as_deref() == Some(docente_id.as_str()),
+            es_responsable: prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str()),
             id_docente: docente_id,
         }).await?;
     }

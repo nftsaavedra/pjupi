@@ -3,11 +3,14 @@ use tauri::{path::BaseDirectory, Manager};
 
 mod commands;
 mod config;
+mod config_validator;
+mod setup_wizard;
 mod db;
 mod domain;
 mod error;
 mod infrastructure;
 mod audit;
+mod services;
 mod state;
 mod storage;
 
@@ -16,7 +19,10 @@ use commands::proyecto_cmd::*;
 use commands::reporte_cmd::*;
 use commands::grado_cmd::*;
 use commands::usuario_cmd::*;
-use config::{load_runtime_config, DatabaseBackend};
+use commands::security_cmd::*;
+use config::load_runtime_config;
+use config_validator::validate_database_config;
+use services::sync_service;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -37,13 +43,28 @@ pub fn run() {
 
             let runtime_config = load_runtime_config(&user_env_path, bundled_default_env_path.as_deref())?;
 
-            let sqlite_pool = if runtime_config.database.backend == DatabaseBackend::Sqlite {
+            // Validate configuration before attempting to connect
+            if let Err(error) = validate_database_config(&runtime_config.database) {
+                let error_msg = format!(
+                    "Error de configuración: {}\n\nArchivo de configuración: {:?}\n\nPara re-configurar la aplicación, elimine el archivo de configuración y reinicie.",
+                    error,
+                    user_env_path
+                );
+                eprintln!("{}", error_msg);
+                return Err(std::io::Error::other(error_msg).into());
+            }
+
+            let sqlite_pool = if runtime_config.database.should_init_local_sqlite() {
                 let pool = tauri::async_runtime::block_on(async {
                     let pool = SqlitePool::connect(&runtime_config.database.sqlite_url).await?;
                     db::init_db(&pool).await?;
                     Ok::<SqlitePool, sqlx::Error>(pool)
                 }).map_err(|error| {
-                    std::io::Error::other(format!("No se pudo inicializar SQLite: {}", error))
+                    std::io::Error::other(format!(
+                        "No se pudo inicializar SQLite en {}. Error: {}\n\nVerifique permisos de directorio y que la ruta sea válida.",
+                        runtime_config.database.sqlite_url,
+                        error
+                    ))
                 })?;
                 Some(pool)
             } else {
@@ -54,7 +75,17 @@ pub fn run() {
                 let database = tauri::async_runtime::block_on(async {
                     db::init_mongo(&runtime_config.database).await
                 }).map_err(|error| {
-                    std::io::Error::other(format!("No se pudo conectar a MongoDB. Revise la configuración en {:?}: {}", runtime_config.user_env_path, error))
+                    std::io::Error::other(format!(
+                        "No se pudo conectar a MongoDB.\n\n\
+                        Error: {}\n\n\
+                        Verifique:\n\
+                        1. La URI de MongoDB es correcta (configurada en {:?})\n\
+                        2. El servidor MongoDB está ejecutándose\n\
+                        3. Las credenciales son correctas\n\
+                        4. La base de datos es accesible desde esta máquina",
+                        error,
+                        user_env_path
+                    ))
                 })?;
 
                 Some(database)
@@ -62,8 +93,14 @@ pub fn run() {
                 None
             };
 
+            if let (Some(sqlite), Some(mongo)) = (sqlite_pool.as_ref(), mongo_db.as_ref()) {
+                if let Err(error) = tauri::async_runtime::block_on(sync_service::sync_pending_once(sqlite, mongo)) {
+                    eprintln!("No se pudo sincronizar outbox local al arrancar: {}", error);
+                }
+            }
+
             app.manage(AppState::new(
-                runtime_config.database.backend,
+                runtime_config.database.primary_backend,
                 sqlite_pool,
                 mongo_db,
                 runtime_config.reniec,
@@ -109,7 +146,10 @@ pub fn run() {
             get_all_usuarios,
             actualizar_usuario,
             desactivar_usuario,
-            reactivar_usuario
+            reactivar_usuario,
+            get_security_status,
+            get_setup_guide,
+            get_security_recommendations
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

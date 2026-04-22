@@ -15,7 +15,7 @@ pub enum DatabaseBackend {
 
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
-    pub backend: DatabaseBackend,
+    pub primary_backend: DatabaseBackend,
     pub sqlite_url: String,
     pub mongodb_uri: Option<String>,
     pub mongodb_db_name: String,
@@ -39,6 +39,7 @@ pub struct RuntimeConfig {
     pub database: DatabaseConfig,
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
+    #[allow(dead_code)]
     pub user_env_path: PathBuf,
 }
 
@@ -53,7 +54,7 @@ impl DatabaseConfig {
             .or(mongodb_uri);
         let backend_value = values.get("PJUPI_DB_BACKEND").cloned();
 
-        let backend = match backend_value.as_deref().map(|value| value.to_ascii_lowercase()) {
+        let primary_backend = match backend_value.as_deref().map(|value| value.to_ascii_lowercase()) {
             Some(value) if value == "mongodb" || value == "mongo" => DatabaseBackend::MongoDb,
             Some(value) if value == "sqlite" => DatabaseBackend::Sqlite,
             _ if mongodb_uri.is_some() => DatabaseBackend::MongoDb,
@@ -67,7 +68,7 @@ impl DatabaseConfig {
             .unwrap_or_else(|| "pjupi".to_string());
 
         Self {
-            backend,
+            primary_backend,
             sqlite_url,
             mongodb_uri,
             mongodb_db_name,
@@ -75,7 +76,11 @@ impl DatabaseConfig {
     }
 
     pub fn requires_mongodb(&self) -> bool {
-        self.backend == DatabaseBackend::MongoDb
+        self.primary_backend == DatabaseBackend::MongoDb
+    }
+
+    pub fn should_init_local_sqlite(&self) -> bool {
+        true
     }
 }
 

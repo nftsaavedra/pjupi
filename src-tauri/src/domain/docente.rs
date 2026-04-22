@@ -47,6 +47,8 @@ pub struct Docente {
     pub apellido_paterno: Option<String>,
     pub apellido_materno: Option<String>,
     pub activo: i64,
+    #[serde(default)]
+    pub updated_at: Option<i64>,
     pub renacyt_codigo_registro: Option<String>,
     pub renacyt_id_investigador: Option<String>,
     pub renacyt_nivel: Option<String>,
@@ -157,6 +159,7 @@ impl Docente {
             apellido_paterno: Some(apellido_paterno),
             apellido_materno,
             activo: 1,
+            updated_at: Some(Self::current_timestamp_ms()),
             renacyt_codigo_registro: renacyt.as_ref().map(|value| value.codigo_registro.trim().to_string()).filter(|value| !value.is_empty()),
             renacyt_id_investigador: renacyt.as_ref().map(|value| value.id_investigador.trim().to_string()).filter(|value| !value.is_empty()),
             renacyt_nivel: renacyt.as_ref().and_then(|value| value.nivel.clone()).filter(|value| !value.trim().is_empty()),

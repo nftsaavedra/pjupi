@@ -6,10 +6,10 @@ Aplicación de escritorio construida con Tauri, React y TypeScript para gestiona
 
 La aplicación ahora soporta dos backends:
 
-- `sqlite`: modo heredado y fallback local.
-- `mongodb`: nuevo backend principal para migración gradual.
+- `mongodb`: backend principal y fuente de verdad objetivo.
+- `sqlite`: respaldo local, soporte offline y compatibilidad operativa.
 
-La selección se hace por variables de entorno en `.env`:
+La configuración actual se define en `pjupi.env` en ejecución instalada o portable, y en `.env` durante desarrollo. Valores soportados:
 
 ```env
 PJUPI_DB_BACKEND=mongodb
@@ -20,6 +20,23 @@ PJUPI_RENIEC_API_BASE_URL=https://api.decolecta.com/v1
 PJUPI_RENIEC_TOKEN=<tu_token_reniec>
 ```
 
+Estado actual del proyecto:
+
+- MongoDB ya está tratado como backend preferente a nivel de configuración.
+- La capa de aplicación ya migró a servicios por agregado para reducir el `dispatch` repetido por backend.
+- SQLite ahora se inicializa como store local aún cuando MongoDB es el backend primario.
+- Las mutaciones de `grados`, `proyectos`, `docentes` y `usuarios` en modo SQLite primario ya se encolan en `sync_outbox`.
+- Todas las mutaciones se registran como snapshots de estado para sincronización.
+- En arranque, si hay SQLite local y MongoDB disponible, se ejecuta sincronización inicial de outbox pendiente.
+- **Política de resolución de conflictos**: MongoDB-primary. En caso de conflicto, MongoDB prevalece.
+- La refactorización pendiente consiste en eliminar el `dispatch` dentro de los servicios y restringir escrituras online en SQLite.
+
+Plan documentado:
+
+- Ver [docs/mongodb-primary-plan.md](docs/mongodb-primary-plan.md).
+- Fases completadas: 1 (dual-backend congelado), 2 (servicios por agregado), 3 (SQLite especializado con outbox/sync para todos los agregados).
+- Fases en progreso: 4 (simplificación de dispatch), 5 (offline real con conflictos), 6 (hardening).
+
 ## Integración RENIEC
 
 - La consulta de DNI usa por defecto `https://api.decolecta.com/v1`.
@@ -28,9 +45,15 @@ PJUPI_RENIEC_TOKEN=<tu_token_reniec>
 
 El formulario de docentes mantiene compatibilidad con el flujo actual, pero ahora registra nombres y apellidos por separado y conserva `nombres_apellidos` como valor compuesto para listados, reportes y trazabilidad existente.
 
-## Estrategia de Migración Segura
+## Estrategia de Transición
 
-Al iniciar en modo `mongodb`, el backend hace lo siguiente:
+La dirección objetivo del proyecto es:
+
+1. MongoDB como backend principal.
+2. SQLite como almacenamiento local para contingencia, trabajo offline o caché operativa.
+3. Sin paridad obligatoria de nuevas reglas de negocio entre dos repositorios principales.
+
+Mientras se completa la refactorización, al iniciar en modo `mongodb` el backend hace lo siguiente:
 
 1. Conecta a MongoDB y asegura índices únicos.
 2. Conserva SQLite como fuente de respaldo si existe `database.db`.
@@ -38,6 +61,12 @@ Al iniciar en modo `mongodb`, el backend hace lo siguiente:
 4. No borra ni altera el archivo SQLite original, por lo que el rollback sigue siendo posible.
 
 La metadata de migración se guarda en la colección `system_meta`.
+
+Limitación actual:
+
+- Aunque la estrategia ya apunta a MongoDB-first, todavía existen repositorios concretos separados para SQLite y MongoDB.
+- El `dispatch` ya salió de varios casos de uso en `storage`, pero sigue existiendo en la capa de servicios mientras se completa la unificación.
+- SQLite todavía conserva CRUD legado completo; `sync_outbox` y `sync_state` ya están operativas para `grados`, `proyectos` y `docentes`, pero la sincronización completa del resto de agregados aún no está terminada.
 
 ## Desarrollo
 
@@ -113,10 +142,29 @@ Esto permite un flujo más razonable para desktop:
 - configuración editable luego de instalar
 - posibilidad de reemplazar credenciales sin recompilar
 
+Recomendación operativa actual:
+
+- En despliegues conectados, use `PJUPI_DB_BACKEND=mongodb`.
+- Reserve `sqlite` para escenarios de contingencia, pruebas locales aisladas o futura operación offline.
+
 Importante:
 
 - Para una versión preliminar, esto ayuda a validar despliegue.
 - Para producción real, no es recomendable distribuir credenciales sensibles de MongoDB o tokens de terceros dentro del cliente de escritorio. Lo correcto es mover esos secretos a un backend controlado o a un flujo de provisión seguro.
+
+## Arquitectura Objetivo de Datos
+
+Objetivo de mediano plazo:
+
+- MongoDB concentra escritura, lectura principal, índices y reglas de negocio persistentes.
+- SQLite se usa como réplica local parcial o cola de trabajo offline.
+- La sincronización se hace desde una capa dedicada, no desde duplicación total de repositorios.
+
+Síntomas actuales que justifican la refactorización:
+
+- La capa [src-tauri/src/storage.rs](src-tauri/src/storage.rs) ya redujo el `dispatch` directo, pero la selección de backend todavía existe en la capa de servicios.
+- Existen repositorios de dominio paralelos en SQLite y MongoDB con lógica de negocio repetida.
+- El costo de mantener paridad funcional entre ambos backends crece con cada cambio de dominio.
 
 ## Verificación
 

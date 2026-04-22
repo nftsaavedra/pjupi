@@ -9,6 +9,8 @@ pub struct Usuario {
     pub nombre_completo: String,
     pub rol: String,
     pub activo: i64,
+    #[serde(default)]
+    pub updated_at: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
@@ -19,6 +21,8 @@ pub struct UsuarioConPassword {
     pub rol: String,
     pub password_hash: String,
     pub activo: i64,
+    #[serde(default)]
+    pub updated_at: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,6 +62,11 @@ pub struct AuthStatus {
 
 impl UsuarioConPassword {
     pub fn new(request: CreateUsuarioRequest, password_hash: String) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as i64)
+            .unwrap_or_default();
+        
         Self {
             id_usuario: Uuid::new_v4().to_string(),
             username: request.username.trim().to_lowercase(),
@@ -65,6 +74,7 @@ impl UsuarioConPassword {
             rol: request.rol.trim().to_string(),
             password_hash,
             activo: 1,
+            updated_at: Some(now),
         }
     }
 
@@ -75,6 +85,7 @@ impl UsuarioConPassword {
             nombre_completo: self.nombre_completo.clone(),
             rol: self.rol.clone(),
             activo: self.activo,
+            updated_at: self.updated_at,
         }
     }
 }

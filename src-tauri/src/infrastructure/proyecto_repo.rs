@@ -1,5 +1,5 @@
 use sqlx::{query, query_as, Row, SqlitePool};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use crate::domain::proyecto::{
     Proyecto,
     CreateProyectoRequest,
@@ -12,30 +12,7 @@ use crate::domain::proyecto::{
 };
 use crate::domain::estadisticas::{DocenteProyectosCount, KpisDashboard, ExportData};
 use crate::error::AppError;
-
-fn normalize_docente_ids(docentes_ids: &[String]) -> Result<Vec<String>, AppError> {
-    let mut normalized_ids = Vec::new();
-    let mut seen = HashSet::new();
-
-    for docente_id in docentes_ids {
-        let normalized = docente_id.trim();
-        if normalized.is_empty() {
-            return Err(AppError::InternalError("La lista de docentes contiene valores inválidos.".to_string()));
-        }
-
-        if seen.insert(normalized.to_string()) {
-            normalized_ids.push(normalized.to_string());
-        }
-    }
-
-    Ok(normalized_ids)
-}
-
-fn normalize_responsable_id(docente_responsable_id: Option<String>) -> Option<String> {
-    docente_responsable_id
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-}
+use crate::services::proyecto_service;
 
 async fn validate_docentes_activos(pool: &SqlitePool, docentes_ids: &[String]) -> Result<(), AppError> {
     for docente_id in docentes_ids {
@@ -54,43 +31,12 @@ async fn validate_docentes_activos(pool: &SqlitePool, docentes_ids: &[String]) -
     Ok(())
 }
 
-fn validate_responsable(docentes_ids: &[String], docente_responsable_id: &Option<String>) -> Result<(), AppError> {
-    if docentes_ids.is_empty() {
-        if docente_responsable_id.is_some() {
-            return Err(AppError::InternalError(
-                "No puede asignar un docente responsable cuando el proyecto no tiene docentes vinculados.".to_string(),
-            ));
-        }
-        return Ok(());
-    }
-
-    let Some(responsable_id) = docente_responsable_id.as_ref() else {
-        return Err(AppError::InternalError(
-            "Seleccione un docente responsable para el proyecto.".to_string(),
-        ));
-    };
-
-    if !docentes_ids.iter().any(|docente_id| docente_id == responsable_id) {
-        return Err(AppError::InternalError(
-            "El docente responsable debe formar parte de los docentes asignados al proyecto.".to_string(),
-        ));
-    }
-
-    Ok(())
-}
-
 pub async fn create_proyecto_con_participantes(pool: &SqlitePool, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {
-    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
-    if docentes_ids.is_empty() {
-        return Err(AppError::InternalError("Seleccione al menos un docente para crear el proyecto.".to_string()));
-    }
-
-    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
-    validate_responsable(&docentes_ids, &docente_responsable_id)?;
-    validate_docentes_activos(pool, &docentes_ids).await?;
+    let prepared = proyecto_service::prepare_create_input(request)?;
+    validate_docentes_activos(pool, &prepared.docentes_ids).await?;
 
     let mut tx = pool.begin().await?;
-    let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: request.titulo_proyecto });
+    let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: prepared.titulo_proyecto });
     query("INSERT INTO proyecto (id_proyecto, titulo_proyecto, activo) VALUES (?, ?, ?)")
         .bind(&proyecto.id_proyecto)
         .bind(&proyecto.titulo_proyecto)
@@ -98,11 +44,11 @@ pub async fn create_proyecto_con_participantes(pool: &SqlitePool, request: Creat
         .execute(&mut *tx)
         .await?;
 
-    for docente_id in docentes_ids {
+    for docente_id in prepared.docentes_ids {
         query("INSERT INTO participacion (id_proyecto, id_docente, es_responsable) VALUES (?, ?, ?)")
             .bind(&proyecto.id_proyecto)
             .bind(&docente_id)
-            .bind((docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
+            .bind((prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
             .execute(&mut *tx)
             .await?;
     }
@@ -116,11 +62,8 @@ pub async fn update_proyecto_con_participantes(
     id_proyecto: &str,
     request: UpdateProyectoConParticipantesRequest,
 ) -> Result<Proyecto, AppError> {
-    let docentes_ids = normalize_docente_ids(&request.docentes_ids)?;
-    let docente_responsable_id = normalize_responsable_id(request.docente_responsable_id);
-
-    validate_responsable(&docentes_ids, &docente_responsable_id)?;
-    validate_docentes_activos(pool, &docentes_ids).await?;
+    let prepared = proyecto_service::prepare_update_input(request)?;
+    validate_docentes_activos(pool, &prepared.docentes_ids).await?;
 
     let mut tx = pool.begin().await?;
 
@@ -134,7 +77,7 @@ pub async fn update_proyecto_con_participantes(
     }
 
     query("UPDATE proyecto SET titulo_proyecto = ? WHERE id_proyecto = ?")
-        .bind(request.titulo_proyecto.trim())
+        .bind(&prepared.titulo_proyecto)
         .bind(id_proyecto)
         .execute(&mut *tx)
         .await?;
@@ -144,11 +87,11 @@ pub async fn update_proyecto_con_participantes(
         .execute(&mut *tx)
         .await?;
 
-    for docente_id in docentes_ids {
+    for docente_id in prepared.docentes_ids {
         query("INSERT INTO participacion (id_proyecto, id_docente, es_responsable) VALUES (?, ?, ?)")
             .bind(id_proyecto)
             .bind(&docente_id)
-            .bind((docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
+            .bind((prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str())) as i64)
             .execute(&mut *tx)
             .await?;
     }

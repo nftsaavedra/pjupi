@@ -64,6 +64,39 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             FOREIGN KEY (id_proyecto) REFERENCES proyecto (id_proyecto) ON DELETE CASCADE,
             FOREIGN KEY (id_docente) REFERENCES docente (id_docente) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS sync_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aggregate_type TEXT NOT NULL,
+            aggregate_id TEXT NOT NULL,
+            operation_type TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            retry_count INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS sync_state (
+            scope TEXT PRIMARY KEY,
+            last_synced_at INTEGER,
+            last_synced_version TEXT,
+            metadata_json TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS sync_conflicts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aggregate_type TEXT NOT NULL,
+            aggregate_id TEXT NOT NULL,
+            offline_updated_at INTEGER,
+            mongo_updated_at INTEGER,
+            conflict_type TEXT NOT NULL,
+            description TEXT,
+            resolution TEXT,
+            created_at INTEGER NOT NULL,
+            resolved_at INTEGER
+        );
     "#)
     .execute(pool)
     .await?;
@@ -80,6 +113,16 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             .execute(pool)
             .await?;
     }
+
+    query("CREATE INDEX IF NOT EXISTS idx_sync_outbox_status_created_at ON sync_outbox(status, created_at)")
+        .execute(pool)
+        .await?;
+    query("CREATE INDEX IF NOT EXISTS idx_sync_outbox_aggregate ON sync_outbox(aggregate_type, aggregate_id)")
+        .execute(pool)
+        .await?;
+    query("CREATE INDEX IF NOT EXISTS idx_sync_conflicts_unresolved ON sync_conflicts(resolved_at) WHERE resolved_at IS NULL")
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

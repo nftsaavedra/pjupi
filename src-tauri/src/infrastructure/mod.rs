@@ -4,4 +4,5 @@ pub mod grado_repo;
 pub mod mongo_repo;
 pub mod renacyt_client;
 pub mod reniec_client;
+pub mod sync_outbox_repo;
 pub mod usuario_repo;

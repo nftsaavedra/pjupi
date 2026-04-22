@@ -8,6 +8,8 @@ pub struct GradoAcademico {
     pub nombre: String,
     pub descripcion: Option<String>,
     pub activo: i64,
+    #[serde(default)]
+    pub updated_at: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,11 +26,17 @@ pub struct CreateGradoRequest {
 
 impl GradoAcademico {
     pub fn new(request: CreateGradoRequest) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as i64)
+            .unwrap_or_default();
+        
         Self {
             id_grado: Uuid::new_v4().to_string(),
             nombre: request.nombre,
             descripcion: request.descripcion,
             activo: 1,
+            updated_at: Some(now),
         }
     }
 }

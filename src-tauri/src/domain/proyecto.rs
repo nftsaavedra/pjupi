@@ -16,6 +16,8 @@ pub struct Proyecto {
     pub id_proyecto: String,
     pub titulo_proyecto: String,
     pub activo: i64,
+    #[serde(default)]
+    pub updated_at: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,10 +69,16 @@ pub struct ExportDataConProjectos {
 
 impl Proyecto {
     pub fn new(request: CreateProyectoRequest) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as i64)
+            .unwrap_or_default();
+        
         Self {
             id_proyecto: Uuid::new_v4().to_string(),
             titulo_proyecto: request.titulo_proyecto,
             activo: 1,
+            updated_at: Some(now),
         }
     }
 }

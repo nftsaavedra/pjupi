@@ -1,6 +1,7 @@
 use sqlx::{query, query_as, SqlitePool};
 use crate::domain::docente::{Docente, CreateDocenteRequest, DocenteDetalle, EliminarDocenteResultado};
 use crate::error::AppError;
+use crate::services::docente_service;
 
 pub async fn create_docente(pool: &SqlitePool, request: CreateDocenteRequest) -> Result<Docente, AppError> {
     let docente = Docente::new(request);
@@ -178,17 +179,7 @@ pub async fn delete_docente(pool: &SqlitePool, id_docente: &str) -> Result<Elimi
         .execute(pool)
         .await?;
 
-    if participaciones.0 > 0 {
-        return Ok(EliminarDocenteResultado {
-            accion: "desactivado".to_string(),
-            mensaje: "Docente desactivado. Mantiene trazabilidad porque tiene proyectos relacionados.".to_string(),
-        });
-    }
-
-    Ok(EliminarDocenteResultado {
-        accion: "desactivado".to_string(),
-        mensaje: "Docente desactivado correctamente.".to_string(),
-    })
+    Ok(docente_service::build_delete_result(participaciones.0 > 0))
 }
 
 pub async fn reactivar_docente(pool: &SqlitePool, id_docente: &str) -> Result<Docente, AppError> {

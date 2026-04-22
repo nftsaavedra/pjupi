@@ -56,7 +56,7 @@ impl SessionStore {
 }
 
 pub struct AppState {
-    pub backend: DatabaseBackend,
+    pub primary_backend: DatabaseBackend,
     pub sqlite: Option<SqlitePool>,
     pub mongo: Option<Database>,
     pub reniec: ReniecConfig,
@@ -66,14 +66,14 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(
-        backend: DatabaseBackend,
+        primary_backend: DatabaseBackend,
         sqlite: Option<SqlitePool>,
         mongo: Option<Database>,
         reniec: ReniecConfig,
         renacyt: RenacytConfig,
     ) -> Self {
         Self {
-            backend,
+            primary_backend,
             sqlite,
             mongo,
             reniec,
@@ -88,6 +88,7 @@ impl AppState {
         })
     }
 
+    #[allow(dead_code)]
     pub fn mongo_db(&self) -> Result<&Database, AppError> {
         self.mongo.as_ref().ok_or_else(|| {
             AppError::ConfigurationError("MongoDB no está inicializado para la configuración actual.".to_string())
