@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FolderOpen, Save } from 'lucide-react';
+import { FolderOpen, Save, Beaker, Lightbulb, Package, DollarSign } from 'lucide-react';
 import type { DocenteDetalle } from '../../docentes/api';
 import type { ProyectoDetalle, ProyectoParticipantesPayload } from '../api';
 import { toast } from '../../../services/toast';
@@ -9,7 +9,13 @@ import { FormModal } from '../../../shared/forms/FormModal';
 import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { DocentesChecklist } from './DocentesChecklist';
+import { RelatedEntitiesSection } from './RelatedEntitiesSection';
 import { getResponsableProyecto, parseParticipantesProyecto } from '../participantes';
+
+interface RelatedEntity {
+  id: string;
+  [key: string]: any;
+}
 
 interface PendingProyectoChange {
   title: string;
@@ -25,8 +31,16 @@ interface ProyectoEditModalProps {
   open: boolean;
   proyecto: ProyectoDetalle | null;
   refreshingDocentes: boolean;
+  patentes?: RelatedEntity[];
+  productos?: RelatedEntity[];
+  equipamientos?: RelatedEntity[];
+  financiamientos?: RelatedEntity[];
   onClose: () => void;
   onSubmit: (idProyecto: string, payload: ProyectoParticipantesPayload) => void;
+  onPatentesChange?: (items: RelatedEntity[]) => void;
+  onProductosChange?: (items: RelatedEntity[]) => void;
+  onEquipamientosChange?: (items: RelatedEntity[]) => void;
+  onFinanciamientosChange?: (items: RelatedEntity[]) => void;
 }
 
 export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
@@ -36,8 +50,16 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
   open,
   proyecto,
   refreshingDocentes,
+  patentes = [],
+  productos = [],
+  equipamientos = [],
+  financiamientos = [],
   onClose,
   onSubmit,
+  onPatentesChange,
+  onProductosChange,
+  onEquipamientosChange,
+  onFinanciamientosChange,
 }) => {
   const participantesIniciales = useMemo(
     () => parseParticipantesProyecto(proyecto?.participantes_json),
@@ -199,7 +221,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
             <span>Editar Proyecto</span>
           </span>
         )}
-        description="Actualice el título, los docentes vinculados y el responsable del proyecto."
+        description="Actualice el título, los docentes vinculados, el responsable y las entidades relacionadas del proyecto."
         onClose={onClose}
         onSubmit={handleSubmit}
         submitText={(
@@ -296,6 +318,69 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
           showSelectedMeta={false}
           showRequiredError={false}
         />
+
+        {/* ── Entidades relacionadas opcionales ── */}
+        <div className="related-entities-container">
+          {onPatentesChange && (
+            <RelatedEntitiesSection
+              title="Patentes"
+              icon={<AppIcon icon={Beaker} size={18} />}
+              description="Agregue patentes asociadas con este proyecto (opcional)."
+              items={patentes}
+              fields={[
+                { name: 'numero_patente', label: 'Número de Patente', placeholder: 'Ej: PE-2024-00123', required: true },
+                { name: 'titulo_patente', label: 'Título', placeholder: 'Ej: Proceso de purificación de agua', required: true },
+                { name: 'estado', label: 'Estado', placeholder: 'Ej: Solicitada, Concedida, Rechazada', required: false },
+              ]}
+              onItemsChange={onPatentesChange}
+            />
+          )}
+
+          {onProductosChange && (
+            <RelatedEntitiesSection
+              title="Productos I+D+i"
+              icon={<AppIcon icon={Lightbulb} size={18} />}
+              description="Agregue productos innovadores del proyecto (opcional)."
+              items={productos}
+              fields={[
+                { name: 'nombre_producto', label: 'Nombre del Producto', placeholder: 'Ej: Sistema de tratamiento', required: true },
+                { name: 'descripcion', label: 'Descripción', placeholder: 'Breve descripción del producto', type: 'textarea', required: false },
+                { name: 'etapa', label: 'Etapa de Desarrollo', placeholder: 'Ej: Prototipo, Piloto, Comercialización', required: false },
+              ]}
+              onItemsChange={onProductosChange}
+            />
+          )}
+
+          {onEquipamientosChange && (
+            <RelatedEntitiesSection
+              title="Equipamiento"
+              icon={<AppIcon icon={Package} size={18} />}
+              description="Agregue equipamiento adquirido o desarrollado (opcional)."
+              items={equipamientos}
+              fields={[
+                { name: 'nombre_equipo', label: 'Nombre del Equipo', placeholder: 'Ej: Cromatógrafo de gases', required: true },
+                { name: 'especificaciones', label: 'Especificaciones', placeholder: 'Detalles técnicos', type: 'textarea', required: false },
+                { name: 'costo', label: 'Costo Estimado (S/)', type: 'number', placeholder: '0.00', required: false },
+              ]}
+              onItemsChange={onEquipamientosChange}
+            />
+          )}
+
+          {onFinanciamientosChange && (
+            <RelatedEntitiesSection
+              title="Financiamiento"
+              icon={<AppIcon icon={DollarSign} size={18} />}
+              description="Agregue fuentes de financiamiento del proyecto (opcional)."
+              items={financiamientos}
+              fields={[
+                { name: 'fuente', label: 'Fuente de Financiamiento', placeholder: 'Ej: FONDECYT, CONCYTEC, Institucional', required: true },
+                { name: 'monto', label: 'Monto (S/)', type: 'number', placeholder: '0.00', required: false },
+                { name: 'estado_financiero', label: 'Estado', placeholder: 'Ej: Aprobado, Desembolsado, En proceso', required: false },
+              ]}
+              onItemsChange={onFinanciamientosChange}
+            />
+          )}
+        </div>
       </FormModal>
 
       <ConfirmDialog

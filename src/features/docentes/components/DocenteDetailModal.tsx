@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, RefreshCw, TriangleAlert, UserRound, X } from 'lucide-react';
+import { BadgeCheck, BookOpen, ChevronDown, ChevronUp, ExternalLink, GraduationCap, RefreshCw, TriangleAlert, UserRound, X } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import type { DocenteDetalle, RenacytFormacionAcademicaResumen } from '../api';
+import type { DocenteDetalle, Publicacion, RenacytFormacionAcademicaResumen, SyncPublicacionesResult } from '../api';
+import { getPublicacionesDocente, sincronizarPublicacionesPure, getTauriErrorMessage } from '../api';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { InlineIconButton } from '../../../shared/ui/InlineIconButton';
 import { toast } from '../../../services/toast';
@@ -9,6 +10,7 @@ import { formatRenacytNivel } from '../../../shared/utils/renacyt';
 
 interface DocenteDetailModalProps {
   canRefreshRenacyt: boolean;
+  canSyncPure?: boolean;
   docente: DocenteDetalle;
   onClose: () => void;
   onRefreshRenacytFormaciones: (id: string) => void;
@@ -19,6 +21,7 @@ type ExternalBrand = 'renacyt' | 'orcid' | 'scopus';
 
 export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
   canRefreshRenacyt,
+  canSyncPure = false,
   docente,
   onClose,
   onRefreshRenacytFormaciones,
@@ -26,8 +29,13 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
 }) => {
   const proyectos = docente.proyectos ? docente.proyectos.split(' | ') : [];
   const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
+  const tieneScopusId = Boolean(docente.renacyt_scopus_author_id);
   const [renacytExpanded, setRenacytExpanded] = useState(true);
   const [formacionesExpanded, setFormacionesExpanded] = useState(false);
+  const [publicacionesExpanded, setPublicacionesExpanded] = useState(false);
+  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
+  const [publicacionesLoaded, setPublicacionesLoaded] = useState(false);
+  const [isSyncingPure, setIsSyncingPure] = useState(false);
 
   const formatDate = (value?: number | null) => {
     if (!value) {
@@ -46,6 +54,43 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
       await openUrl(url);
     } catch {
       toast.error(errorMessage);
+    }
+  };
+
+  const handleLoadPublicaciones = async () => {
+    if (publicacionesLoaded) return;
+    try {
+      const data = await getPublicacionesDocente(docente.id_docente);
+      setPublicaciones(data);
+      setPublicacionesLoaded(true);
+    } catch (error) {
+      toast.error(getTauriErrorMessage(error));
+    }
+  };
+
+  const handleSyncPure = async () => {
+    setIsSyncingPure(true);
+    try {
+      const result: SyncPublicacionesResult = await sincronizarPublicacionesPure(docente.id_docente);
+      toast.success(
+        `Sincronización Pure completada: ${result.nuevas} nuevas, ${result.actualizadas} actualizadas de ${result.total_encontradas} encontradas.`,
+      );
+      // Reload after sync
+      const data = await getPublicacionesDocente(docente.id_docente);
+      setPublicaciones(data);
+      setPublicacionesLoaded(true);
+    } catch (error) {
+      toast.error(getTauriErrorMessage(error));
+    } finally {
+      setIsSyncingPure(false);
+    }
+  };
+
+  const handleTogglePublicaciones = async () => {
+    const next = !publicacionesExpanded;
+    setPublicacionesExpanded(next);
+    if (next && !publicacionesLoaded) {
+      await handleLoadPublicaciones();
     }
   };
 
@@ -317,6 +362,112 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
             ))}
           </div>
 
+          {/* ── Publicaciones Pure ── */}
+          <div className="renacyt-detail-card">
+            <button
+              type="button"
+              className="renacyt-detail-toggle"
+              onClick={() => void handleTogglePublicaciones()}
+              aria-expanded={publicacionesExpanded}
+            >
+              <span className="renacyt-detail-toggle-copy">
+                <span className="title-with-icon renacyt-detail-title">
+                  <AppIcon icon={BookOpen} size={18} />
+                  <span>Publicaciones (Pure)</span>
+                </span>
+                {publicacionesLoaded && (
+                  <span className="badge badge-info">{publicaciones.length}</span>
+                )}
+              </span>
+              <span className="renacyt-detail-toggle-icon" aria-hidden="true">
+                <AppIcon icon={publicacionesExpanded ? ChevronUp : ChevronDown} size={18} />
+              </span>
+            </button>
+
+            {publicacionesExpanded && (
+              <>
+                {!tieneScopusId && (
+                  <div className="inline-feedback inline-feedback-warning renacyt-formaciones-feedback">
+                    <span>
+                      Este docente no tiene Scopus Author ID. Sincronice primero los datos RENACYT para obtenerlo.
+                    </span>
+                  </div>
+                )}
+
+                {tieneScopusId && canSyncPure && (
+                  <div className="renacyt-detail-actions">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => void handleSyncPure()}
+                      disabled={isSyncingPure}
+                    >
+                      <span className="button-with-icon">
+                        <AppIcon icon={RefreshCw} size={16} />
+                        <span>{isSyncingPure ? 'Sincronizando Pure...' : 'Sincronizar desde Pure'}</span>
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {publicacionesLoaded && publicaciones.length === 0 && (
+                  <p className="renacyt-detail-empty">
+                    No hay publicaciones sincronizadas para este docente.
+                    {canSyncPure && tieneScopusId && ' Use el botón para sincronizar desde Pure.'}
+                  </p>
+                )}
+
+                {publicaciones.length > 0 && (
+                  <div className="renacyt-formaciones-list">
+                    {publicaciones.map((pub) => (
+                      <article key={pub.id_publicacion} className="renacyt-formacion-card">
+                        <div className="renacyt-formacion-head">
+                          <strong>{pub.titulo}</strong>
+                          {pub.anio_publicacion && (
+                            <span className="badge badge-info">{pub.anio_publicacion}</span>
+                          )}
+                        </div>
+                        <div className="renacyt-formacion-grid">
+                          {pub.tipo_publicacion && (
+                            <span><strong>Tipo:</strong> {pub.tipo_publicacion}</span>
+                          )}
+                          {pub.journal_titulo && (
+                            <span><strong>Journal:</strong> {pub.journal_titulo}</span>
+                          )}
+                          {pub.estado_publicacion && (
+                            <span><strong>Estado:</strong> {pub.estado_publicacion}</span>
+                          )}
+                          {pub.doi && (
+                            <span>
+                              <strong>DOI:</strong>{' '}
+                              <InlineIconButton
+                                icon={ExternalLink}
+                                label="Abrir DOI"
+                                onClick={() =>
+                                  void handleOpenExternalUrl(
+                                    `https://doi.org/${pub.doi}`,
+                                    'No se pudo abrir el enlace DOI.',
+                                  )
+                                }
+                              />
+                              {pub.doi}
+                            </span>
+                          )}
+                          {pub.autores_json && parseAutores(pub.autores_json).length > 0 && (
+                            <span className="renacyt-formacion-full-col">
+                              <strong>Autores:</strong>{' '}
+                              {parseAutores(pub.autores_json).join('; ')}
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
           {docente.cantidad_proyectos > 0 ? (
             <div className="proyectos-section">
               <h3 className="title-with-icon">
@@ -367,4 +518,14 @@ const parseFormacionesAcademicas = (value?: string | null): RenacytFormacionAcad
 
 const hasFormacionDate = (value?: number | null) => {
   return Boolean(value && value > 0);
+};
+
+const parseAutores = (value?: string | null): string[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
 };

@@ -6,6 +6,8 @@ export type AppPermission =
   | 'docentes.manage'
   | 'proyectos.view'
   | 'proyectos.manage'
+  | 'grupos.view'
+  | 'grupos.manage'
   | 'reportes.view'
   | 'reportes.export'
   | 'configuracion.view'
@@ -29,6 +31,8 @@ export const ROLE_DEFINITIONS: Record<AppRole, RoleDefinition> = {
       'docentes.manage',
       'proyectos.view',
       'proyectos.manage',
+      'grupos.view',
+      'grupos.manage',
       'reportes.view',
       'reportes.export',
       'configuracion.view',
@@ -50,11 +54,13 @@ export const ROLE_DEFINITIONS: Record<AppRole, RoleDefinition> = {
       'docentes.manage',
       'proyectos.view',
       'proyectos.manage',
+      'grupos.view',
+      'grupos.manage',
       'reportes.view',
       'reportes.export',
     ],
     capabilities: [
-      'Gestiona docentes, proyectos y sincronizaciones operativas.',
+      'Gestiona docentes, proyectos, grupos y sincronizaciones operativas.',
       'Consulta dashboard y reportes con opción de exportar.',
       'No administra usuarios ni catálogos de configuración.',
     ],
@@ -66,10 +72,11 @@ export const ROLE_DEFINITIONS: Record<AppRole, RoleDefinition> = {
       'dashboard.view',
       'docentes.view',
       'proyectos.view',
+      'grupos.view',
       'reportes.view',
     ],
     capabilities: [
-      'Visualiza dashboard, docentes, proyectos y reportes.',
+      'Visualiza dashboard, docentes, proyectos, grupos y reportes.',
       'No puede crear, editar, desactivar, reactivar ni sincronizar.',
       'No puede exportar ni acceder a configuración.',
     ],

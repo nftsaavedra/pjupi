@@ -1,11 +1,17 @@
 import React from 'react';
-import { FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Plus, Beaker, Lightbulb, Package, DollarSign } from 'lucide-react';
 import type { DocenteDetalle } from '../../docentes/api';
 import { FormInput } from '../../../shared/forms/FormInput';
 import { FormSelect } from '../../../shared/forms/FormSelect';
 import { FormModal } from '../../../shared/forms/FormModal';
 import { AppIcon } from '../../../shared/ui/AppIcon';
 import { DocentesChecklist } from './DocentesChecklist';
+import { RelatedEntitiesSection } from './RelatedEntitiesSection';
+
+interface RelatedEntity {
+  id: string;
+  [key: string]: any;
+}
 
 interface ProyectoCreateModalProps {
   docentes: DocenteDetalle[];
@@ -16,11 +22,19 @@ interface ProyectoCreateModalProps {
   open: boolean;
   refreshingDocentes: boolean;
   titulo: string;
+  patentes?: RelatedEntity[];
+  productos?: RelatedEntity[];
+  equipamientos?: RelatedEntity[];
+  financiamientos?: RelatedEntity[];
   onChangeDocentes: (ids: string[]) => void;
   onChangeResponsable: (docenteId: string) => void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
   onTituloChange: (value: string) => void;
+  onPatentesChange?: (items: RelatedEntity[]) => void;
+  onProductosChange?: (items: RelatedEntity[]) => void;
+  onEquipamientosChange?: (items: RelatedEntity[]) => void;
+  onFinanciamientosChange?: (items: RelatedEntity[]) => void;
 }
 
 export const ProyectoCreateModal: React.FC<ProyectoCreateModalProps> = ({
@@ -32,11 +46,19 @@ export const ProyectoCreateModal: React.FC<ProyectoCreateModalProps> = ({
   open,
   refreshingDocentes,
   titulo,
+  patentes = [],
+  productos = [],
+  equipamientos = [],
+  financiamientos = [],
   onChangeDocentes,
   onChangeResponsable,
   onClose,
   onSubmit,
   onTituloChange,
+  onPatentesChange,
+  onProductosChange,
+  onEquipamientosChange,
+  onFinanciamientosChange,
 }) => {
   const docentesSeleccionadosOptions = docentes
     .filter((docente) => docentesSeleccionados.includes(docente.id_docente))
@@ -54,7 +76,7 @@ export const ProyectoCreateModal: React.FC<ProyectoCreateModalProps> = ({
           <span>Registrar Nuevo Proyecto</span>
         </span>
       )}
-      description="Defina el título, los docentes participantes y el responsable del proyecto."
+      description="Defina el título, los docentes participantes, el responsable y opcionalmente entidades relacionadas (patentes, productos, equipamiento, financiamiento)."
       onClose={onClose}
       onSubmit={onSubmit}
       submitText={(
@@ -94,6 +116,69 @@ export const ProyectoCreateModal: React.FC<ProyectoCreateModalProps> = ({
         refreshing={refreshingDocentes}
         showSelectedMeta={false}
       />
+
+      {/* ── Entidades relacionadas opcionales ── */}
+      <div className="related-entities-container">
+        {onPatentesChange && (
+          <RelatedEntitiesSection
+            title="Patentes"
+            icon={<AppIcon icon={Beaker} size={18} />}
+            description="Agregue patentes asociadas con este proyecto (opcional)."
+            items={patentes}
+            fields={[
+              { name: 'numero_patente', label: 'Número de Patente', placeholder: 'Ej: PE-2024-00123', required: true },
+              { name: 'titulo_patente', label: 'Título', placeholder: 'Ej: Proceso de purificación de agua', required: true },
+              { name: 'estado', label: 'Estado', placeholder: 'Ej: Solicitada, Concedida, Rechazada', required: false },
+            ]}
+            onItemsChange={onPatentesChange}
+          />
+        )}
+
+        {onProductosChange && (
+          <RelatedEntitiesSection
+            title="Productos I+D+i"
+            icon={<AppIcon icon={Lightbulb} size={18} />}
+            description="Agregue productos innovadores del proyecto (opcional)."
+            items={productos}
+            fields={[
+              { name: 'nombre_producto', label: 'Nombre del Producto', placeholder: 'Ej: Sistema de tratamiento', required: true },
+              { name: 'descripcion', label: 'Descripción', placeholder: 'Breve descripción del producto', type: 'textarea', required: false },
+              { name: 'etapa', label: 'Etapa de Desarrollo', placeholder: 'Ej: Prototipo, Piloto, Comercialización', required: false },
+            ]}
+            onItemsChange={onProductosChange}
+          />
+        )}
+
+        {onEquipamientosChange && (
+          <RelatedEntitiesSection
+            title="Equipamiento"
+            icon={<AppIcon icon={Package} size={18} />}
+            description="Agregue equipamiento adquirido o desarrollado (opcional)."
+            items={equipamientos}
+            fields={[
+              { name: 'nombre_equipo', label: 'Nombre del Equipo', placeholder: 'Ej: Cromatógrafo de gases', required: true },
+              { name: 'especificaciones', label: 'Especificaciones', placeholder: 'Detalles técnicos', type: 'textarea', required: false },
+              { name: 'costo', label: 'Costo Estimado (S/)', type: 'number', placeholder: '0.00', required: false },
+            ]}
+            onItemsChange={onEquipamientosChange}
+          />
+        )}
+
+        {onFinanciamientosChange && (
+          <RelatedEntitiesSection
+            title="Financiamiento"
+            icon={<AppIcon icon={DollarSign} size={18} />}
+            description="Agregue fuentes de financiamiento del proyecto (opcional)."
+            items={financiamientos}
+            fields={[
+              { name: 'fuente', label: 'Fuente de Financiamiento', placeholder: 'Ej: FONDECYT, CONCYTEC, Institucional', required: true },
+              { name: 'monto', label: 'Monto (S/)', type: 'number', placeholder: '0.00', required: false },
+              { name: 'estado_financiero', label: 'Estado', placeholder: 'Ej: Aprobado, Desembolsado, En proceso', required: false },
+            ]}
+            onItemsChange={onFinanciamientosChange}
+          />
+        )}
+      </div>
     </FormModal>
   );
 };

@@ -6,3 +6,4 @@ pub mod renacyt_client;
 pub mod reniec_client;
 pub mod sync_outbox_repo;
 pub mod usuario_repo;
+pub mod pure_client;

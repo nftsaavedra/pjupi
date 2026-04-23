@@ -62,6 +62,10 @@ pub struct Docente {
     pub renacyt_fecha_ultima_sincronizacion: Option<i64>,
     pub renacyt_ficha_url: Option<String>,
     pub renacyt_formaciones_academicas_json: Option<String>,
+    /// Grupo de investigación al que pertenece el docente (opcional).
+    #[serde(default)]
+    #[sqlx(skip)]
+    pub grupo_investigacion_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -173,6 +177,7 @@ impl Docente {
             renacyt_fecha_ultima_sincronizacion: fecha_ultima_sincronizacion,
             renacyt_ficha_url: renacyt.as_ref().map(|value| value.ficha_url.trim().to_string()).filter(|value| !value.is_empty()),
             renacyt_formaciones_academicas_json: renacyt.as_ref().and_then(|value| value.formaciones_academicas_json.clone()).filter(|value| !value.trim().is_empty()),
+            grupo_investigacion_id: None,
         }
     }
 

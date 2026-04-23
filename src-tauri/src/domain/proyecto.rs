@@ -18,6 +18,14 @@ pub struct Proyecto {
     pub activo: i64,
     #[serde(default)]
     pub updated_at: Option<i64>,
+    /// Código OCDE del área temática del proyecto (ej. "1.1 Matemáticas").
+    #[serde(default)]
+    #[sqlx(skip)]
+    pub campo_ocde: Option<String>,
+    /// Programas de investigación institucionales relacionados.
+    #[serde(default)]
+    #[sqlx(skip)]
+    pub programas_relacionados: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -79,6 +87,8 @@ impl Proyecto {
             titulo_proyecto: request.titulo_proyecto,
             activo: 1,
             updated_at: Some(now),
+            campo_ocde: None,
+            programas_relacionados: Vec::new(),
         }
     }
 }

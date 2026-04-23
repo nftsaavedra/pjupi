@@ -1,6 +1,7 @@
 use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado};
 use crate::domain::estadisticas::{DocenteProyectosCount, ExportData, KpisDashboard};
 use crate::domain::grado::{CreateGradoRequest, EliminarGradoResultado, GradoAcademico};
+use crate::domain::grupo_investigacion::{GrupoInvestigacion, CreateGrupoInvestigacionRequest, UpdateGrupoInvestigacionRequest};
 use crate::domain::proyecto::{
     CreateProyectoConParticipantesRequest,
     EliminarProyectoResultado,
@@ -24,6 +25,8 @@ enum AppPermission {
     ReportesExport,
     GradosRead,
     GradosManage,
+    GruposView,
+    GruposManage,
 }
 
 fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
@@ -39,6 +42,8 @@ fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
                 | AppPermission::ReportesView
                 | AppPermission::ReportesExport
                 | AppPermission::GradosRead
+                    | AppPermission::GruposView
+                    | AppPermission::GruposManage
         ),
         "consulta" => matches!(
             permission,
@@ -46,6 +51,7 @@ fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
                 | AppPermission::DocentesView
                 | AppPermission::ProyectosView
                 | AppPermission::ReportesView
+                    | AppPermission::GruposView
         ),
         _ => false,
     }
@@ -344,3 +350,29 @@ pub async fn reactivar_usuario(state: &AppState, window_label: &str, id_usuario:
     crate::audit::write_user_audit(&actor, "usuario.reactivate", &usuario, "activo=1".to_string());
     Ok(usuario)
 }
+
+pub async fn get_all_grupos(state: &AppState, window_label: &str) -> Result<Vec<GrupoInvestigacion>, AppError> {
+    require_permission(state, window_label, AppPermission::GruposView).await?;
+    crate::services::grupo_service::get_all(state).await
+}
+
+pub async fn create_grupo(state: &AppState, window_label: &str, request: CreateGrupoInvestigacionRequest) -> Result<GrupoInvestigacion, AppError> {
+    require_permission(state, window_label, AppPermission::GruposManage).await?;
+    crate::services::grupo_service::create(state, request).await
+}
+
+pub async fn get_grupo(state: &AppState, window_label: &str, id_grupo: &str) -> Result<GrupoInvestigacion, AppError> {
+    require_permission(state, window_label, AppPermission::GruposView).await?;
+    crate::services::grupo_service::get_by_id(state, id_grupo).await
+}
+
+pub async fn update_grupo(state: &AppState, window_label: &str, id_grupo: &str, request: UpdateGrupoInvestigacionRequest) -> Result<GrupoInvestigacion, AppError> {
+    require_permission(state, window_label, AppPermission::GruposManage).await?;
+    crate::services::grupo_service::update(state, id_grupo, request).await
+}
+
+pub async fn delete_grupo(state: &AppState, window_label: &str, id_grupo: &str) -> Result<(), AppError> {
+    require_permission(state, window_label, AppPermission::GruposManage).await?;
+    crate::services::grupo_service::delete(state, id_grupo).await
+}
+

@@ -5,7 +5,7 @@ use mongodb::Database;
 use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 
-use crate::config::{DatabaseBackend, RenacytConfig, ReniecConfig};
+use crate::config::{DatabaseBackend, PureConfig, RenacytConfig, ReniecConfig};
 use crate::error::AppError;
 
 #[derive(Clone)]
@@ -61,6 +61,7 @@ pub struct AppState {
     pub mongo: Option<Database>,
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
+    pub pure_config: PureConfig,
     sessions: SessionStore,
 }
 
@@ -71,6 +72,7 @@ impl AppState {
         mongo: Option<Database>,
         reniec: ReniecConfig,
         renacyt: RenacytConfig,
+        pure_config: PureConfig,
     ) -> Self {
         Self {
             primary_backend,
@@ -78,6 +80,7 @@ impl AppState {
             mongo,
             reniec,
             renacyt,
+            pure_config,
             sessions: SessionStore::new(),
         }
     }

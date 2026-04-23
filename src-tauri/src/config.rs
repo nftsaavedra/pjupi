@@ -35,10 +35,17 @@ pub struct RenacytConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct PureConfig {
+    pub api_base_url: String,
+    pub api_key: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct RuntimeConfig {
     pub database: DatabaseConfig,
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
+    pub pure: PureConfig,
     #[allow(dead_code)]
     pub user_env_path: PathBuf,
 }
@@ -180,6 +187,24 @@ impl RenacytConfig {
     }
 }
 
+impl PureConfig {
+    pub fn from_values(values: &HashMap<String, String>) -> Self {
+        let api_base_url = values
+            .get("PJUPI_PURE_API_BASE_URL")
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "https://pure.unf.edu.pe/ws/api".to_string());
+        let api_key = values
+            .get("PJUPI_PURE_API_KEY")
+            .cloned()
+            .or_else(|| env::var("PJUPI_PURE_API_KEY").ok())
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty());
+
+        Self { api_base_url, api_key }
+    }
+}
+
 pub fn load_runtime_config(user_env_path: &Path, bundled_default_env_path: Option<&Path>) -> Result<RuntimeConfig, AppError> {
     if let Some(parent) = user_env_path.parent() {
         fs::create_dir_all(parent).map_err(|error| {
@@ -211,6 +236,7 @@ pub fn load_runtime_config(user_env_path: &Path, bundled_default_env_path: Optio
         database: DatabaseConfig::from_values(&values),
         reniec: ReniecConfig::from_values(&values),
         renacyt: RenacytConfig::from_values(&values),
+        pure: PureConfig::from_values(&values),
         user_env_path: user_env_path.to_path_buf(),
     })
 }
@@ -234,6 +260,8 @@ fn merge_process_env(values: &mut HashMap<String, String>) {
         "PJUPI_RENACYT_API_BASE_URL",
         "PJUPI_RENACYT_ACTO_VERSION",
         "PJUPI_RENACYT_FICHA_BASE_URL",
+        "PJUPI_PURE_API_BASE_URL",
+        "PJUPI_PURE_API_KEY",
     ] {
         if let Ok(value) = env::var(key) {
             let trimmed = value.trim();

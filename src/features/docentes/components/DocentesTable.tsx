@@ -113,6 +113,7 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           onRefreshRenacytFormaciones={handleRefreshRenacytFormaciones}
           isRefreshingRenacyt={refreshingRenacytDocenteId === selectedDocente.id_docente}
           canRefreshRenacyt={canManage}
+          canSyncPure={canManage}
         />
       )}
 

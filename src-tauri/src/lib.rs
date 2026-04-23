@@ -20,6 +20,8 @@ use commands::reporte_cmd::*;
 use commands::grado_cmd::*;
 use commands::usuario_cmd::*;
 use commands::security_cmd::*;
+use commands::pure_cmd::*;
+use commands::grupo_cmd::*;
 use config::load_runtime_config;
 use config_validator::validate_database_config;
 use services::sync_service;
@@ -105,6 +107,7 @@ pub fn run() {
                 mongo_db,
                 runtime_config.reniec,
                 runtime_config.renacyt,
+                runtime_config.pure,
             ));
 
             Ok(())
@@ -149,7 +152,14 @@ pub fn run() {
             reactivar_usuario,
             get_security_status,
             get_setup_guide,
-            get_security_recommendations
+            get_security_recommendations,
+            sincronizar_publicaciones_pure,
+            get_publicaciones_docente,
+            get_all_grupos,
+            create_grupo,
+            get_grupo,
+            update_grupo,
+            delete_grupo
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

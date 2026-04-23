@@ -179,3 +179,99 @@ export interface AuthStatus {
   has_users: boolean;
   requires_setup: boolean;
 }
+
+// ─── PeruCRIS / Pure types ────────────────────────────────────────────────────
+
+export interface Publicacion {
+  id_publicacion: string;
+  pure_uuid: string;
+  docente_id: string;
+  proyecto_id?: string | null;
+  titulo: string;
+  tipo_publicacion?: string | null;
+  doi?: string | null;
+  scopus_eid?: string | null;
+  anio_publicacion?: number | null;
+  autores_json?: string | null;
+  estado_publicacion?: string | null;
+  journal_titulo?: string | null;
+  issn?: string | null;
+  pure_sincronizado_at?: number | null;
+  created_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface SyncPublicacionesResult {
+  docente_id: string;
+  scopus_author_id: string;
+  pure_person_uuid?: string | null;
+  total_encontradas: number;
+  nuevas: number;
+  actualizadas: number;
+}
+
+export interface Patente {
+  id_patente: string;
+  proyecto_id?: string | null;
+  docente_id?: string | null;
+  titulo: string;
+  numero_patente?: string | null;
+  tipo?: string | null;
+  fecha_solicitud?: number | null;
+  fecha_concesion?: number | null;
+  pais?: string | null;
+  entidad_concedente?: string | null;
+  descripcion?: string | null;
+  created_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface Producto {
+  id_producto: string;
+  proyecto_id?: string | null;
+  docente_id?: string | null;
+  nombre: string;
+  tipo?: string | null;
+  descripcion?: string | null;
+  fecha_registro?: number | null;
+  created_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface Equipamiento {
+  id_equipamiento: string;
+  proyecto_id?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+  valor_estimado?: number | null;
+  moneda?: string | null;
+  proveedor?: string | null;
+  fecha_adquisicion?: number | null;
+  created_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface Financiamiento {
+  id_financiamiento: string;
+  proyecto_id?: string | null;
+  entidad_financiadora: string;
+  tipo?: string | null;
+  monto?: number | null;
+  moneda?: string | null;
+  fecha_inicio?: number | null;
+  fecha_fin?: number | null;
+  descripcion?: string | null;
+  created_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface GrupoInvestigacion {
+  id_grupo: string;
+  nombre: string;
+  descripcion?: string | null;
+  coordinador_id?: string | null;
+  lineas_investigacion: string[];
+  activo: number;
+  created_at?: number | null;
+  updated_at?: number | null;
+}

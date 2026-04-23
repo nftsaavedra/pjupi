@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2 } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2, Users } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
 import { getAuthStatus, getCurrentSession, logoutUsuario, type Usuario } from './features/auth/api';
 import { AuthScreen } from './features/auth/AuthScreen';
@@ -18,6 +18,11 @@ const DashboardTab = lazy(async () => {
 const ProyectosTab = lazy(async () => {
   const module = await import('./features/proyectos/ProyectosTab');
   return { default: module.ProyectosTab };
+});
+
+const GruposTab = lazy(async () => {
+  const module = await import('./features/grupos/GruposTab');
+  return { default: module.GruposTab };
 });
 
 const DocenteCreateModal = lazy(async () => {
@@ -93,6 +98,7 @@ function App() {
     ...(hasPermission(currentRole, 'dashboard.view') ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' }] : []),
     ...(hasPermission(currentRole, 'proyectos.view') ? [{ id: 'proyectos', label: 'Proyectos', icon: FolderOpen, description: 'Alta y seguimiento' }] : []),
     ...(hasPermission(currentRole, 'docentes.view') ? [{ id: 'docentes', label: 'Docentes', icon: GraduationCap, description: 'Registro y estado' }] : []),
+    ...(hasPermission(currentRole, 'grupos.view') ? [{ id: 'grupos', label: 'Grupos', icon: Users, description: 'Investigación coordinada' }] : []),
     ...(hasPermission(currentRole, 'reportes.view') ? [{ id: 'reportes', label: 'Reportes', icon: FileSpreadsheet, description: 'Vista previa y exportación' }] : []),
     ...(hasPermission(currentRole, 'configuracion.view') ? [{ id: 'configuracion', label: 'Configuración', icon: Settings2, description: 'Accesos y catálogos' }] : []),
   ];
@@ -111,6 +117,11 @@ function App() {
       kicker: 'Gestión operativa',
       title: 'Docentes',
       subtitle: 'Registro, estado y trazabilidad docente.',
+    },
+    grupos: {
+      kicker: 'Investigación',
+      title: 'Grupos de Investigación',
+      subtitle: 'Coordinación y líneas de investigación.',
     },
     reportes: {
       kicker: 'Análisis y salida',
@@ -206,6 +217,12 @@ function App() {
                 </Suspense>
               )}
             </div>
+          </Suspense>
+        );
+      case 'grupos':
+        return (
+          <Suspense fallback={<FormAndTableFallback columns={4} />}>
+            <GruposTab canManage={hasPermission(currentRole, 'grupos.manage')} />
           </Suspense>
         );
       case 'configuracion':

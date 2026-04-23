@@ -12,6 +12,7 @@ use rand_core::OsRng;
 use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado};
 use crate::domain::estadisticas::{DocenteProyectosCount, ExportData, KpisDashboard};
 use crate::domain::grado::{CreateGradoRequest, EliminarGradoResultado, GradoAcademico};
+use crate::domain::grupo_investigacion::{GrupoInvestigacion, UpdateGrupoInvestigacionRequest};
 use crate::domain::proyecto::{
     CreateProyectoConParticipantesRequest,
     CreateProyectoRequest,
@@ -124,6 +125,64 @@ pub async fn ensure_indexes(db: &Database) -> Result<(), AppError> {
                 .options(Some(IndexOptions::builder().unique(true).build()))
                 .build(),
         )
+        .await?;
+
+    // --- Publicaciones (Pure sync) ---
+    db.collection::<Document>("publicaciones")
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "pure_uuid": 1 })
+                .options(Some(IndexOptions::builder().unique(true).build()))
+                .build(),
+        )
+        .await?;
+    db.collection::<Document>("publicaciones")
+        .create_index(IndexModel::builder().keys(doc! { "docente_id": 1 }).build())
+        .await?;
+    db.collection::<Document>("publicaciones")
+        .create_index(IndexModel::builder().keys(doc! { "proyecto_id": 1 }).build())
+        .await?;
+
+    // --- Patentes ---
+    db.collection::<Document>("patentes")
+        .create_index(IndexModel::builder().keys(doc! { "proyecto_id": 1 }).build())
+        .await?;
+    db.collection::<Document>("patentes")
+        .create_index(IndexModel::builder().keys(doc! { "docente_id": 1 }).build())
+        .await?;
+    db.collection::<Document>("patentes")
+        .create_index(IndexModel::builder().keys(doc! { "numero_patente": 1 }).build())
+        .await?;
+
+    // --- Productos ---
+    db.collection::<Document>("productos")
+        .create_index(IndexModel::builder().keys(doc! { "proyecto_id": 1 }).build())
+        .await?;
+    db.collection::<Document>("productos")
+        .create_index(IndexModel::builder().keys(doc! { "docente_id": 1 }).build())
+        .await?;
+
+    // --- Equipamientos ---
+    db.collection::<Document>("equipamientos")
+        .create_index(IndexModel::builder().keys(doc! { "proyecto_id": 1 }).build())
+        .await?;
+
+    // --- Financiamientos ---
+    db.collection::<Document>("financiamientos")
+        .create_index(IndexModel::builder().keys(doc! { "proyecto_id": 1 }).build())
+        .await?;
+
+    // --- Grupos de investigación ---
+    db.collection::<Document>("grupos_investigacion")
+        .create_index(
+            IndexModel::builder()
+                .keys(doc! { "id_grupo": 1 })
+                .options(Some(IndexOptions::builder().unique(true).build()))
+                .build(),
+        )
+        .await?;
+    db.collection::<Document>("grupos_investigacion")
+        .create_index(IndexModel::builder().keys(doc! { "coordinador_id": 1 }).build())
         .await?;
 
     Ok(())
@@ -979,4 +1038,58 @@ pub async fn reactivar_usuario(db: &Database, actor_user_id: &str, id_usuario: &
         .await?
         .ok_or_else(|| AppError::NotFound("Usuario no encontrado.".to_string()))?;
     Ok(usuario.public_view())
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Grupos de Investigación (Bloque 5c)
+// ═══════════════════════════════════════════════════════════════════════════
+
+pub async fn get_all_grupos(db: &Database) -> Result<Vec<GrupoInvestigacion>, AppError> {
+    let grupos = db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    Ok(grupos)
+}
+
+pub async fn create_grupo(db: &Database, grupo: GrupoInvestigacion) -> Result<GrupoInvestigacion, AppError> {
+    let _ = db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .insert_one(&grupo)
+        .await?;
+    Ok(grupo)
+}
+
+pub async fn get_grupo_by_id(db: &Database, id_grupo: &str) -> Result<GrupoInvestigacion, AppError> {
+    let grupo = db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .find_one(doc! { "id_grupo": id_grupo })
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("Grupo con ID {} no encontrado", id_grupo)))?;
+    Ok(grupo)
+}
+
+pub async fn update_grupo(db: &Database, id_grupo: &str, request: UpdateGrupoInvestigacionRequest) -> Result<GrupoInvestigacion, AppError> {
+    db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .update_one(
+            doc! { "id_grupo": id_grupo },
+            doc! {
+                "$set": {
+                    "nombre": request.nombre,
+                    "descripcion": request.descripcion,
+                    "coordinador_id": request.coordinador_id,
+                    "lineas_investigacion": request.lineas_investigacion,
+                    "updated_at": chrono::Utc::now().timestamp_millis(),
+                }
+            },
+        )
+        .await?;
+
+    get_grupo_by_id(db, id_grupo).await
+}
+
+pub async fn delete_grupo(db: &Database, id_grupo: &str) -> Result<(), AppError> {
+    db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .delete_one(doc! { "id_grupo": id_grupo })
+        .await?;
+    Ok(())
 }

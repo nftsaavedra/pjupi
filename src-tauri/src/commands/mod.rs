@@ -4,3 +4,5 @@ pub mod reporte_cmd;
 pub mod grado_cmd;
 pub mod usuario_cmd;
 pub mod security_cmd;
+pub mod pure_cmd;
+pub mod grupo_cmd;
