@@ -120,7 +120,7 @@ pub async fn get_publicaciones_docente(
 ) -> Result<Vec<Publicacion>, AppError> {
     use futures_util::TryStreamExt;
 
-    storage::require_docentes_manage_permission(&state, window.label()).await?;
+    storage::require_docentes_view_permission(&state, window.label()).await?;
 
     let db = state.mongo_db()?;
     let publicaciones = db

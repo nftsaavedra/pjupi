@@ -5,18 +5,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::error::AppError;
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DatabaseBackend {
-    Sqlite,
-    MongoDb,
-}
+use crate::error::AppError;
 
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
-    pub primary_backend: DatabaseBackend,
-    pub sqlite_url: String,
     pub mongodb_uri: Option<String>,
     pub mongodb_db_name: String,
 }
@@ -47,26 +41,17 @@ pub struct RuntimeConfig {
     pub renacyt: RenacytConfig,
     pub pure: PureConfig,
     #[allow(dead_code)]
-    pub user_env_path: PathBuf,
+    pub user_config_path: PathBuf,
 }
 
 impl DatabaseConfig {
     pub fn from_values(values: &HashMap<String, String>) -> Self {
-        let sqlite_url = normalize_sqlite_url(values.get("PJUPI_SQLITE_URL").map(String::as_str));
         let mongodb_uri = env::var("PJUPI_MONGODB_URI").ok();
         let mongodb_uri = values
             .get("PJUPI_MONGODB_URI")
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .or(mongodb_uri);
-        let backend_value = values.get("PJUPI_DB_BACKEND").cloned();
-
-        let primary_backend = match backend_value.as_deref().map(|value| value.to_ascii_lowercase()) {
-            Some(value) if value == "mongodb" || value == "mongo" => DatabaseBackend::MongoDb,
-            Some(value) if value == "sqlite" => DatabaseBackend::Sqlite,
-            _ if mongodb_uri.is_some() => DatabaseBackend::MongoDb,
-            _ => DatabaseBackend::Sqlite,
-        };
 
         let mongodb_db_name = values
             .get("PJUPI_MONGODB_DB")
@@ -75,71 +60,13 @@ impl DatabaseConfig {
             .unwrap_or_else(|| "pjupi".to_string());
 
         Self {
-            primary_backend,
-            sqlite_url,
             mongodb_uri,
             mongodb_db_name,
         }
     }
 
     pub fn requires_mongodb(&self) -> bool {
-        self.primary_backend == DatabaseBackend::MongoDb
-    }
-
-    pub fn should_init_local_sqlite(&self) -> bool {
         true
-    }
-}
-
-fn default_sqlite_url() -> String {
-    let app_dir = resolve_local_data_dir().join("pjupi");
-
-    if let Err(error) = fs::create_dir_all(&app_dir) {
-        eprintln!("No se pudo crear el directorio local de datos en {:?}: {}", app_dir, error);
-        return "sqlite:database.db".to_string();
-    }
-
-    let database_path = app_dir.join("database.db");
-    sqlite_url_from_path(&database_path)
-}
-
-fn sqlite_url_from_path(path: &Path) -> String {
-    let normalized = path.to_string_lossy().replace('\\', "/");
-
-    if normalized.starts_with('/') {
-        format!("sqlite://{}", normalized)
-    } else {
-        format!("sqlite:///{}", normalized)
-    }
-}
-
-fn resolve_local_data_dir() -> PathBuf {
-    #[cfg(target_os = "windows")]
-    {
-        env::var_os("LOCALAPPDATA")
-            .map(PathBuf::from)
-            .or_else(|| env::var_os("APPDATA").map(PathBuf::from))
-            .unwrap_or_else(env::temp_dir)
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        env::var_os("HOME")
-            .map(PathBuf::from)
-            .map(|home| home.join("Library").join("Application Support"))
-            .unwrap_or_else(env::temp_dir)
-    }
-
-    #[cfg(all(unix, not(target_os = "macos")))]
-    {
-        env::var_os("XDG_DATA_HOME")
-            .map(PathBuf::from)
-            .or_else(|| {
-                env::var_os("HOME")
-                    .map(PathBuf::from)
-                    .map(|home| home.join(".local").join("share"))
-            })
-            .unwrap_or_else(env::temp_dir)
     }
 }
 
@@ -197,7 +124,9 @@ impl PureConfig {
         let api_key = values
             .get("PJUPI_PURE_API_KEY")
             .cloned()
+            .or_else(|| values.get("PURE_API_KEY").cloned())
             .or_else(|| env::var("PJUPI_PURE_API_KEY").ok())
+            .or_else(|| env::var("PURE_API_KEY").ok())
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty());
 
@@ -205,19 +134,17 @@ impl PureConfig {
     }
 }
 
-pub fn load_runtime_config(user_env_path: &Path, bundled_default_env_path: Option<&Path>) -> Result<RuntimeConfig, AppError> {
-    if let Some(parent) = user_env_path.parent() {
+pub fn load_runtime_config(user_config_path: &Path, bundled_default_env_path: Option<&Path>) -> Result<RuntimeConfig, AppError> {
+    if let Some(parent) = user_config_path.parent() {
         fs::create_dir_all(parent).map_err(|error| {
-            AppError::ConfigurationError(format!("No se pudo preparar el directorio de configuración local: {}", error))
+            AppError::ConfigurationError(format!("No se pudo preparar el directorio de configuracion local: {}", error))
         })?;
     }
 
-    if !user_env_path.exists() {
-        if let Some(default_env_path) = bundled_default_env_path {
-            fs::copy(default_env_path, user_env_path).map_err(|error| {
-                AppError::ConfigurationError(format!("No se pudo copiar la configuración inicial de la aplicación: {}", error))
-            })?;
-        }
+    if !user_config_path.exists() {
+        fs::write(user_config_path, default_json_config_template()).map_err(|error| {
+            AppError::ConfigurationError(format!("No se pudo crear el archivo de configuracion JSON inicial: {}", error))
+        })?;
     }
 
     let mut values = HashMap::new();
@@ -226,8 +153,13 @@ pub fn load_runtime_config(user_env_path: &Path, bundled_default_env_path: Optio
         merge_env_file(&mut values, default_env_path)?;
     }
 
-    if user_env_path.exists() {
-        merge_env_file(&mut values, user_env_path)?;
+    if user_config_path.exists() {
+        merge_json_file(&mut values, user_config_path)?;
+    }
+
+    let legacy_env_path = user_config_path.with_file_name("pjupi.env");
+    if legacy_env_path.exists() {
+        merge_env_file(&mut values, &legacy_env_path)?;
     }
 
     merge_process_env(&mut values);
@@ -237,16 +169,8 @@ pub fn load_runtime_config(user_env_path: &Path, bundled_default_env_path: Optio
         reniec: ReniecConfig::from_values(&values),
         renacyt: RenacytConfig::from_values(&values),
         pure: PureConfig::from_values(&values),
-        user_env_path: user_env_path.to_path_buf(),
+        user_config_path: user_config_path.to_path_buf(),
     })
-}
-
-fn normalize_sqlite_url(raw_value: Option<&str>) -> String {
-    match raw_value.map(str::trim) {
-        Some("") | None => default_sqlite_url(),
-        Some("sqlite:database.db") | Some("sqlite://database.db") | Some("sqlite:///database.db") => default_sqlite_url(),
-        Some(value) => value.to_string(),
-    }
 }
 
 fn merge_process_env(values: &mut HashMap<String, String>) {
@@ -254,7 +178,6 @@ fn merge_process_env(values: &mut HashMap<String, String>) {
         "PJUPI_DB_BACKEND",
         "PJUPI_MONGODB_URI",
         "PJUPI_MONGODB_DB",
-        "PJUPI_SQLITE_URL",
         "PJUPI_RENIEC_API_BASE_URL",
         "PJUPI_RENIEC_TOKEN",
         "PJUPI_RENACYT_API_BASE_URL",
@@ -262,6 +185,7 @@ fn merge_process_env(values: &mut HashMap<String, String>) {
         "PJUPI_RENACYT_FICHA_BASE_URL",
         "PJUPI_PURE_API_BASE_URL",
         "PJUPI_PURE_API_KEY",
+        "PURE_API_KEY",
     ] {
         if let Ok(value) = env::var(key) {
             let trimmed = value.trim();
@@ -272,9 +196,90 @@ fn merge_process_env(values: &mut HashMap<String, String>) {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonConfigFile {
+    database: Option<JsonDatabaseConfig>,
+    reniec: Option<JsonReniecConfig>,
+    renacyt: Option<JsonRenacytConfig>,
+    pure: Option<JsonPureConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonDatabaseConfig {
+    mongodb_uri: Option<String>,
+    mongodb_db: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonReniecConfig {
+    api_base_url: Option<String>,
+    token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonRenacytConfig {
+    api_base_url: Option<String>,
+    acto_version: Option<String>,
+    ficha_base_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonPureConfig {
+    api_base_url: Option<String>,
+    api_key: Option<String>,
+}
+
+fn merge_json_file(values: &mut HashMap<String, String>, path: &Path) -> Result<(), AppError> {
+    let content = fs::read_to_string(path).map_err(|error| {
+        AppError::ConfigurationError(format!("No se pudo leer el archivo de configuracion JSON {:?}: {}", path, error))
+    })?;
+
+    let parsed: JsonConfigFile = serde_json::from_str(&content).map_err(|error| {
+        AppError::ConfigurationError(format!("El archivo de configuracion JSON {:?} es invalido: {}", path, error))
+    })?;
+
+    if let Some(database) = parsed.database {
+        insert_if_non_empty(values, "PJUPI_DB_BACKEND", Some("mongodb".to_string()));
+        insert_if_non_empty(values, "PJUPI_MONGODB_URI", database.mongodb_uri);
+        insert_if_non_empty(values, "PJUPI_MONGODB_DB", database.mongodb_db);
+    }
+
+    if let Some(reniec) = parsed.reniec {
+        insert_if_non_empty(values, "PJUPI_RENIEC_API_BASE_URL", reniec.api_base_url);
+        insert_if_non_empty(values, "PJUPI_RENIEC_TOKEN", reniec.token);
+    }
+
+    if let Some(renacyt) = parsed.renacyt {
+        insert_if_non_empty(values, "PJUPI_RENACYT_API_BASE_URL", renacyt.api_base_url);
+        insert_if_non_empty(values, "PJUPI_RENACYT_ACTO_VERSION", renacyt.acto_version);
+        insert_if_non_empty(values, "PJUPI_RENACYT_FICHA_BASE_URL", renacyt.ficha_base_url);
+    }
+
+    if let Some(pure) = parsed.pure {
+        insert_if_non_empty(values, "PJUPI_PURE_API_BASE_URL", pure.api_base_url);
+        insert_if_non_empty(values, "PJUPI_PURE_API_KEY", pure.api_key);
+    }
+
+    Ok(())
+}
+
+fn insert_if_non_empty(values: &mut HashMap<String, String>, key: &str, maybe_value: Option<String>) {
+    if let Some(value) = maybe_value {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            values.insert(key.to_string(), trimmed.to_string());
+        }
+    }
+}
+
 fn merge_env_file(values: &mut HashMap<String, String>, path: &Path) -> Result<(), AppError> {
     let content = fs::read_to_string(path).map_err(|error| {
-        AppError::ConfigurationError(format!("No se pudo leer el archivo de configuración {:?}: {}", path, error))
+        AppError::ConfigurationError(format!("No se pudo leer el archivo de configuracion {:?}: {}", path, error))
     })?;
 
     for raw_line in content.lines() {
@@ -298,3 +303,8 @@ fn merge_env_file(values: &mut HashMap<String, String>, path: &Path) -> Result<(
 
     Ok(())
 }
+
+fn default_json_config_template() -> &'static str {
+    "{\n  \"database\": {\n    \"mongodbUri\": \"\",\n    \"mongodbDb\": \"pjupi\"\n  },\n  \"reniec\": {\n    \"apiBaseUrl\": \"https://api.decolecta.com/v1\",\n    \"token\": \"\"\n  },\n  \"renacyt\": {\n    \"apiBaseUrl\": \"https://renacyt.concytec.gob.pe/renacyt-backend\",\n    \"actoVersion\": \"2021\",\n    \"fichaBaseUrl\": \"https://servicio-renacyt.concytec.gob.pe/ficha-renacyt/\"\n  },\n  \"pure\": {\n    \"apiBaseUrl\": \"https://pure.unf.edu.pe/ws/api\",\n    \"apiKey\": \"\"\n  }\n}\n"
+}
+

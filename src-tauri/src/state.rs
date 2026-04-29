@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use mongodb::Database;
-use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 
-use crate::config::{DatabaseBackend, PureConfig, RenacytConfig, ReniecConfig};
+use crate::config::{PureConfig, RenacytConfig, ReniecConfig};
 use crate::error::AppError;
 
 #[derive(Clone)]
@@ -56,8 +55,6 @@ impl SessionStore {
 }
 
 pub struct AppState {
-    pub primary_backend: DatabaseBackend,
-    pub sqlite: Option<SqlitePool>,
     pub mongo: Option<Database>,
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
@@ -67,16 +64,12 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(
-        primary_backend: DatabaseBackend,
-        sqlite: Option<SqlitePool>,
         mongo: Option<Database>,
         reniec: ReniecConfig,
         renacyt: RenacytConfig,
         pure_config: PureConfig,
     ) -> Self {
         Self {
-            primary_backend,
-            sqlite,
             mongo,
             reniec,
             renacyt,
@@ -85,13 +78,6 @@ impl AppState {
         }
     }
 
-    pub fn sqlite_pool(&self) -> Result<&SqlitePool, AppError> {
-        self.sqlite.as_ref().ok_or_else(|| {
-            AppError::ConfigurationError("SQLite no está inicializado para la configuración actual.".to_string())
-        })
-    }
-
-    #[allow(dead_code)]
     pub fn mongo_db(&self) -> Result<&Database, AppError> {
         self.mongo.as_ref().ok_or_else(|| {
             AppError::ConfigurationError("MongoDB no está inicializado para la configuración actual.".to_string())

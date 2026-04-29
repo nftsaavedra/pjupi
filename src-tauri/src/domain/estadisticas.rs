@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DocenteProyectosCount {
     pub nombre: String,
     pub cantidad: i64,
@@ -16,7 +15,7 @@ pub struct KpisDashboard {
     pub docentes_multiples_proyectos: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ExportData {
     pub proyecto: String,
     pub grado: String,

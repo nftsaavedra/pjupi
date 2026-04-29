@@ -1,4 +1,3 @@
-use sqlx::SqlitePool;
 use tauri::{path::BaseDirectory, Manager};
 
 mod commands;
@@ -24,7 +23,6 @@ use commands::pure_cmd::*;
 use commands::grupo_cmd::*;
 use config::load_runtime_config;
 use config_validator::validate_database_config;
-use services::sync_service;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,40 +36,23 @@ pub fn run() {
             let bundled_default_env_path = app.path()
                 .resolve("config/default.env", BaseDirectory::Resource)
                 .ok();
-            let user_env_path = app.path()
+            let user_config_path = app.path()
                 .app_config_dir()
                 .unwrap_or_else(|_| app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir()))
-                .join("pjupi.env");
+                .join("pjupi.config.json");
 
-            let runtime_config = load_runtime_config(&user_env_path, bundled_default_env_path.as_deref())?;
+            let runtime_config = load_runtime_config(&user_config_path, bundled_default_env_path.as_deref())?;
 
             // Validate configuration before attempting to connect
             if let Err(error) = validate_database_config(&runtime_config.database) {
                 let error_msg = format!(
                     "Error de configuración: {}\n\nArchivo de configuración: {:?}\n\nPara re-configurar la aplicación, elimine el archivo de configuración y reinicie.",
                     error,
-                    user_env_path
+                    user_config_path
                 );
                 eprintln!("{}", error_msg);
                 return Err(std::io::Error::other(error_msg).into());
             }
-
-            let sqlite_pool = if runtime_config.database.should_init_local_sqlite() {
-                let pool = tauri::async_runtime::block_on(async {
-                    let pool = SqlitePool::connect(&runtime_config.database.sqlite_url).await?;
-                    db::init_db(&pool).await?;
-                    Ok::<SqlitePool, sqlx::Error>(pool)
-                }).map_err(|error| {
-                    std::io::Error::other(format!(
-                        "No se pudo inicializar SQLite en {}. Error: {}\n\nVerifique permisos de directorio y que la ruta sea válida.",
-                        runtime_config.database.sqlite_url,
-                        error
-                    ))
-                })?;
-                Some(pool)
-            } else {
-                None
-            };
 
             let mongo_db = if runtime_config.database.requires_mongodb() {
                 let database = tauri::async_runtime::block_on(async {
@@ -86,7 +67,7 @@ pub fn run() {
                         3. Las credenciales son correctas\n\
                         4. La base de datos es accesible desde esta máquina",
                         error,
-                        user_env_path
+                        user_config_path
                     ))
                 })?;
 
@@ -95,15 +76,7 @@ pub fn run() {
                 None
             };
 
-            if let (Some(sqlite), Some(mongo)) = (sqlite_pool.as_ref(), mongo_db.as_ref()) {
-                if let Err(error) = tauri::async_runtime::block_on(sync_service::sync_pending_once(sqlite, mongo)) {
-                    eprintln!("No se pudo sincronizar outbox local al arrancar: {}", error);
-                }
-            }
-
             app.manage(AppState::new(
-                runtime_config.database.primary_backend,
-                sqlite_pool,
                 mongo_db,
                 runtime_config.reniec,
                 runtime_config.renacyt,

@@ -2,7 +2,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 
 use crate::config::ReniecConfig;
 use crate::domain::docente::ReniecDniLookupResult;
-use crate::error::AppError;
+use crate::error::{sanitize_external_detail, AppError};
 
 pub async fn consultar_dni(config: &ReniecConfig, numero: &str) -> Result<ReniecDniLookupResult, AppError> {
     let numero_limpio = numero.trim();
@@ -14,7 +14,7 @@ pub async fn consultar_dni(config: &ReniecConfig, numero: &str) -> Result<Reniec
 
     let token = config.token.as_ref().ok_or_else(|| {
         AppError::ConfigurationError(
-            "La integración RENIEC no está configurada. Defina PJUPI_RENIEC_TOKEN en el archivo .env.".to_string(),
+            "La integración RENIEC no está configurada. Defina PJUPI_RENIEC_TOKEN en .env (desarrollo) o en pjupi.env (producción).".to_string(),
         )
     })?;
 
@@ -41,7 +41,8 @@ pub async fn consultar_dni(config: &ReniecConfig, numero: &str) -> Result<Reniec
     }
 
     let detalle = response.text().await.unwrap_or_else(|_| "Sin detalle adicional".to_string());
+    let safe_detalle = sanitize_external_detail(&detalle);
     Err(AppError::ExternalServiceError(format!(
-        "La consulta RENIEC no pudo completarse en este momento ({status}). {detalle}"
+        "La consulta RENIEC no pudo completarse en este momento ({status}). {safe_detalle}"
     )))
 }

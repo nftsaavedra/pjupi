@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Usuario {
     pub id_usuario: String,
     pub username: String,
@@ -13,7 +12,7 @@ pub struct Usuario {
     pub updated_at: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UsuarioConPassword {
     pub id_usuario: String,
     pub username: String,

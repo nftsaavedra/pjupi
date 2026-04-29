@@ -71,6 +71,10 @@ pub async fn require_docentes_manage_permission(state: &AppState, window_label: 
     require_permission(state, window_label, AppPermission::DocentesManage).await
 }
 
+pub async fn require_docentes_view_permission(state: &AppState, window_label: &str) -> Result<Usuario, AppError> {
+    require_permission(state, window_label, AppPermission::DocentesView).await
+}
+
 async fn get_user_by_id(state: &AppState, user_id: &str) -> Result<Usuario, AppError> {
     usuario_service::get_by_id_public(state, user_id).await
 }

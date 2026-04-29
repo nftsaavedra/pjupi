@@ -1,33 +1,29 @@
 /// Setup wizard module for initial application configuration
 /// 
 /// Provides a guided setup process for:
-/// - Selecting database backend (MongoDB or SQLite-only)
 /// - Configuring MongoDB connection
 /// - Setting up API credentials
 /// - Initializing first admin user
 
 use std::collections::HashMap;
 
-#[allow(dead_code)]
-use crate::config::DatabaseConfig;
-
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct SetupWizardState {
-    pub backend_choice: Option<String>, // "mongodb" or "sqlite"
     pub mongodb_uri: Option<String>,
     pub mongodb_db_name: String,
     pub reniec_token: Option<String>,
+    pub pure_api_key: Option<String>,
     pub renacyt_api_configured: bool,
 }
 
 impl Default for SetupWizardState {
     fn default() -> Self {
         Self {
-            backend_choice: None,
             mongodb_uri: None,
             mongodb_db_name: "pjupi".to_string(),
             reniec_token: None,
+            pure_api_key: None,
             renacyt_api_configured: false,
         }
     }
@@ -35,50 +31,26 @@ impl Default for SetupWizardState {
 
 #[allow(dead_code)]
 impl SetupWizardState {
-    /// Generate environment variable content from setup wizard state
-    pub fn to_env_content(&self) -> String {
-        let mut content = String::new();
+    /// Generate JSON configuration content from setup wizard state
+    pub fn to_json_content(&self) -> String {
+        let mongodb_uri = self.mongodb_uri.clone().unwrap_or_default();
+        let reniec_token = self.reniec_token.clone().unwrap_or_default();
+        let pure_api_key = self.pure_api_key.clone().unwrap_or_default();
 
-        // Backend configuration
-        if let Some(backend) = &self.backend_choice {
-            content.push_str(&format!("# Backend Selection (mongodb or sqlite)\n"));
-            content.push_str(&format!("PJUPI_DB_BACKEND={}\n\n", backend));
-        }
-
-        // MongoDB configuration
-        if let Some(uri) = &self.mongodb_uri {
-            content.push_str(&format!("# MongoDB Configuration\n"));
-            content.push_str(&format!("PJUPI_MONGODB_URI={}\n", uri));
-            content.push_str(&format!("PJUPI_MONGODB_DB={}\n\n", self.mongodb_db_name));
-        }
-
-        // RENIEC API Configuration (optional)
-        if let Some(token) = &self.reniec_token {
-            content.push_str(&format!("# RENIEC API Configuration\n"));
-            content.push_str(&format!("# Do not share this token publicly\n"));
-            content.push_str(&format!("PJUPI_RENIEC_TOKEN={}\n\n", token));
-        }
-
-        // Default API endpoints (can be customized)
-        content.push_str(&format!("# RENACYT API Configuration (default values)\n"));
-        content.push_str(&format!("PJUPI_RENACYT_API_BASE_URL=https://renacyt.concytec.gob.pe/renacyt-backend\n"));
-        content.push_str(&format!("PJUPI_RENACYT_ACTO_VERSION=2021\n"));
-        content.push_str(&format!("PJUPI_RENACYT_FICHA_BASE_URL=https://servicio-renacyt.concytec.gob.pe/ficha-renacyt/\n\n"));
-
-        content.push_str(&format!("# RENIEC API Configuration (optional)\n"));
-        content.push_str(&format!("# PJUPI_RENIEC_API_BASE_URL=https://api.decolecta.com/v1\n"));
-        content.push_str(&format!("# PJUPI_RENIEC_TOKEN=your_token_here\n"));
-
-        content
+        format!(
+            "{{\n  \"database\": {{\n    \"mongodbUri\": \"{}\",\n    \"mongodbDb\": \"{}\"\n  }},\n  \"reniec\": {{\n    \"apiBaseUrl\": \"https://api.decolecta.com/v1\",\n    \"token\": \"{}\"\n  }},\n  \"renacyt\": {{\n    \"apiBaseUrl\": \"https://renacyt.concytec.gob.pe/renacyt-backend\",\n    \"actoVersion\": \"2021\",\n    \"fichaBaseUrl\": \"https://servicio-renacyt.concytec.gob.pe/ficha-renacyt/\"\n  }},\n  \"pure\": {{\n    \"apiBaseUrl\": \"https://pure.unf.edu.pe/ws/api\",\n    \"apiKey\": \"{}\"\n  }}\n}}\n",
+            escape_json_string(&mongodb_uri),
+            escape_json_string(&self.mongodb_db_name),
+            escape_json_string(&reniec_token),
+            escape_json_string(&pure_api_key)
+        )
     }
 
     /// Convert wizard state to HashMap for DatabaseConfig
     pub fn to_config_values(&self) -> HashMap<String, String> {
         let mut values = HashMap::new();
 
-        if let Some(backend) = &self.backend_choice {
-            values.insert("PJUPI_DB_BACKEND".to_string(), backend.clone());
-        }
+        values.insert("PJUPI_DB_BACKEND".to_string(), "mongodb".to_string());
 
         if let Some(uri) = &self.mongodb_uri {
             values.insert("PJUPI_MONGODB_URI".to_string(), uri.clone());
@@ -89,8 +61,18 @@ impl SetupWizardState {
             values.insert("PJUPI_RENIEC_TOKEN".to_string(), token.clone());
         }
 
+        if let Some(api_key) = &self.pure_api_key {
+            values.insert("PJUPI_PURE_API_KEY".to_string(), api_key.clone());
+        }
+
         values
     }
+}
+
+fn escape_json_string(input: &str) -> String {
+    input
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
 }
 
 /// Provides user-friendly wizard step descriptions and validation hints
@@ -100,9 +82,8 @@ pub struct SetupWizardSteps;
 #[allow(dead_code)]
 impl SetupWizardSteps {
     pub const STEP_1_BACKEND_CHOICE: &'static str = 
-        "Seleccione el backend de base de datos:\n\
-         1. MongoDB (recomendado para aplicaciones empresariales con sincronización offline)\n\
-         2. SQLite (configuración local, no requiere servidor externo)\n";
+        "El backend de base de datos es MongoDB por defecto en esta version.\n\
+         Solo necesita configurar la URI y la base de datos objetivo.\n";
 
     pub const STEP_2_MONGODB_URI: &'static str =
         "Ingrese la URI de conexión a MongoDB:\n\
@@ -116,7 +97,7 @@ impl SetupWizardSteps {
 
     pub const STEP_4_REVIEW: &'static str =
         "Revise la configuración generada. Los cambios se guardarán en:\n\
-         ~/.pjupi/pjupi.env\n";
+         ~/.pjupi/pjupi.config.json\n";
 }
 
 /// Validates user input during setup wizard
@@ -126,10 +107,11 @@ pub struct SetupWizardValidator;
 #[allow(dead_code)]
 impl SetupWizardValidator {
     pub fn validate_backend_choice(input: &str) -> Result<String, String> {
-        match input.trim().to_lowercase().as_str() {
-            "1" | "mongodb" | "mongo" => Ok("mongodb".to_string()),
-            "2" | "sqlite" | "local" => Ok("sqlite".to_string()),
-            _ => Err("Opción inválida. Seleccione 1 (MongoDB) o 2 (SQLite).".to_string()),
+        let normalized = input.trim().to_lowercase();
+        if normalized.is_empty() || normalized == "1" || normalized == "mongodb" || normalized == "mongo" {
+            Ok("mongodb".to_string())
+        } else {
+            Err("Solo MongoDB esta soportado en esta version. Use 'mongodb'.".to_string())
         }
     }
 
@@ -183,12 +165,11 @@ mod tests {
     #[test]
     fn test_wizard_state_to_env() {
         let mut state = SetupWizardState::default();
-        state.backend_choice = Some("mongodb".to_string());
         state.mongodb_uri = Some("mongodb://localhost:27017".to_string());
 
-        let env = state.to_env_content();
-        assert!(env.contains("PJUPI_DB_BACKEND=mongodb"));
-        assert!(env.contains("PJUPI_MONGODB_URI=mongodb://localhost:27017"));
+        let json = state.to_json_content();
+        assert!(json.contains("\"mongodbUri\": \"mongodb://localhost:27017\""));
+        assert!(json.contains("\"mongodbDb\": \"pjupi\""));
     }
 
     #[test]
@@ -201,7 +182,7 @@ mod tests {
             SetupWizardValidator::validate_backend_choice("mongodb"),
             Ok("mongodb".to_string())
         );
-        assert!(SetupWizardValidator::validate_backend_choice("3").is_err());
+        assert!(SetupWizardValidator::validate_backend_choice("sqlite").is_err());
     }
 
     #[test]

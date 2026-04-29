@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -37,7 +36,7 @@ pub struct RenacytLookupResult {
     pub formaciones_academicas_json: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Docente {
     pub id_docente: String,
     pub dni: String,
@@ -64,7 +63,6 @@ pub struct Docente {
     pub renacyt_formaciones_academicas_json: Option<String>,
     /// Grupo de investigación al que pertenece el docente (opcional).
     #[serde(default)]
-    #[sqlx(skip)]
     pub grupo_investigacion_id: Option<String>,
 }
 
@@ -79,7 +77,7 @@ pub struct CreateDocenteRequest {
 }
 
 // New: Docente with detail data for reports
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize)]
 pub struct DocenteDetalle {
     pub id_docente: String,
     pub dni: String,

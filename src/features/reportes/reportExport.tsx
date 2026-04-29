@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import { formatRenacytNivel } from '../../shared/utils/renacyt';
 import { getDataExportacionAgrupada, getDataExportacionPlana } from './api';
 
@@ -45,15 +46,22 @@ const getSheetName = (tipo: TipoReporte) => {
 };
 
 export const buildExcelReport = async (tipo: TipoReporte): Promise<ReportExportPayload> => {
-  const XLSX = await import('xlsx');
   const rows = await normalizeRows(tipo);
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(getSheetName(tipo));
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, getSheetName(tipo));
+  if (rows.length > 0) {
+    worksheet.columns = Object.keys(rows[0]).map((key) => ({
+      header: key,
+      key,
+      width: 24,
+    }));
+    rows.forEach((row) => worksheet.addRow(row));
+  }
 
+  const buffer = await workbook.xlsx.writeBuffer();
   return {
-    bytes: new Uint8Array(XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })),
+    bytes: new Uint8Array(buffer as ArrayBuffer),
     suggestedName: getSuggestedFileName(tipo, 'xlsx'),
   };
 };

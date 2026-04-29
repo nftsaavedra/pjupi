@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -11,7 +10,7 @@ pub struct ProyectoParticipanteResumen {
     pub es_responsable: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Proyecto {
     pub id_proyecto: String,
     pub titulo_proyecto: String,
@@ -20,11 +19,9 @@ pub struct Proyecto {
     pub updated_at: Option<i64>,
     /// Código OCDE del área temática del proyecto (ej. "1.1 Matemáticas").
     #[serde(default)]
-    #[sqlx(skip)]
     pub campo_ocde: Option<String>,
     /// Programas de investigación institucionales relacionados.
     #[serde(default)]
-    #[sqlx(skip)]
     pub programas_relacionados: Vec<String>,
 }
 
@@ -47,7 +44,7 @@ pub struct UpdateProyectoConParticipantesRequest {
     pub docente_responsable_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize)]
 pub struct ProyectoDetalle {
     pub id_proyecto: String,
     pub titulo_proyecto: String,
@@ -65,7 +62,7 @@ pub struct EliminarProyectoResultado {
 }
 
 // NEW: Enhanced export data grouped by docente
-#[derive(Debug, Serialize, FromRow)]
+#[derive(Debug, Serialize)]
 pub struct ExportDataConProjectos {
     pub docente: String,
     pub dni: String,

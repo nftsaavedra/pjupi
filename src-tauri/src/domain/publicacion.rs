@@ -42,6 +42,7 @@ pub struct Publicacion {
 }
 
 impl Publicacion {
+    #[allow(dead_code)]
     pub fn new(
         pure_uuid: String,
         docente_id: String,
@@ -79,6 +80,7 @@ pub struct SyncPublicacionesResult {
     pub actualizadas: usize,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct VincularPublicacionProyectoRequest {
     pub id_publicacion: String,

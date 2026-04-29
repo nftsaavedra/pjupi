@@ -49,7 +49,8 @@ const getDefaultPath = async (suggestedName: string) => {
 };
 
 const downloadInBrowser = ({ suggestedName, bytes, mimeType }: SaveDesktopFileOptions) => {
-  const blob = new Blob([bytes], { type: mimeType });
+  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const blob = new Blob([arrayBuffer], { type: mimeType });
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;

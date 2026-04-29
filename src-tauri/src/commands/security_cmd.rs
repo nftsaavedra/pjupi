@@ -1,7 +1,6 @@
 /// Security and configuration status commands
 /// Provides information about application security and configuration state
 
-use crate::config::DatabaseBackend;
 use crate::state::AppState;
 use serde::Serialize;
 
@@ -9,48 +8,24 @@ use serde::Serialize;
 pub struct SecurityStatus {
     pub database_backend: String,
     pub mongodb_configured: bool,
-    pub sqlite_initialized: bool,
     pub security_recommendations: Vec<String>,
 }
 
 #[tauri::command]
 pub async fn get_security_status(state: tauri::State<'_, AppState>) -> Result<SecurityStatus, String> {
-    let db_backend = state.primary_backend;
     let mongodb_configured = state.mongo.is_some();
-    let sqlite_initialized = state.sqlite.is_some();
 
     let mut recommendations = Vec::new();
 
-    // Check if MongoDB is required but not configured
-    if matches!(db_backend, DatabaseBackend::MongoDb) && !mongodb_configured {
+    if !mongodb_configured {
         recommendations.push(
-            "⚠️ MongoDB está configurado como backend primario pero no está disponible. Verifique la configuración de PJUPI_MONGODB_URI.".to_string()
+            "⚠️ MongoDB no está disponible. Verifique la configuración de PJUPI_MONGODB_URI.".to_string()
         );
     }
-
-    // Warn if running in SQLite-only mode
-    if matches!(db_backend, DatabaseBackend::Sqlite) {
-        recommendations.push(
-            "ℹ️ Ejecutando en modo SQLite local. Los cambios offline no se sincronizarán con MongoDB.".to_string()
-        );
-    }
-
-    // Check if both backends are available (recommended setup)
-    if mongodb_configured && sqlite_initialized {
-        recommendations.push(
-            "✓ Configuración óptima: MongoDB primario + SQLite local para sincronización offline.".to_string()
-        );
-    }
-
-    let backend_name = match db_backend {
-        DatabaseBackend::MongoDb => "MongoDB".to_string(),
-        DatabaseBackend::Sqlite => "SQLite".to_string(),
-    };
 
     Ok(SecurityStatus {
-        database_backend: backend_name,
+        database_backend: "MongoDB".to_string(),
         mongodb_configured,
-        sqlite_initialized,
         security_recommendations: recommendations,
     })
 }
@@ -75,19 +50,19 @@ pub async fn get_setup_guide() -> Result<ConfigurationGuide, String> {
         ConfigurationStep {
             step_number: 1,
             title: "Crear archivo de configuración".to_string(),
-            description: "El archivo de configuración se encuentra en:\n- Windows: %APPDATA%/pjupi/pjupi.env\n- macOS: ~/Library/Application Support/pjupi/pjupi.env\n- Linux: ~/.local/share/pjupi/pjupi.env".to_string(),
-            example: Some("# pjupi.env\nPJUPI_DB_BACKEND=mongodb\nPJUPI_MONGODB_URI=mongodb://localhost:27017\nPJUPI_MONGODB_DB=pjupi".to_string()),
+            description: "El archivo de configuración se encuentra en:\n- Windows: %APPDATA%/com.upic.pjupi/pjupi.config.json\n- macOS: ~/Library/Application Support/com.upic.pjupi/pjupi.config.json\n- Linux: ~/.local/share/com.upic.pjupi/pjupi.config.json".to_string(),
+            example: Some("{\n  \"database\": {\n    \"mongodbUri\": \"mongodb://localhost:27017\",\n    \"mongodbDb\": \"pjupi\"\n  }\n}".to_string()),
         },
         ConfigurationStep {
             step_number: 2,
             title: "Configurar base de datos".to_string(),
-            description: "Seleccione entre:\n- mongodb: Para sincronización empresarial (recomendado)\n- sqlite: Para uso local sin servidor".to_string(),
+            description: "MongoDB es el backend obligatorio en esta versión. Configure la URI y el nombre de la base en pjupi.config.json.".to_string(),
             example: None,
         },
         ConfigurationStep {
             step_number: 3,
             title: "Configurar API externos (opcional)".to_string(),
-            description: "Agregue tokens de RENIEC si desea consultar datos del DNI:\nPJUPI_RENIEC_TOKEN=su_token_aqui".to_string(),
+            description: "Agregue credenciales externas según funcionalidades usadas:\nPJUPI_RENIEC_TOKEN=su_token_aqui\nPJUPI_PURE_API_KEY=su_api_key_pure".to_string(),
             example: None,
         },
         ConfigurationStep {
@@ -123,7 +98,7 @@ pub async fn get_security_recommendations() -> Result<SecurityRecommendations, S
         SecurityRecommendation {
             category: "Configuración".to_string(),
             title: "Proteger archivo de configuración".to_string(),
-            description: "El archivo pjupi.env contiene credenciales sensibles. Asegúrese de que solo el usuario actual pueda acceder.\nEn Linux/macOS: chmod 600 ~/.local/share/pjupi/pjupi.env".to_string(),
+            description: "El archivo pjupi.config.json contiene credenciales sensibles. Asegúrese de que solo el usuario actual pueda acceder.\nEn Linux/macOS: chmod 600 ~/.local/share/com.upic.pjupi/pjupi.config.json".to_string(),
             priority: "high".to_string(),
         },
         SecurityRecommendation {
@@ -135,19 +110,19 @@ pub async fn get_security_recommendations() -> Result<SecurityRecommendations, S
         SecurityRecommendation {
             category: "API".to_string(),
             title: "Mantener tokens actualizados".to_string(),
-            description: "Los tokens de API (RENIEC, RENACYT) deben rotarse regularmente según la política de seguridad del proveedor.".to_string(),
+            description: "Los secretos de API (RENIEC y Pure) deben rotarse regularmente según la política de seguridad del proveedor.".to_string(),
             priority: "medium".to_string(),
         },
         SecurityRecommendation {
             category: "Base de datos".to_string(),
             title: "Hacer backup regularmente".to_string(),
-            description: "SQLite almacena cambios offline localmente. Haga backup de: ~/.local/share/pjupi/database.db".to_string(),
+            description: "Configure backups automáticos en MongoDB (snapshots y/o dumps) según su RPO/RTO.".to_string(),
             priority: "medium".to_string(),
         },
         SecurityRecommendation {
             category: "Red".to_string(),
-            title: "Monitorear sincronización".to_string(),
-            description: "Revise regularmente la tabla sync_conflicts para detectar problemas de sincronización offline/online.".to_string(),
+            title: "Monitorear disponibilidad de MongoDB".to_string(),
+            description: "Implemente alertas de latencia/conectividad para evitar interrupciones de operaciones en tiempo real.".to_string(),
             priority: "low".to_string(),
         },
     ];

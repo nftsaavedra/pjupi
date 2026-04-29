@@ -17,6 +17,7 @@ PJUPI_DB_BACKEND=mongodb
 PJUPI_MONGODB_URI=mongodb://localhost:27017
 PJUPI_MONGODB_DB=pjupi
 PJUPI_RENIEC_TOKEN=<token_opcional>
+PJUPI_PURE_API_KEY=<tu_api_key_pure>
 ```
 
 | Variable | Descripción | Requerida |
@@ -24,6 +25,10 @@ PJUPI_RENIEC_TOKEN=<token_opcional>
 | `PJUPI_DB_BACKEND` | `mongodb` o `sqlite` | No (default: `mongodb` si hay URI) |
 | `PJUPI_MONGODB_URI` | URI de conexión a MongoDB | Sí (modo MongoDB) |
 | `PJUPI_MONGODB_DB` | Nombre de la base de datos | No (default: `pjupi`) |
+| `PJUPI_PURE_API_BASE_URL` | URL base API de Pure | No (default: `https://pure.unf.edu.pe/ws/api`) |
+| `PJUPI_PURE_API_KEY` | API key para sincronización con Pure | Sí (solo para sync Pure) |
+
+Tambien se acepta `PURE_API_KEY` como alias en desarrollo para facilitar integración con `.env`.
 | `PJUPI_SQLITE_URL` | Ruta personalizada para SQLite | No |
 | `PJUPI_RENIEC_TOKEN` | Token API para consulta de DNI | No |
 

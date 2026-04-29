@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::PureConfig;
-use crate::error::AppError;
+use crate::error::{sanitize_external_detail, AppError};
 
 // ─── DTOs defensivos de Pure API ────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ pub async fn resolve_person_uuid(
 ) -> Result<Option<String>, AppError> {
     let api_key = config.api_key.as_deref().ok_or_else(|| {
         AppError::ConfigurationError(
-            "PJUPI_PURE_API_KEY no está configurada. Configure la clave en pjupi.env para usar la sincronización con Pure.".to_string(),
+            "No se encontró la API key de Pure. Configure PJUPI_PURE_API_KEY (o PURE_API_KEY) en .env (desarrollo) o en pjupi.env (producción).".to_string(),
         )
     })?;
 
@@ -178,14 +178,27 @@ pub async fn resolve_person_uuid(
         .json(&body)
         .send()
         .await
-        .map_err(|e| AppError::InternalError(format!("Pure /persons/search falló: {}", e)))?;
+        .map_err(|e| {
+            AppError::InternalError(format!(
+                "Pure /persons/search falló: {}",
+                sanitize_external_detail(&e.to_string())
+            ))
+        })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text: String = response.text().await.unwrap_or_default();
+        let safe_text = sanitize_external_detail(&text);
+        if status.as_u16() == 403 {
+            return Err(AppError::ConfigurationError(
+                "La API key de Pure no tiene permiso para acceder a /persons. \
+                El administrador de Pure debe habilitar el rol 'Persons' para esta API key."
+                    .to_string(),
+            ));
+        }
         return Err(AppError::InternalError(format!(
             "Pure /persons/search respondió con error {}: {}",
-            status, text
+            status, safe_text
         )));
     }
 
@@ -205,7 +218,7 @@ pub async fn fetch_research_outputs_by_scopus_id(
 ) -> Result<Vec<FetchedPublication>, AppError> {
     let api_key = config.api_key.as_deref().ok_or_else(|| {
         AppError::ConfigurationError(
-            "PJUPI_PURE_API_KEY no está configurada. Configure la clave en pjupi.env para usar la sincronización con Pure.".to_string(),
+            "No se encontró la API key de Pure. Configure PJUPI_PURE_API_KEY (o PURE_API_KEY) en .env (desarrollo) o en pjupi.env (producción).".to_string(),
         )
     })?;
 
@@ -234,15 +247,27 @@ pub async fn fetch_research_outputs_by_scopus_id(
             .send()
             .await
             .map_err(|e| {
-                AppError::InternalError(format!("Pure /research-outputs/search falló: {}", e))
+                AppError::InternalError(format!(
+                    "Pure /research-outputs/search falló: {}",
+                    sanitize_external_detail(&e.to_string())
+                ))
             })?;
 
         if !response.status().is_success() {
             let status = response.status();
             let text: String = response.text().await.unwrap_or_default();
+            let safe_text = sanitize_external_detail(&text);
+            if status.as_u16() == 403 {
+                return Err(AppError::ConfigurationError(
+                    "La API key de Pure no tiene permiso para acceder a /research-outputs. \
+                    El administrador del servidor Pure debe habilitar el rol 'Research outputs' \
+                    para la API key configurada en PJUPI_PURE_API_KEY."
+                        .to_string(),
+                ));
+            }
             return Err(AppError::InternalError(format!(
                 "Pure /research-outputs/search respondió con error {}: {}",
-                status, text
+                status, safe_text
             )));
         }
 

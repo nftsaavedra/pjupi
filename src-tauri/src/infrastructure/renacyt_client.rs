@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::RenacytConfig;
 use crate::domain::docente::RenacytLookupResult;
-use crate::error::AppError;
+use crate::error::{sanitize_external_detail, AppError};
 
 #[derive(Debug, Deserialize)]
 #[allow(non_snake_case)]
@@ -154,7 +154,7 @@ pub async fn consultar_investigador(config: &RenacytConfig, codigo_o_id: &str) -
         AppError::ExternalServiceError(if postulante_payload.messageErrors.trim().is_empty() {
             "RENACYT no devolvió datos del investigador consultado.".to_string()
         } else {
-            postulante_payload.messageErrors
+            sanitize_external_detail(&postulante_payload.messageErrors)
         })
     })?;
 

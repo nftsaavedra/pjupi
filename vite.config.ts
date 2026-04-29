@@ -45,15 +45,15 @@ const getPdfVendorChunk = (id: string) => {
 export default defineConfig(async () => ({
   plugins: [react()],
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/recharts')) {
             return 'charts-vendor';
           }
 
-          if (id.includes('node_modules/xlsx')) {
-            return 'xlsx-vendor';
+          if (id.includes('node_modules/exceljs')) {
+            return 'excel-vendor';
           }
 
           if (id.includes('@tauri-apps/api/core')) {
