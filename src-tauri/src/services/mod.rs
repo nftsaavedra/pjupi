@@ -3,3 +3,7 @@ pub mod grado_service;
 pub mod proyecto_service;
 pub mod usuario_service;
 pub mod grupo_service;
+pub mod patente_service;
+pub mod producto_service;
+pub mod equipamiento_service;
+pub mod financiamiento_service;

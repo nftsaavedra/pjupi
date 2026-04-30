@@ -48,6 +48,15 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
     titulo,
     totalActivos,
     totalInactivos,
+    // Recursos
+    patentes,
+    productos,
+    equipamientos,
+    financiamientos,
+    handlePatentesChange,
+    handleProductosChange,
+    handleEquipamientosChange,
+    handleFinanciamientosChange,
   } = useProyectosTab(refreshTrigger, onProyectoCreated);
 
   return (
@@ -109,11 +118,19 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           open={isFormOpen}
           refreshingDocentes={refreshingDocentes}
           titulo={titulo}
+          patentes={patentes.map((p) => ({ ...p, id: p.id_patente }))}
+          productos={productos.map((p) => ({ ...p, id: p.id_producto }))}
+          equipamientos={equipamientos.map((e) => ({ ...e, id: e.id_equipamiento }))}
+          financiamientos={financiamientos.map((f) => ({ ...f, id: f.id_financiamiento }))}
           onChangeDocentes={handleChangeDocentesSeleccionados}
           onChangeResponsable={setDocenteResponsableId}
           onClose={handleCloseForm}
           onSubmit={handleSubmit}
           onTituloChange={setTitulo}
+          onPatentesChange={handlePatentesChange}
+          onProductosChange={handleProductosChange}
+          onEquipamientosChange={handleEquipamientosChange}
+          onFinanciamientosChange={handleFinanciamientosChange}
         />
       )}
 
@@ -125,8 +142,16 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           open={Boolean(proyectoToEdit)}
           proyecto={proyectoToEdit}
           refreshingDocentes={refreshingDocentes}
+          patentes={patentes.map((p) => ({ ...p, id: p.id_patente }))}
+          productos={productos.map((p) => ({ ...p, id: p.id_producto }))}
+          equipamientos={equipamientos.map((e) => ({ ...e, id: e.id_equipamiento }))}
+          financiamientos={financiamientos.map((f) => ({ ...f, id: f.id_financiamiento }))}
           onClose={() => setProyectoToEdit(null)}
           onSubmit={handleActualizarProyecto}
+          onPatentesChange={handlePatentesChange}
+          onProductosChange={handleProductosChange}
+          onEquipamientosChange={handleEquipamientosChange}
+          onFinanciamientosChange={handleFinanciamientosChange}
         />
       )}
 

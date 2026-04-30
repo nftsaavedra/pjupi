@@ -79,10 +79,3 @@ pub struct SyncPublicacionesResult {
     pub nuevas: usize,
     pub actualizadas: usize,
 }
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize)]
-pub struct VincularPublicacionProyectoRequest {
-    pub id_publicacion: String,
-    pub proyecto_id: Option<String>,
-}

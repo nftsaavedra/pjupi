@@ -3,7 +3,6 @@ use tauri::{path::BaseDirectory, Manager};
 mod commands;
 mod config;
 mod config_validator;
-mod setup_wizard;
 mod db;
 mod domain;
 mod error;
@@ -21,6 +20,7 @@ use commands::usuario_cmd::*;
 use commands::security_cmd::*;
 use commands::pure_cmd::*;
 use commands::grupo_cmd::*;
+use commands::recursos_cmd::*;
 use config::load_runtime_config;
 use config_validator::validate_database_config;
 use state::AppState;
@@ -132,7 +132,23 @@ pub fn run() {
             create_grupo,
             get_grupo,
             update_grupo,
-            delete_grupo
+            delete_grupo,
+            crear_patente,
+            get_patentes_proyecto,
+            actualizar_patente,
+            eliminar_patente,
+            crear_producto,
+            get_productos_proyecto,
+            actualizar_producto,
+            eliminar_producto,
+            crear_equipamiento,
+            get_equipamientos_proyecto,
+            actualizar_equipamiento,
+            eliminar_equipamiento,
+            crear_financiamiento,
+            get_financiamientos_proyecto,
+            actualizar_financiamiento,
+            eliminar_financiamiento,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

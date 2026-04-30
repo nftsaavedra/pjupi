@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFetchDocentes } from '../../docentes/hooks/useFetchDocentes';
 import { useStableFetchData } from '../../../shared/hooks/useStableFetch';
 import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
@@ -13,6 +13,17 @@ import {
   type ProyectoParticipantesPayload,
   type ProyectoDetalle,
 } from '../api';
+import type { Patente, Producto, Equipamiento, Financiamiento } from '../../../services/tauri/types';
+import {
+  crearPatente, getPatentesProyecto, eliminarPatente,
+  crearProducto, getProductosProyecto, eliminarProducto,
+  crearEquipamiento, getEquipamientosProyecto, eliminarEquipamiento,
+  crearFinanciamiento, getFinanciamientosProyecto, eliminarFinanciamiento,
+  type CreatePatentePayload,
+  type CreateProductoPayload,
+  type CreateEquipamientoPayload,
+  type CreateFinanciamientoPayload,
+} from '../../../services/tauri/recursos';
 
 export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => void) => {
   const [titulo, setTitulo] = useState('');
@@ -24,6 +35,28 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   const [proyectoToEdit, setProyectoToEdit] = useState<ProyectoDetalle | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [busqueda, setBusqueda] = useState('');
+  
+  // Recursos (patentes, productos, equipamientos, financiamientos)
+  const [patentes, setPatentes] = useState<Patente[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [equipamientos, setEquipamientos] = useState<Equipamiento[]>([]);
+  const [financiamientos, setFinanciamientos] = useState<Financiamiento[]>([]);
+
+  // Cargar recursos existentes al abrir edición de un proyecto
+  useEffect(() => {
+    if (!proyectoToEdit?.id_proyecto) {
+      setPatentes([]);
+      setProductos([]);
+      setEquipamientos([]);
+      setFinanciamientos([]);
+      return;
+    }
+    const id = proyectoToEdit.id_proyecto;
+    getPatentesProyecto(id).then(setPatentes).catch(() => setPatentes([]));
+    getProductosProyecto(id).then(setProductos).catch(() => setProductos([]));
+    getEquipamientosProyecto(id).then(setEquipamientos).catch(() => setEquipamientos([]));
+    getFinanciamientosProyecto(id).then(setFinanciamientos).catch(() => setFinanciamientos([]));
+  }, [proyectoToEdit?.id_proyecto]);
 
   const {
     docentes,
@@ -54,6 +87,10 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     setTitulo('');
     setDocentesSeleccionados([]);
     setDocenteResponsableId(null);
+    setPatentes([]);
+    setProductos([]);
+    setEquipamientos([]);
+    setFinanciamientos([]);
   };
 
   const handleChangeDocentesSeleccionados = (ids: string[]) => {
@@ -100,7 +137,50 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
 
     setIsLoading(true);
     try {
-      await crearProyectoConParticipantes(titulo, docentesSeleccionados, docenteResponsableId);
+      const proyecto = await crearProyectoConParticipantes(titulo, docentesSeleccionados, docenteResponsableId);
+      const pid = proyecto.id_proyecto;
+
+      // Persistir recursos pendientes (colectados durante el modal de creación)
+      const recursosPendientes: Promise<unknown>[] = [];
+      for (const item of patentes) {
+        recursosPendientes.push(crearPatente({
+          proyecto_id: pid,
+          titulo: (item as unknown as Record<string, string>).titulo_patente || (item as unknown as Record<string, string>).titulo || '',
+          numero_patente: (item as unknown as Record<string, string>).numero_patente,
+          estado: (item as unknown as Record<string, string>).estado,
+        }).catch(() => null));
+      }
+      for (const item of productos) {
+        recursosPendientes.push(crearProducto({
+          proyecto_id: pid,
+          nombre: (item as unknown as Record<string, string>).nombre_producto || (item as unknown as Record<string, string>).nombre || '',
+          tipo: (item as unknown as Record<string, string>).tipo,
+          etapa: (item as unknown as Record<string, string>).etapa,
+          descripcion: (item as unknown as Record<string, string>).descripcion,
+        }).catch(() => null));
+      }
+      for (const item of equipamientos) {
+        recursosPendientes.push(crearEquipamiento({
+          proyecto_id: pid,
+          nombre: (item as unknown as Record<string, string>).nombre_equipo || (item as unknown as Record<string, string>).nombre || '',
+          descripcion: (item as unknown as Record<string, string>).descripcion,
+          especificaciones: (item as unknown as Record<string, string>).especificaciones,
+          valor_estimado: (item as unknown as Record<string, unknown>).costo as number,
+        }).catch(() => null));
+      }
+      for (const item of financiamientos) {
+        recursosPendientes.push(crearFinanciamiento({
+          proyecto_id: pid,
+          entidad_financiadora: (item as unknown as Record<string, string>).fuente || (item as unknown as Record<string, string>).entidad_financiadora || '',
+          tipo: (item as unknown as Record<string, string>).tipo,
+          monto: (item as unknown as Record<string, unknown>).monto as number,
+          estado_financiero: (item as unknown as Record<string, string>).estado_financiero,
+        }).catch(() => null));
+      }
+      if (recursosPendientes.length > 0) {
+        await Promise.all(recursosPendientes);
+      }
+
       toast.success('Proyecto creado exitosamente');
       resetForm();
       setIsFormOpen(false);
@@ -162,6 +242,227 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     }
   };
 
+  // ── Handlers para patentes ──────────────────────────────────────────────────
+  const handlePatentesChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
+    // En flujo de creación: solo actualizar estado local (sin proyecto_id aún)
+    if (!proyectoToEdit?.id_proyecto) {
+      setPatentes(items as unknown as Patente[]);
+      return;
+    }
+
+    const nuevas: CreatePatentePayload[] = [];
+    const eliminadas: string[] = [];
+
+    for (const item of items) {
+      if (item.id.startsWith('temp-')) {
+        // Nuevo item
+        nuevas.push({
+          proyecto_id: proyectoToEdit?.id_proyecto,
+          titulo: (item.titulo_patente as string) || '',
+          numero_patente: item.numero_patente as string,
+          estado: item.estado as string,
+        });
+      }
+    }
+
+    // Detectar eliminadas (items que estaban pero ya no están)
+    const itemIds = items.map((i) => i.id);
+    for (const patente of patentes) {
+      if (!itemIds.includes(patente.id_patente)) {
+        eliminadas.push(patente.id_patente);
+      }
+    }
+
+    // Ejecutar cambios
+    for (const nueva of nuevas) {
+      try {
+        await crearPatente(nueva);
+      } catch (error) {
+        toast.error('Error creando patente: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    for (const id of eliminadas) {
+      try {
+        await eliminarPatente(id);
+      } catch (error) {
+        toast.error('Error eliminando patente: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    // Recargar patentes
+    if (proyectoToEdit?.id_proyecto) {
+      try {
+        const p = await getPatentesProyecto(proyectoToEdit.id_proyecto);
+        setPatentes(p);
+      } catch (error) {
+        toast.error('Error cargando patentes: ' + getTauriErrorMessage(error));
+      }
+    }
+  };
+
+  // ── Handlers para productos ────────────────────────────────────────────────
+  const handleProductosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
+    if (!proyectoToEdit?.id_proyecto) {
+      setProductos(items as unknown as Producto[]);
+      return;
+    }
+    const nuevas: CreateProductoPayload[] = [];
+    const eliminadas: string[] = [];
+
+    for (const item of items) {
+      if (item.id.startsWith('temp-')) {
+        nuevas.push({
+          proyecto_id: proyectoToEdit?.id_proyecto,
+          nombre: (item.nombre_producto as string) || '',
+          tipo: item.tipo as string,
+          etapa: item.etapa as string,
+          descripcion: item.descripcion as string,
+        });
+      }
+    }
+
+    const itemIds = items.map((i) => i.id);
+    for (const producto of productos) {
+      if (!itemIds.includes(producto.id_producto)) {
+        eliminadas.push(producto.id_producto);
+      }
+    }
+
+    for (const nueva of nuevas) {
+      try {
+        await crearProducto(nueva);
+      } catch (error) {
+        toast.error('Error creando producto: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    for (const id of eliminadas) {
+      try {
+        await eliminarProducto(id);
+      } catch (error) {
+        toast.error('Error eliminando producto: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    if (proyectoToEdit?.id_proyecto) {
+      try {
+        const p = await getProductosProyecto(proyectoToEdit.id_proyecto);
+        setProductos(p);
+      } catch (error) {
+        toast.error('Error cargando productos: ' + getTauriErrorMessage(error));
+      }
+    }
+  };
+
+  // ── Handlers para equipamientos ────────────────────────────────────────────
+  const handleEquipamientosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
+    if (!proyectoToEdit?.id_proyecto) {
+      setEquipamientos(items as unknown as Equipamiento[]);
+      return;
+    }
+    const nuevas: CreateEquipamientoPayload[] = [];
+    const eliminadas: string[] = [];
+
+    for (const item of items) {
+      if (item.id.startsWith('temp-')) {
+        nuevas.push({
+          proyecto_id: proyectoToEdit?.id_proyecto,
+          nombre: (item.nombre_equipo as string) || '',
+          descripcion: item.descripcion as string,
+          especificaciones: item.especificaciones as string,
+          valor_estimado: item.costo as number,
+        });
+      }
+    }
+
+    const itemIds = items.map((i) => i.id);
+    for (const equipo of equipamientos) {
+      if (!itemIds.includes(equipo.id_equipamiento)) {
+        eliminadas.push(equipo.id_equipamiento);
+      }
+    }
+
+    for (const nueva of nuevas) {
+      try {
+        await crearEquipamiento(nueva);
+      } catch (error) {
+        toast.error('Error creando equipamiento: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    for (const id of eliminadas) {
+      try {
+        await eliminarEquipamiento(id);
+      } catch (error) {
+        toast.error('Error eliminando equipamiento: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    if (proyectoToEdit?.id_proyecto) {
+      try {
+        const e = await getEquipamientosProyecto(proyectoToEdit.id_proyecto);
+        setEquipamientos(e);
+      } catch (error) {
+        toast.error('Error cargando equipamientos: ' + getTauriErrorMessage(error));
+      }
+    }
+  };
+
+  // ── Handlers para financiamientos ──────────────────────────────────────────
+  const handleFinanciamientosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
+    if (!proyectoToEdit?.id_proyecto) {
+      setFinanciamientos(items as unknown as Financiamiento[]);
+      return;
+    }
+    const nuevas: CreateFinanciamientoPayload[] = [];
+    const eliminadas: string[] = [];
+
+    for (const item of items) {
+      if (item.id.startsWith('temp-')) {
+        nuevas.push({
+          proyecto_id: proyectoToEdit?.id_proyecto,
+          entidad_financiadora: (item.fuente as string) || '',
+          tipo: item.tipo as string,
+          monto: item.monto as number,
+          estado_financiero: item.estado_financiero as string,
+        });
+      }
+    }
+
+    const itemIds = items.map((i) => i.id);
+    for (const fin of financiamientos) {
+      if (!itemIds.includes(fin.id_financiamiento)) {
+        eliminadas.push(fin.id_financiamiento);
+      }
+    }
+
+    for (const nueva of nuevas) {
+      try {
+        await crearFinanciamiento(nueva);
+      } catch (error) {
+        toast.error('Error creando financiamiento: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    for (const id of eliminadas) {
+      try {
+        await eliminarFinanciamiento(id);
+      } catch (error) {
+        toast.error('Error eliminando financiamiento: ' + getTauriErrorMessage(error));
+      }
+    }
+
+    if (proyectoToEdit?.id_proyecto) {
+      try {
+        const f = await getFinanciamientosProyecto(proyectoToEdit.id_proyecto);
+        setFinanciamientos(f);
+      } catch (error) {
+        toast.error('Error cargando financiamientos: ' + getTauriErrorMessage(error));
+      }
+    }
+  };
+
   const totalActivos = useMemo(() => proyectos.filter((proyecto) => proyecto.activo === 1).length, [proyectos]);
   const totalInactivos = useMemo(() => proyectos.filter((proyecto) => proyecto.activo === 0).length, [proyectos]);
 
@@ -212,5 +513,14 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     totalActivos,
     totalInactivos,
     cargarProyectos,
+    // Recursos
+    patentes,
+    productos,
+    equipamientos,
+    financiamientos,
+    handlePatentesChange,
+    handleProductosChange,
+    handleEquipamientosChange,
+    handleFinanciamientosChange,
   };
 };

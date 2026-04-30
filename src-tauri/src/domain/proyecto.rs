@@ -1,3 +1,4 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -74,10 +75,7 @@ pub struct ExportDataConProjectos {
 
 impl Proyecto {
     pub fn new(request: CreateProyectoRequest) -> Self {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_millis() as i64)
-            .unwrap_or_default();
+        let now = Utc::now().timestamp_millis();
         
         Self {
             id_proyecto: Uuid::new_v4().to_string(),

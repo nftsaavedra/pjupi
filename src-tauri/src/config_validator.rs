@@ -1,80 +1,39 @@
 /// Configuration validation module for security and correctness checks
-/// 
-/// This module provides:
-/// - Configuration completeness validation
-/// - Security checks (credentials, permissions)
-/// - User-friendly error messages for troubleshooting
+///
+/// Validates database configuration completeness and URI format, returning
+/// user-friendly `AppError::ConfigurationError` messages on failure.
 
 use crate::config::DatabaseConfig;
 use crate::error::AppError;
 
-#[derive(Debug)]
-#[allow(dead_code)]
-pub enum ValidationError {
-    MissingMongoDbUri,
-    InvalidMongoDbUri(String),
-    MissingCriticalConfig(String),
-    InconsistentBackendConfig,
-}
-
-impl std::fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ValidationError::MissingMongoDbUri => {
-                write!(f, "MongoDB URI no configurada. Configure PJUPI_MONGODB_URI en su archivo .env o en las variables de entorno.")
-            }
-            ValidationError::InvalidMongoDbUri(reason) => {
-                write!(f, "URI de MongoDB es inválida: {}. Formato esperado: mongodb://[usuario:contraseña@]host[:puerto][/base_de_datos]", reason)
-            }
-            ValidationError::MissingCriticalConfig(msg) => {
-                write!(f, "Configuración crítica faltante: {}", msg)
-            }
-            ValidationError::InconsistentBackendConfig => {
-                write!(f, "Configuración de backend inconsistente. Si PJUPI_DB_BACKEND=mongodb, debe proporcionar PJUPI_MONGODB_URI.")
-            }
-        }
-    }
-}
-
-impl From<ValidationError> for AppError {
-    fn from(err: ValidationError) -> Self {
-        AppError::ConfigurationError(err.to_string())
-    }
-}
-
-/// Validates the database configuration for consistency and security
-pub fn validate_database_config(config: &DatabaseConfig) -> Result<(), ValidationError> {
-    // Check if backend is MongoDB but URI is missing
+/// Validates the database configuration for consistency and correctness.
+pub fn validate_database_config(config: &DatabaseConfig) -> Result<(), AppError> {
     if config.requires_mongodb() && config.mongodb_uri.is_none() {
-        return Err(ValidationError::MissingMongoDbUri);
+        return Err(AppError::ConfigurationError(
+            "MongoDB URI no configurada. Configure PJUPI_MONGODB_URI en su archivo de configuración o variable de entorno.".to_string(),
+        ));
     }
 
-    // Validate MongoDB URI format if provided
     if let Some(uri) = &config.mongodb_uri {
         validate_mongodb_uri(uri)?;
-    }
-
-    // Check for inconsistent configuration
-    if config.requires_mongodb() && config.mongodb_uri.is_none() {
-        return Err(ValidationError::InconsistentBackendConfig);
     }
 
     Ok(())
 }
 
-/// Validates MongoDB URI format and basic structure
-fn validate_mongodb_uri(uri: &str) -> Result<(), ValidationError> {
+fn validate_mongodb_uri(uri: &str) -> Result<(), AppError> {
     if uri.is_empty() {
-        return Err(ValidationError::InvalidMongoDbUri("URI is empty".to_string()));
-    }
-
-    if !uri.starts_with("mongodb://") && !uri.starts_with("mongodb+srv://") {
-        return Err(ValidationError::InvalidMongoDbUri(
-            "URI must start with mongodb:// or mongodb+srv://".to_string(),
+        return Err(AppError::ConfigurationError(
+            "La URI de MongoDB no puede estar vacía.".to_string(),
         ));
     }
 
-    // Basic check that URI contains a host after the scheme
+    if !uri.starts_with("mongodb://") && !uri.starts_with("mongodb+srv://") {
+        return Err(AppError::ConfigurationError(
+            "La URI de MongoDB debe comenzar con mongodb:// o mongodb+srv://".to_string(),
+        ));
+    }
+
     let after_scheme = if uri.starts_with("mongodb+srv://") {
         &uri[14..]
     } else {
@@ -82,8 +41,8 @@ fn validate_mongodb_uri(uri: &str) -> Result<(), ValidationError> {
     };
 
     if after_scheme.is_empty() {
-        return Err(ValidationError::InvalidMongoDbUri(
-            "No host specified after scheme".to_string(),
+        return Err(AppError::ConfigurationError(
+            "La URI de MongoDB no especifica un host válido.".to_string(),
         ));
     }
 

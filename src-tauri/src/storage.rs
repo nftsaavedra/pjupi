@@ -1,7 +1,11 @@
 use crate::domain::docente::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado};
 use crate::domain::estadisticas::{DocenteProyectosCount, ExportData, KpisDashboard};
+use crate::domain::equipamiento::{CreateEquipamientoRequest, Equipamiento, UpdateEquipamientoRequest};
+use crate::domain::financiamiento::{CreateFinanciamientoRequest, Financiamiento, UpdateFinanciamientoRequest};
 use crate::domain::grado::{CreateGradoRequest, EliminarGradoResultado, GradoAcademico};
 use crate::domain::grupo_investigacion::{GrupoInvestigacion, CreateGrupoInvestigacionRequest, UpdateGrupoInvestigacionRequest};
+use crate::domain::patente::{CreatePatenteRequest, Patente, UpdatePatenteRequest};
+use crate::domain::producto::{CreateProductoRequest, Producto, UpdateProductoRequest};
 use crate::domain::proyecto::{
     CreateProyectoConParticipantesRequest,
     EliminarProyectoResultado,
@@ -12,7 +16,7 @@ use crate::domain::proyecto::{
 };
 use crate::domain::usuario::{AuthStatus, BootstrapUsuarioRequest, CreateUsuarioRequest, LoginUsuarioRequest, UpdateUsuarioRequest, Usuario};
 use crate::error::AppError;
-use crate::services::{docente_service, grado_service, proyecto_service, usuario_service};
+use crate::services::{docente_service, grado_service, proyecto_service, usuario_service, patente_service, producto_service, equipamiento_service, financiamiento_service};
 use crate::state::AppState;
 
 enum AppPermission {
@@ -27,6 +31,7 @@ enum AppPermission {
     GradosManage,
     GruposView,
     GruposManage,
+    RecursosManage,
 }
 
 fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
@@ -42,8 +47,9 @@ fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
                 | AppPermission::ReportesView
                 | AppPermission::ReportesExport
                 | AppPermission::GradosRead
-                    | AppPermission::GruposView
-                    | AppPermission::GruposManage
+                | AppPermission::GruposView
+                | AppPermission::GruposManage
+                | AppPermission::RecursosManage
         ),
         "consulta" => matches!(
             permission,
@@ -51,7 +57,7 @@ fn role_has_permission(role: &str, permission: &AppPermission) -> bool {
                 | AppPermission::DocentesView
                 | AppPermission::ProyectosView
                 | AppPermission::ReportesView
-                    | AppPermission::GruposView
+                | AppPermission::GruposView
         ),
         _ => false,
     }
@@ -311,6 +317,94 @@ pub async fn get_current_session(state: &AppState, window_label: &str) -> Result
 pub async fn logout_usuario(state: &AppState, window_label: &str) -> Result<(), AppError> {
     state.clear_current_session(window_label).await;
     Ok(())
+}
+
+// ── Patentes ──────────────────────────────────────────────────────────────────
+
+pub async fn crear_patente(state: &AppState, window_label: &str, request: CreatePatenteRequest) -> Result<Patente, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    patente_service::create(state, request).await
+}
+
+pub async fn get_patentes_proyecto(state: &AppState, window_label: &str, proyecto_id: &str) -> Result<Vec<Patente>, AppError> {
+    require_permission(state, window_label, AppPermission::ProyectosView).await?;
+    patente_service::get_by_proyecto(state, proyecto_id).await
+}
+
+pub async fn actualizar_patente(state: &AppState, window_label: &str, id_patente: &str, request: UpdatePatenteRequest) -> Result<Patente, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    patente_service::update(state, id_patente, request).await
+}
+
+pub async fn eliminar_patente(state: &AppState, window_label: &str, id_patente: &str) -> Result<(), AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    patente_service::delete(state, id_patente).await
+}
+
+// ── Productos ─────────────────────────────────────────────────────────────────
+
+pub async fn crear_producto(state: &AppState, window_label: &str, request: CreateProductoRequest) -> Result<Producto, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    producto_service::create(state, request).await
+}
+
+pub async fn get_productos_proyecto(state: &AppState, window_label: &str, proyecto_id: &str) -> Result<Vec<Producto>, AppError> {
+    require_permission(state, window_label, AppPermission::ProyectosView).await?;
+    producto_service::get_by_proyecto(state, proyecto_id).await
+}
+
+pub async fn actualizar_producto(state: &AppState, window_label: &str, id_producto: &str, request: UpdateProductoRequest) -> Result<Producto, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    producto_service::update(state, id_producto, request).await
+}
+
+pub async fn eliminar_producto(state: &AppState, window_label: &str, id_producto: &str) -> Result<(), AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    producto_service::delete(state, id_producto).await
+}
+
+// ── Equipamientos ─────────────────────────────────────────────────────────────
+
+pub async fn crear_equipamiento(state: &AppState, window_label: &str, request: CreateEquipamientoRequest) -> Result<Equipamiento, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    equipamiento_service::create(state, request).await
+}
+
+pub async fn get_equipamientos_proyecto(state: &AppState, window_label: &str, proyecto_id: &str) -> Result<Vec<Equipamiento>, AppError> {
+    require_permission(state, window_label, AppPermission::ProyectosView).await?;
+    equipamiento_service::get_by_proyecto(state, proyecto_id).await
+}
+
+pub async fn actualizar_equipamiento(state: &AppState, window_label: &str, id_equipamiento: &str, request: UpdateEquipamientoRequest) -> Result<Equipamiento, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    equipamiento_service::update(state, id_equipamiento, request).await
+}
+
+pub async fn eliminar_equipamiento(state: &AppState, window_label: &str, id_equipamiento: &str) -> Result<(), AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    equipamiento_service::delete(state, id_equipamiento).await
+}
+
+// ── Financiamientos ───────────────────────────────────────────────────────────
+
+pub async fn crear_financiamiento(state: &AppState, window_label: &str, request: CreateFinanciamientoRequest) -> Result<Financiamiento, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    financiamiento_service::create(state, request).await
+}
+
+pub async fn get_financiamientos_proyecto(state: &AppState, window_label: &str, proyecto_id: &str) -> Result<Vec<Financiamiento>, AppError> {
+    require_permission(state, window_label, AppPermission::ProyectosView).await?;
+    financiamiento_service::get_by_proyecto(state, proyecto_id).await
+}
+
+pub async fn actualizar_financiamiento(state: &AppState, window_label: &str, id_financiamiento: &str, request: UpdateFinanciamientoRequest) -> Result<Financiamiento, AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    financiamiento_service::update(state, id_financiamiento, request).await
+}
+
+pub async fn eliminar_financiamiento(state: &AppState, window_label: &str, id_financiamiento: &str) -> Result<(), AppError> {
+    require_permission(state, window_label, AppPermission::RecursosManage).await?;
+    financiamiento_service::delete(state, id_financiamiento).await
 }
 
 pub async fn get_all_usuarios(state: &AppState, window_label: &str) -> Result<Vec<Usuario>, AppError> {

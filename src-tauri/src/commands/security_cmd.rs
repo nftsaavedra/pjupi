@@ -1,6 +1,7 @@
 /// Security and configuration status commands
 /// Provides information about application security and configuration state
 
+use crate::error::AppError;
 use crate::state::AppState;
 use serde::Serialize;
 
@@ -12,7 +13,7 @@ pub struct SecurityStatus {
 }
 
 #[tauri::command]
-pub async fn get_security_status(state: tauri::State<'_, AppState>) -> Result<SecurityStatus, String> {
+pub async fn get_security_status(state: tauri::State<'_, AppState>) -> Result<SecurityStatus, AppError> {
     let mongodb_configured = state.mongo.is_some();
 
     let mut recommendations = Vec::new();
@@ -45,7 +46,7 @@ pub struct ConfigurationStep {
 }
 
 #[tauri::command]
-pub async fn get_setup_guide() -> Result<ConfigurationGuide, String> {
+pub async fn get_setup_guide() -> Result<ConfigurationGuide, AppError> {
     let steps = vec![
         ConfigurationStep {
             step_number: 1,
@@ -93,7 +94,7 @@ pub struct SecurityRecommendation {
 }
 
 #[tauri::command]
-pub async fn get_security_recommendations() -> Result<SecurityRecommendations, String> {
+pub async fn get_security_recommendations() -> Result<SecurityRecommendations, AppError> {
     let recommendations = vec![
         SecurityRecommendation {
             category: "Configuración".to_string(),

@@ -1,3 +1,4 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -145,12 +146,7 @@ impl Docente {
         .collect::<Vec<_>>()
         .join(" ");
         let renacyt = request.renacyt;
-        let fecha_ultima_sincronizacion = renacyt.as_ref().map(|_| {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|duration| duration.as_millis() as i64)
-                .unwrap_or_default()
-        });
+        let fecha_ultima_sincronizacion = renacyt.as_ref().map(|_| Utc::now().timestamp_millis());
 
         Self {
             id_docente: Uuid::new_v4().to_string(),
@@ -206,9 +202,6 @@ impl Docente {
     }
 
     fn current_timestamp_ms() -> i64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_millis() as i64)
-            .unwrap_or_default()
+        Utc::now().timestamp_millis()
     }
 }
