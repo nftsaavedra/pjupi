@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { BookPlus, Pencil, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { useFetchGrados } from './hooks/useFetchGrados';
-import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
-import { toast } from '../../../services/toast';
-import { FormInput } from '../../../shared/forms/FormInput';
-import { FormModal } from '../../../shared/forms/FormModal';
-import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { SkeletonTable } from '../../../shared/ui/Skeleton';
-import { TableActionButton } from '../../../shared/ui/TableActionButton';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { toast } from '@/services/toast';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormModal } from '@/shared/forms/FormModal';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonTable } from '@/shared/ui/Skeleton';
+import { TableActionButton } from '@/shared/ui/TableActionButton';
 import { actualizarGrado, crearGrado, eliminarGrado, getTauriErrorMessage, reactivarGrado, type GradoAcademico } from '../api';
 
 interface GradosTabProps {
@@ -34,7 +34,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
     toastKey: 'grados-refresh',
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!nombre.trim()) {
@@ -165,13 +165,13 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
             className="form-input filter-search"
             placeholder="Buscar por nombre o descripción"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); }}
             aria-label="Buscar grados por nombre o descripción"
           />
           <select
             className="form-input filter-select"
             value={estadoFiltro}
-            onChange={(e) => setEstadoFiltro(e.target.value as 'todos' | 'activos' | 'inactivos')}
+            onChange={(e) => { setEstadoFiltro(e.target.value as 'todos' | 'activos' | 'inactivos'); }}
             aria-label="Filtrar grados por estado"
           >
             <option value="todos">Todos</option>
@@ -203,20 +203,20 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
                         icon={RotateCcw}
                         iconSize={18}
                         label="Reactivar grado"
-                        onClick={() => handleReactivar(grado.id_grado)}
+                        onClick={() => { void handleReactivar(grado.id_grado); }}
                       />
                     )}
                     <TableActionButton
                       className="btn-edit"
                       icon={Pencil}
                       label="Editar grado"
-                      onClick={() => handleEditar(grado)}
+                      onClick={() => { handleEditar(grado); }}
                     />
                     <TableActionButton
                       className="btn-delete"
                       icon={Trash2}
                       label="Desactivar o eliminar grado"
-                      onClick={() => setGradoToDelete(grado)}
+                      onClick={() => { setGradoToDelete(grado); }}
                     />
                   </td>
                 </tr>
@@ -238,7 +238,7 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
         )}
         description="Complete la información base del catálogo académico y guarde los cambios para refrescar la lista visible."
         onClose={handleCloseForm}
-        onSubmit={handleSubmit}
+        onSubmit={(e) => { void handleSubmit(e); }}
         submitText={(
           <span className="button-with-icon">
             <AppIcon icon={Save} size={18} />
@@ -271,8 +271,8 @@ export const GradosTab: React.FC<GradosTabProps> = ({ onGradoModified, refreshTr
         message={`Esta acción intentará eliminar el grado "${gradoToDelete?.nombre ?? ''}". Si tiene docentes relacionados, se desactivará para conservar la integridad de la información.`}
         confirmText="Sí, continuar"
         cancelText="No, cancelar"
-        onConfirm={handleEliminar}
-        onCancel={() => setGradoToDelete(null)}
+        onConfirm={() => { void handleEliminar(); }}
+        onCancel={() => { setGradoToDelete(null); }}
       />
     </div>
   );

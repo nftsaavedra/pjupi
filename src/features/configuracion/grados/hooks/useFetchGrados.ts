@@ -1,5 +1,5 @@
 import { getAllGrados, type GradoAcademico } from '../../api';
-import { useStableFetch } from '../../../../shared/hooks/useStableFetch';
+import { useStableFetch } from '@/shared/hooks/useStableFetch';
 
 export const useFetchGrados = (refreshTrigger = 0) => {
   const { data, loading, refreshing, error, recargar } = useStableFetch<GradoAcademico[]>(

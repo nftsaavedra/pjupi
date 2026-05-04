@@ -1,1 +1,1 @@
-export { useRefreshToast } from '../shared/hooks/useRefreshToast';
+export { useRefreshToast } from '@/shared/hooks/useRefreshToast';

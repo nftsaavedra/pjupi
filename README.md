@@ -6,30 +6,28 @@ Aplicación de escritorio para gestión de grados académicos, docentes y proyec
 
 - **Frontend**: React + TypeScript + Vite
 - **Backend**: Rust (Tauri v2)
-- **Base de datos**: MongoDB (primario) + SQLite (store local / offline)
+- **Base de datos**: MongoDB (Atlas)
 
 ## Configuración
 
 En desarrollo use `.env` en la raíz. En producción, edite `%APPDATA%\com.upic.pjupi\pjupi.env`.
 
 ```env
-PJUPI_DB_BACKEND=mongodb
-PJUPI_MONGODB_URI=mongodb://localhost:27017
+PJUPI_MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/?appName=pjupi
 PJUPI_MONGODB_DB=pjupi
+PJUPI_RENIEC_API_BASE_URL=https://api.decolecta.com/v1
 PJUPI_RENIEC_TOKEN=<token_opcional>
+PJUPI_PURE_API_BASE_URL=https://pure.unf.edu.pe/ws/api
 PJUPI_PURE_API_KEY=<tu_api_key_pure>
 ```
 
 | Variable | Descripción | Requerida |
 |----------|-------------|-----------|
-| `PJUPI_DB_BACKEND` | `mongodb` o `sqlite` | No (default: `mongodb` si hay URI) |
-| `PJUPI_MONGODB_URI` | URI de conexión a MongoDB | Sí (modo MongoDB) |
+| `PJUPI_MONGODB_URI` | URI de conexión a MongoDB | Sí |
 | `PJUPI_MONGODB_DB` | Nombre de la base de datos | No (default: `pjupi`) |
 | `PJUPI_PURE_API_BASE_URL` | URL base API de Pure | No (default: `https://pure.unf.edu.pe/ws/api`) |
 | `PJUPI_PURE_API_KEY` | API key para sincronización con Pure | Sí (solo para sync Pure) |
-
-Tambien se acepta `PURE_API_KEY` como alias en desarrollo para facilitar integración con `.env`.
-| `PJUPI_SQLITE_URL` | Ruta personalizada para SQLite | No |
+| `PJUPI_RENIEC_API_BASE_URL` | URL base API RENIEC | No (default: `https://api.decolecta.com/v1`) |
 | `PJUPI_RENIEC_TOKEN` | Token API para consulta de DNI | No |
 
 ## Desarrollo
@@ -68,15 +66,11 @@ npm run build
 ## Arquitectura
 
 ```
-Frontend (React) → Tauri IPC → Services → BackendStrategy → MongoDB / SQLite
-                                                                    ↕
-                                                          sync_outbox (offline queue)
+Frontend (React) → Tauri IPC → Rust Commands → Services → MongoDB
 ```
 
-- MongoDB es la fuente de verdad. SQLite actúa como store local para operación offline.
-- Las mutaciones en modo offline se encolan en `sync_outbox` y se sincronizan al reconectar.
-- Política de conflictos: MongoDB-primary.
-- Ver [docs/mongodb-primary-plan.md](docs/mongodb-primary-plan.md) para detalles de arquitectura.
+- Screaming Architecture: cada feature (`docentes/`, `proyectos/`, `grupos/`, etc.) tiene sus propios modelos, comandos, servicio y repositorio.
+- Ver [docs/mongodb-primary-plan.md](docs/mongodb-primary-plan.md) y [AGENTS.md](AGENTS.md) para detalles de arquitectura.
 
 ## IDE Recomendado
 

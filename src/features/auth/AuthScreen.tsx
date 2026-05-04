@@ -1,8 +1,8 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useId, useState } from 'react';
 import { LogIn, ShieldCheck } from 'lucide-react';
 import { getTauriErrorMessage, loginUsuario, registrarPrimerUsuario, type Usuario } from './api';
-import { AppIcon } from '../../shared/ui/AppIcon';
-import { toast } from '../../services/toast';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { toast } from '@/services/toast';
 
 interface AuthScreenProps {
   mode: 'setup' | 'login';
@@ -20,14 +20,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    setUsername('');
-    setNombreCompleto('');
-    setPassword('');
-    setConfirmPassword('');
-  }, [mode]);
-
-  const handleSetup = async (e: React.FormEvent) => {
+  const handleSetup = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!username.trim() || !nombreCompleto.trim() || !password.trim()) {
@@ -57,7 +50,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!username.trim() || !password.trim()) {
@@ -89,14 +82,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
           </p>
         </div>
 
-        <form className="form" onSubmit={mode === 'setup' ? handleSetup : handleLogin}>
+        <form key={mode} className="form" onSubmit={(e) => { void (mode === 'setup' ? handleSetup(e) : handleLogin(e)); }}>
           <div className="form-group">
             <label htmlFor={usernameId}>Usuario</label>
             <input
               id={usernameId}
               className="form-input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); }}
               placeholder="Ej: admin"
               autoComplete="username"
               required
@@ -110,7 +103,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
                 id={fullNameId}
                 className="form-input"
                 value={nombreCompleto}
-                onChange={(e) => setNombreCompleto(e.target.value)}
+                onChange={(e) => { setNombreCompleto(e.target.value); }}
                 placeholder="Ej: Administrador General"
                 required
               />
@@ -124,7 +117,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
               type="password"
               className="form-input"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
               placeholder="Mínimo 8 caracteres"
               autoComplete={mode === 'setup' ? 'new-password' : 'current-password'}
               required
@@ -139,7 +132,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onAuthenticated })
                 type="password"
                 className="form-input"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => { setConfirmPassword(e.target.value); }}
                 placeholder="Repita la contraseña"
                 autoComplete="new-password"
                 required

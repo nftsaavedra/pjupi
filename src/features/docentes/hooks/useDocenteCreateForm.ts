@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useFetchGrados } from '../../configuracion/grados/hooks/useFetchGrados';
-import { toast } from '../../../services/toast';
+import { toast } from '@/services/toast';
 import { buscarDocentePorDni, consultarDniReniec, consultarRenacytDocente, crearDocente, getTauriErrorMessage, type RenacytLookupResult } from '../api';
 
 type DniValidationStatus = 'idle' | 'checking' | 'duplicate' | 'validated' | 'error';
@@ -174,7 +174,7 @@ export const useDocenteCreateForm = (refreshTrigger = 0, onDocenteCreated: () =>
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     const nombresLimpio = nombres.trim();

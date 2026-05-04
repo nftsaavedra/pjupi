@@ -5,13 +5,13 @@ import {
   getTauriErrorMessage,
   type DatosExportDocenteAgrupado,
 } from './api';
-import { toast } from '../../services/toast';
-import { useStableFetchData } from '../../shared/hooks/useStableFetch';
-import { useRefreshToast } from '../../shared/hooks/useRefreshToast';
-import { AppIcon } from '../../shared/ui/AppIcon';
-import { SkeletonTable } from '../../shared/ui/Skeleton';
-import { saveDesktopFile } from '../../shared/utils/saveDesktopFile';
-import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../shared/utils/renacyt';
+import { toast } from '@/services/toast';
+import { useStableFetchData } from '@/shared/hooks/useStableFetch';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonTable } from '@/shared/ui/Skeleton';
+import { saveDesktopFile } from '@/shared/utils/saveDesktopFile';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '@/shared/utils/renacyt';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
 
@@ -100,7 +100,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refr
               <select
                 className="form-input"
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoReporte)}
+                onChange={(e) => { setTipo(e.target.value as TipoReporte); }}
                 aria-label="Seleccionar tipo de reporte"
               >
                 <option value="agrupado_docente">Docentes con proyectos (agrupado)</option>
@@ -170,7 +170,7 @@ export const ReportesTab: React.FC<ReportesTabProps> = ({ canExport = true, refr
             className="form-input"
             placeholder="Buscar por docente, DNI, grado o nivel RENACYT"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); }}
             aria-label="Buscar en la vista previa por docente, DNI, grado o nivel RENACYT"
           />
         </div>

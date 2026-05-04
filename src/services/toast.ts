@@ -27,10 +27,10 @@ const show = (type: ToastType, message: string, duration = 3500) => {
 };
 
 export const toast = {
-  success: (message: string, duration?: number) => show('success', message, duration),
-  error: (message: string, duration?: number) => show('error', message, duration),
-  info: (message: string, duration?: number) => show('info', message, duration),
-  warning: (message: string, duration?: number) => show('warning', message, duration),
+  success: (message: string, duration?: number) => { show('success', message, duration); },
+  error: (message: string, duration?: number) => { show('error', message, duration); },
+  info: (message: string, duration?: number) => { show('info', message, duration); },
+  warning: (message: string, duration?: number) => { show('warning', message, duration); },
   subscribe: (listener: ToastListener) => {
     listeners.add(listener);
     return () => {

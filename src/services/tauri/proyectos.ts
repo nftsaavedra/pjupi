@@ -31,11 +31,11 @@ export const getAllProyectosDetalle = async (): Promise<ProyectoDetalle[]> => {
 };
 
 export const eliminarRelacionProyectoDocente = async (id_proyecto: string, id_docente: string): Promise<void> => {
-  return await invoke('eliminar_relacion_proyecto_docente', { idProyecto: id_proyecto, idDocente: id_docente });
+  await invoke('eliminar_relacion_proyecto_docente', { idProyecto: id_proyecto, idDocente: id_docente });
 };
 
 export const eliminarRelacionesProyecto = async (id_proyecto: string): Promise<void> => {
-  return await invoke('eliminar_relaciones_proyecto', { idProyecto: id_proyecto });
+  await invoke('eliminar_relaciones_proyecto', { idProyecto: id_proyecto });
 };
 
 export const eliminarProyecto = async (id_proyecto: string): Promise<EliminarProyectoResultado> => {

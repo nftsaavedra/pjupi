@@ -49,7 +49,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                   ref={ref}
                   {...triggerProps}
                   className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => onTabChange(tab.id)}
+                  onClick={() => { onTabChange(tab.id); }}
                   aria-current={activeTab === tab.id ? 'page' : undefined}
                   aria-label={tabAriaLabel}
                 >
@@ -60,7 +60,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                   )}
                   <span className="tab-button-copy">
                     <span className="tab-button-label">{tab.label}</span>
-                    {variant === 'sidebar' && tab.description && (
+                    {tab.description && (
                       <span className="tab-button-description">{tab.description}</span>
                     )}
                   </span>
@@ -75,7 +75,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
             key={tab.id}
             type="button"
             className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => { onTabChange(tab.id); }}
             aria-current={activeTab === tab.id ? 'page' : undefined}
             aria-label={tabAriaLabel}
           >

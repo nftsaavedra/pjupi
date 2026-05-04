@@ -44,7 +44,7 @@ export const FormInput: React.FC<FormInputProps> = ({
         id={inputId}
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); }}
         placeholder={placeholder}
         maxLength={maxLength}
         required={required}

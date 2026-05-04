@@ -1,16 +1,16 @@
 import React from 'react';
 import { FolderOpen, Plus, Beaker, Lightbulb, Package, DollarSign } from 'lucide-react';
 import type { DocenteDetalle } from '../../docentes/api';
-import { FormInput } from '../../../shared/forms/FormInput';
-import { FormSelect } from '../../../shared/forms/FormSelect';
-import { FormModal } from '../../../shared/forms/FormModal';
-import { AppIcon } from '../../../shared/ui/AppIcon';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormSelect } from '@/shared/forms/FormSelect';
+import { FormModal } from '@/shared/forms/FormModal';
+import { AppIcon } from '@/shared/ui/AppIcon';
 import { DocentesChecklist } from './DocentesChecklist';
 import { RelatedEntitiesSection } from './RelatedEntitiesSection';
 
 interface RelatedEntity {
   id: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ProyectoCreateModalProps {
@@ -29,7 +29,7 @@ interface ProyectoCreateModalProps {
   onChangeDocentes: (ids: string[]) => void;
   onChangeResponsable: (docenteId: string) => void;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.SyntheticEvent) => void;
   onTituloChange: (value: string) => void;
   onPatentesChange?: (items: RelatedEntity[]) => void;
   onProductosChange?: (items: RelatedEntity[]) => void;

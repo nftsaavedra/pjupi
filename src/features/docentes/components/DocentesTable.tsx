@@ -4,8 +4,8 @@ import { useDocentesTable } from '../hooks/useDocentesTable';
 import { DocenteDetailModal } from './DocenteDetailModal';
 import { DocentesTableGrid } from './DocentesTableGrid';
 import { DocentesTableToolbar } from './DocentesTableToolbar';
-import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../../../shared/ui/AppIcon';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
 
 interface DocentesTableProps {
   canManage: boolean;
@@ -98,8 +98,8 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           docentes={docentesFiltrados}
           loading={loading}
           onView={setSelectedDocente}
-          onRefreshRenacyt={handleRefreshRenacytFormaciones}
-          onReactivate={handleReactivarDocente}
+          onRefreshRenacyt={(id) => { void handleRefreshRenacytFormaciones(id); }}
+          onReactivate={(id) => { void handleReactivarDocente(id); }}
           onDeactivate={setDocenteToDelete}
           refreshingRenacytDocenteId={refreshingRenacytDocenteId}
           canManage={canManage}
@@ -109,8 +109,8 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
       {selectedDocente && (
         <DocenteDetailModal
           docente={selectedDocente}
-          onClose={() => setSelectedDocente(null)}
-          onRefreshRenacytFormaciones={handleRefreshRenacytFormaciones}
+          onClose={() => { setSelectedDocente(null); }}
+          onRefreshRenacytFormaciones={(id) => { void handleRefreshRenacytFormaciones(id); }}
           isRefreshingRenacyt={refreshingRenacytDocenteId === selectedDocente.id_docente}
           canRefreshRenacyt={canManage}
           canSyncPure={canManage}
@@ -124,8 +124,8 @@ export const DocentesTable: React.FC<DocentesTableProps> = ({
           message={`¿Desea desactivar al docente "${docenteToDelete?.nombres_apellidos ?? ''}"? Su historial y relaciones se conservarán para mantener la trazabilidad.`}
           confirmText="Sí, desactivar"
           cancelText="Cancelar"
-          onConfirm={handleEliminarDocente}
-          onCancel={() => setDocenteToDelete(null)}
+          onConfirm={() => { void handleEliminarDocente(); }}
+          onCancel={() => { setDocenteToDelete(null); }}
         />
       )}
     </div>

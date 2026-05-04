@@ -1,5 +1,7 @@
 # Plan Adaptado PeruCRIS + Pure para PJUPI
 
+> **⚠️ NOTA**: Este documento es histórico y referencia rutas/estados de la arquitectura anterior. La estructura actual es Screaming Architecture (ver `src-tauri/src/*/`). Se conserva como referencia del plan de integración Pure.
+
 ## 1) Resultado de auditoria de viabilidad
 
 Estado real del proyecto (verificado):

@@ -88,7 +88,7 @@ export interface ReniecDniLookupResult {
 }
 
 export interface EliminarDocenteResultado {
-  accion: 'desactivado' | string;
+  accion: string;
   mensaje: string;
 }
 
@@ -122,7 +122,7 @@ export interface ProyectoParticipanteResumen {
 }
 
 export interface EliminarProyectoResultado {
-  accion: 'desactivado' | string;
+  accion: string;
   mensaje: string;
 }
 
@@ -134,7 +134,7 @@ export interface GradoAcademico {
 }
 
 export interface EliminarGradoResultado {
-  accion: 'eliminado' | 'desactivado' | string;
+  accion: string;
   mensaje: string;
 }
 
@@ -171,7 +171,7 @@ export interface Usuario {
   id_usuario: string;
   username: string;
   nombre_completo: string;
-  rol: 'admin' | 'operador' | 'consulta' | string;
+  rol: string;
   activo: number;
 }
 

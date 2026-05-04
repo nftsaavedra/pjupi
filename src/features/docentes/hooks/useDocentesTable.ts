@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useStableFetchData } from '../../../shared/hooks/useStableFetch';
-import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
-import { toast } from '../../../services/toast';
+import { useStableFetchData } from '@/shared/hooks/useStableFetch';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { toast } from '@/services/toast';
 import { eliminarDocente, getAllDocentesConProyectos, getTauriErrorMessage, reactivarDocente, refrescarFormacionAcademicaRenacytDocente, type DocenteDetalle } from '../api';
-import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../../shared/utils/renacyt';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '@/shared/utils/renacyt';
 
 const normalizeText = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 

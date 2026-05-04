@@ -8,7 +8,7 @@ interface FormModalProps {
   description?: React.ReactNode;
   children: React.ReactNode;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.SyntheticEvent) => void;
   submitText?: React.ReactNode;
   cancelText?: string;
   isLoading?: boolean;
@@ -63,7 +63,7 @@ export const FormModal: React.FC<FormModalProps> = ({
         className={className
           ? `modal-content form-modal ${size === 'lg' ? 'form-modal-lg' : ''} ${className}`
           : `modal-content form-modal ${size === 'lg' ? 'form-modal-lg' : ''}`}
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event) => { event.stopPropagation(); }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
-import { formatRenacytNivel } from '../../shared/utils/renacyt';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
 import { getDataExportacionAgrupada, getDataExportacionPlana } from './api';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
@@ -133,6 +133,7 @@ const getColumns = (tipo: TipoReporte): ReportExportColumn[] => {
   ];
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 const ReportePdfDocument = ({
   tipo,
   rows,

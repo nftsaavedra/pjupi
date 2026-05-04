@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   FloatingArrow,
   FloatingPortal,
@@ -71,16 +71,27 @@ export const FloatingTooltip: React.FC<FloatingTooltipProps> = ({
     role,
   ]);
 
+  const referenceRef = useCallback(
+    (node: HTMLElement | null) => { refs.setReference(node); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [refs.setReference],
+  );
+  const floatingRef = useCallback(
+    (node: HTMLElement | null) => { refs.setFloating(node); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [refs.setFloating],
+  );
+
   return (
     <>
       {renderTrigger({
-        ref: refs.setReference as React.RefCallback<HTMLButtonElement>,
-        triggerProps: getReferenceProps() as React.ButtonHTMLAttributes<HTMLButtonElement>,
+        ref: referenceRef,
+        triggerProps: getReferenceProps(),
       })}
       {open && (
         <FloatingPortal>
           <div
-            ref={refs.setFloating}
+            ref={floatingRef}
             style={floatingStyles}
             className={tooltipClassName ? `floating-tooltip floating-tooltip-${size} ${tooltipClassName}` : `floating-tooltip floating-tooltip-${size}`}
             {...getFloatingProps()}

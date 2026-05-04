@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { AppIcon } from '../../../shared/ui/AppIcon';
+import { AppIcon } from '@/shared/ui/AppIcon';
 
 interface RelatedEntity {
   id: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface RelatedEntityFieldConfig {
@@ -40,6 +40,12 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<RelatedEntity | null>(null);
 
+  const getField = (item: RelatedEntity | null, name: string): string => {
+    if (!item) return '';
+    const val = item[name];
+    return typeof val === 'string' ? val : JSON.stringify(val ?? '');
+  };
+
   const handleAddItem = () => {
     const newId = `temp-${Date.now()}`;
     const newItem: RelatedEntity = { id: newId };
@@ -68,9 +74,8 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
 
     const isNew = editingId?.startsWith('temp-');
     if (isNew) {
-      const finalId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      editingItem.id = finalId;
-      onItemsChange([...items, editingItem]);
+      const finalId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      onItemsChange([...items, { ...editingItem, id: finalId }]);
     } else {
       const updated = items.map((item) => (item.id === editingId ? editingItem : item));
       onItemsChange(updated);
@@ -96,7 +101,7 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
       <button
         type="button"
         className="related-entities-toggle"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={() => { setExpanded((prev) => !prev); }}
         aria-expanded={expanded}
       >
         <span className="related-entities-toggle-copy">
@@ -129,14 +134,14 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
                       <button
                         type="button"
                         className="btn-small btn-secondary"
-                        onClick={() => handleEditItem(item)}
+                        onClick={() => { handleEditItem(item); }}
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         className="btn-small btn-danger"
-                        onClick={() => handleDeleteItem(item.id)}
+                        onClick={() => { handleDeleteItem(item.id); }}
                       >
                         <AppIcon icon={Trash2} size={14} />
                       </button>
@@ -147,7 +152,7 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
                     <div className="related-entity-content">
                       {fields.map((field) => (
                         <span key={field.name}>
-                          <strong>{field.label}:</strong> {item[field.name] || 'No disponible'}
+                          <strong>{field.label}:</strong> {getField(item, field.name)}
                         </span>
                       ))}
                     </div>
@@ -155,14 +160,14 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
                       <button
                         type="button"
                         className="btn-small btn-secondary"
-                        onClick={() => handleEditItem(item)}
+                        onClick={() => { handleEditItem(item); }}
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         className="btn-small btn-danger"
-                        onClick={() => handleDeleteItem(item.id)}
+                        onClick={() => { handleDeleteItem(item.id); }}
                       >
                         <AppIcon icon={Trash2} size={14} />
                       </button>
@@ -186,24 +191,24 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
                   </label>
                   {field.type === 'textarea' ? (
                     <textarea
-                      id={`${field.name}-${editingId}`}
-                      value={editingItem[field.name] || ''}
-                      onChange={(e) =>
-                        setEditingItem({ ...editingItem, [field.name]: e.target.value })
-                      }
-                      placeholder={field.placeholder}
-                      rows={3}
-                    />
-                  ) : (
-                    <input
-                      id={`${field.name}-${editingId}`}
-                      type={field.type || 'text'}
-                      value={editingItem[field.name] || ''}
-                      onChange={(e) =>
-                        setEditingItem({ ...editingItem, [field.name]: e.target.value })
-                      }
-                      placeholder={field.placeholder}
-                    />
+                        id={`${field.name}-${editingId}`}
+                        value={getField(editingItem, field.name)}
+                        onChange={(e) =>
+                          { setEditingItem({ ...editingItem, [field.name]: e.target.value }); }
+                        }
+                        placeholder={field.placeholder}
+                        rows={3}
+                      />
+                    ) : (
+                      <input
+                        id={`${field.name}-${editingId}`}
+                        type={field.type || 'text'}
+                        value={getField(editingItem, field.name)}
+                        onChange={(e) =>
+                          { setEditingItem({ ...editingItem, [field.name]: e.target.value }); }
+                        }
+                        placeholder={field.placeholder}
+                      />
                   )}
                 </div>
               ))}

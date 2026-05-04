@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { toast } from '../../services/toast';
+import { toast } from '@/services/toast';
 
 interface UseRefreshToastOptions {
   refreshing: boolean;

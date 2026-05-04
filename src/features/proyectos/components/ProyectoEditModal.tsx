@@ -1,20 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FolderOpen, Save, Beaker, Lightbulb, Package, DollarSign } from 'lucide-react';
 import type { DocenteDetalle } from '../../docentes/api';
 import type { ProyectoDetalle, ProyectoParticipantesPayload } from '../api';
-import { toast } from '../../../services/toast';
-import { FormInput } from '../../../shared/forms/FormInput';
-import { FormSelect } from '../../../shared/forms/FormSelect';
-import { FormModal } from '../../../shared/forms/FormModal';
-import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../../../shared/ui/AppIcon';
+import { toast } from '@/services/toast';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormSelect } from '@/shared/forms/FormSelect';
+import { FormModal } from '@/shared/forms/FormModal';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
 import { DocentesChecklist } from './DocentesChecklist';
 import { RelatedEntitiesSection } from './RelatedEntitiesSection';
 import { getResponsableProyecto, parseParticipantesProyecto } from '../participantes';
 
 interface RelatedEntity {
   id: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PendingProyectoChange {
@@ -84,6 +84,22 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
     [participantesIniciales],
   );
 
+  const formKey = open ? (proyecto?.id_proyecto ?? 'new') : 'closed';
+  const [prevFormKey, setPrevFormKey] = useState<string>(formKey);
+  if (formKey !== prevFormKey) {
+    setPrevFormKey(formKey);
+    if (open && proyecto) {
+      setTitulo(proyecto.titulo_proyecto);
+      setSelectedIds(initialSelectedIds);
+      setResponsableId(initialResponsableId);
+    } else {
+      setTitulo('');
+      setSelectedIds([]);
+      setResponsableId(null);
+    }
+    setPendingChange(null);
+  }
+
   const addedDocentes = useMemo(
     () => selectedIds
       .filter((id) => !initialSelectedIds.includes(id))
@@ -122,21 +138,6 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
     || addedDocentes.length > 0
     || removedDocentes.length > 0
     || responsableId !== initialResponsableId;
-
-  useEffect(() => {
-    if (!open || !proyecto) {
-      setTitulo('');
-      setSelectedIds([]);
-      setResponsableId(null);
-      setPendingChange(null);
-      return;
-    }
-
-    setTitulo(proyecto.titulo_proyecto);
-    setSelectedIds(initialSelectedIds);
-    setResponsableId(initialResponsableId);
-    setPendingChange(null);
-  }, [initialResponsableId, initialSelectedIds, open, proyecto]);
 
   const requestToggleDocente = (docente: DocenteDetalle, nextSelected: boolean) => {
     if (nextSelected) {
@@ -187,7 +188,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
     });
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = (event: React.SyntheticEvent) => {
     event.preventDefault();
 
     if (!proyecto) {
@@ -245,7 +246,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
         <FormSelect
           label="Docente responsable"
           value={responsableId ?? ''}
-          onChange={(value) => requestResponsableChange(value)}
+          onChange={(value) => { requestResponsableChange(value); }}
           options={responsableOptions}
           placeholder={selectedIds.length === 0 ? 'Primero agregue docentes al proyecto' : '-- Seleccionar responsable --'}
           disabled={selectedIds.length === 0}
@@ -393,7 +394,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
           pendingChange?.onConfirm();
           setPendingChange(null);
         }}
-        onCancel={() => setPendingChange(null)}
+        onCancel={() => { setPendingChange(null); }}
       />
     </>
   );

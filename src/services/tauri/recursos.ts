@@ -47,7 +47,7 @@ export const actualizarPatente = async (idPatente: string, request: UpdatePatent
 };
 
 export const eliminarPatente = async (idPatente: string): Promise<void> => {
-  return await invoke('eliminar_patente', { idPatente });
+  await invoke('eliminar_patente', { idPatente });
 };
 
 // ── Productos ────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export const actualizarProducto = async (idProducto: string, request: UpdateProd
 };
 
 export const eliminarProducto = async (idProducto: string): Promise<void> => {
-  return await invoke('eliminar_producto', { idProducto });
+  await invoke('eliminar_producto', { idProducto });
 };
 
 // ── Equipamientos ────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export const actualizarEquipamiento = async (idEquipamiento: string, request: Up
 };
 
 export const eliminarEquipamiento = async (idEquipamiento: string): Promise<void> => {
-  return await invoke('eliminar_equipamiento', { idEquipamiento });
+  await invoke('eliminar_equipamiento', { idEquipamiento });
 };
 
 // ── Financiamientos ──────────────────────────────────────────────────────────
@@ -163,5 +163,5 @@ export const actualizarFinanciamiento = async (idFinanciamiento: string, request
 };
 
 export const eliminarFinanciamiento = async (idFinanciamiento: string): Promise<void> => {
-  return await invoke('eliminar_financiamiento', { idFinanciamiento });
+  await invoke('eliminar_financiamiento', { idFinanciamiento });
 };

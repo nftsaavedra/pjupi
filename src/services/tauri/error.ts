@@ -28,9 +28,11 @@ export const getTauriErrorMessage = (error: unknown): string => {
     try {
       return JSON.stringify(error);
     } catch {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       return String(error);
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return String(error);
 };

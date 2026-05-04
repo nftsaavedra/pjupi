@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { formatRenacytNivel } from '../../shared/utils/renacyt';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
 import { getDataExportacionAgrupada, getDataExportacionPlana } from './api';
 
 type TipoReporte = 'agrupado_docente' | 'plano';
@@ -61,7 +61,7 @@ export const buildExcelReport = async (tipo: TipoReporte): Promise<ReportExportP
 
   const buffer = await workbook.xlsx.writeBuffer();
   return {
-    bytes: new Uint8Array(buffer as ArrayBuffer),
+    bytes: new Uint8Array(buffer),
     suggestedName: getSuggestedFileName(tipo, 'xlsx'),
   };
 };

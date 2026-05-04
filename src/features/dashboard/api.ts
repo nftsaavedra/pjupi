@@ -1,6 +1,6 @@
 export {
   getEstadisticasProyectosXDocente,
   getKpisDashboard,
-} from '../../services/tauri/dashboard';
+} from '@/services/tauri/dashboard';
 
-export type { DocenteProyectosCount, KpisDashboard } from '../../services/tauri/types';
+export type { DocenteProyectosCount, KpisDashboard } from '@/services/tauri/types';

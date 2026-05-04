@@ -39,7 +39,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       <select
         id={selectId}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); }}
         required={required}
         className="form-input"
         aria-describedby={helpId}

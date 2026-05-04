@@ -1,6 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AppIcon } from '../../../shared/ui/AppIcon';
+import { AppIcon } from '@/shared/ui/AppIcon';
 
 interface KPICardProps {
   icon: LucideIcon;

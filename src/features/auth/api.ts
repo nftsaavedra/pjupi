@@ -4,8 +4,8 @@ export {
   loginUsuario,
   logoutUsuario,
   registrarPrimerUsuario,
-} from '../../services/tauri/auth';
+} from '@/services/tauri/auth';
 
-export { getTauriErrorMessage } from '../../services/tauri/error';
+export { getTauriErrorMessage } from '@/services/tauri/error';
 
-export type { AuthStatus, Usuario } from '../../services/tauri/types';
+export type { AuthStatus, Usuario } from '@/services/tauri/types';

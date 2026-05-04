@@ -1,12 +1,12 @@
 import React from 'react';
 import { BadgeCheck, GraduationCap, Plus, Search } from 'lucide-react';
 import { useDocenteCreateForm } from '../hooks/useDocenteCreateForm';
-import { FieldHelpTooltip } from '../../../shared/forms/FieldHelpTooltip';
-import { FormInput } from '../../../shared/forms/FormInput';
-import { FormModal } from '../../../shared/forms/FormModal';
-import { FormSelect } from '../../../shared/forms/FormSelect';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { formatRenacytNivel } from '../../../shared/utils/renacyt';
+import { FieldHelpTooltip } from '@/shared/forms/FieldHelpTooltip';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormModal } from '@/shared/forms/FormModal';
+import { FormSelect } from '@/shared/forms/FormSelect';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
 
 interface DocenteCreateModalProps {
   open: boolean;
@@ -33,7 +33,7 @@ const countFormacionesAcademicas = (value?: string | null) => {
   }
 
   try {
-    const parsed = JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.length : 0;
   } catch {
     return 0;
@@ -89,7 +89,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
       )}
       description="Valide el DNI, vincule RENACYT si corresponde y luego seleccione el grado antes de registrar al docente."
       onClose={onClose}
-      onSubmit={handleSubmit}
+      onSubmit={(e) => { void handleSubmit(e); }}
       size="lg"
       className="docente-form-modal"
       bodyClassName="docente-form-modal-body"
@@ -117,7 +117,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
                 id="docente-dni"
                 type="text"
                 value={dni}
-                onChange={(event) => handleDniChange(event.target.value)}
+                onChange={(event) => { handleDniChange(event.target.value); }}
                 placeholder="Ej: 45678912"
                 maxLength={8}
                 required
@@ -129,7 +129,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
               <button
                 type="button"
                 className="btn-secondary form-input-action-button"
-                onClick={handleValidarDni}
+                onClick={() => { void handleValidarDni(); }}
                 disabled={!puedeValidarDni}
               >
                 <span className="button-with-icon">
@@ -161,7 +161,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
                 id="docente-renacyt"
                 type="text"
                 value={renacytQuery}
-                onChange={(event) => handleRenacytChange(event.target.value)}
+                onChange={(event) => { handleRenacytChange(event.target.value); }}
                 placeholder="Ej: P0013866 o 13866"
                 className="form-input"
                 autoComplete="off"
@@ -170,7 +170,7 @@ export const DocenteCreateModal: React.FC<DocenteCreateModalProps> = ({
               <button
                 type="button"
                 className="btn-secondary form-input-action-button"
-                onClick={handleValidarRenacyt}
+                onClick={() => { void handleValidarRenacyt(); }}
                 disabled={!puedeValidarRenacyt}
               >
                 <span className="button-with-icon">

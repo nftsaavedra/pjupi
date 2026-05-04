@@ -1,8 +1,8 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { GraduationCap, Users } from 'lucide-react';
 import type { Usuario } from '../auth/api';
-import { AppIcon } from '../../shared/ui/AppIcon';
-import { SkeletonBlock, SkeletonTable } from '../../shared/ui/Skeleton';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonBlock, SkeletonTable } from '@/shared/ui/Skeleton';
 
 const GradosTab = lazy(async () => {
   const module = await import('./grados/GradosTab');
@@ -40,11 +40,9 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<ConfigSection>(isAdmin ? 'usuarios' : 'grados');
   const panelId = `config-panel-${activeSection}`;
-
-  useEffect(() => {
-    if (!isAdmin && activeSection === 'usuarios') {
-      setActiveSection('grados');
-    }
+  const effectiveSection = useMemo(() => {
+    if (!isAdmin && activeSection === 'usuarios') return 'grados';
+    return activeSection;
   }, [activeSection, isAdmin]);
 
   const sections = [
@@ -77,11 +75,11 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
                   key={section.id}
                   type="button"
                   role="tab"
-                  aria-selected={activeSection === section.id}
+                  aria-selected={effectiveSection === section.id}
                   aria-controls={`config-panel-${section.id}`}
                   id={`config-tab-${section.id}`}
-                  className={`settings-nav-button ${activeSection === section.id ? 'active' : ''}`}
-                  onClick={() => setActiveSection(section.id)}
+                  className={`settings-nav-button ${effectiveSection === section.id ? 'active' : ''}`}
+                  onClick={() => { setActiveSection(section.id); }}
                 >
                   <span className="settings-nav-icon">
                     <AppIcon icon={section.icon} size={18} />
@@ -98,15 +96,15 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
           <div
             id={panelId}
             role="tabpanel"
-            aria-labelledby={`config-tab-${activeSection}`}
+            aria-labelledby={`config-tab-${effectiveSection}`}
             className="settings-content settings-content-panel"
           >
             <Suspense fallback={<ConfigSectionFallback />}>
-              {activeSection === 'grados' && (
+              {effectiveSection === 'grados' && (
                 currentUser ? <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
               )}
 
-              {activeSection === 'usuarios' && isAdmin && (
+              {effectiveSection === 'usuarios' && isAdmin && (
                 currentUser ? <UsuariosTab currentUser={currentUser} onUsuarioModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
               )}
             </Suspense>

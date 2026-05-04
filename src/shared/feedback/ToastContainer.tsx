@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Info, TriangleAlert, XCircle } from 'lucide-react';
-import { toast, type ToastItem } from '../../services/toast';
+import { toast, type ToastItem } from '@/services/toast';
 import { AppIcon } from '../ui/AppIcon';
 
 export const ToastContainer: React.FC = () => {

@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import type { DocenteProyectosCount } from '../api';
 import { useMeasuredChart } from '../hooks/useMeasuredChart';
-import { SkeletonChart } from '../../../shared/ui/Skeleton';
+import { SkeletonChart } from '@/shared/ui/Skeleton';
 
 interface DashboardChartsProps {
   estadisticas: DocenteProyectosCount[];
@@ -27,9 +27,9 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
   ));
 
   useEffect(() => {
-    const handleResize = () => setViewportWidth(window.innerWidth);
+    const handleResize = () => { setViewportWidth(window.innerWidth); };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => { window.removeEventListener('resize', handleResize); };
   }, []);
 
   const totalAsignaciones = useMemo(
@@ -70,10 +70,10 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
   const pieColors = ['#10b981', '#f59e0b'];
   const isCompact = viewportWidth <= 768;
   const allDocentesTickInterval = isCompact ? Math.max(Math.ceil(estadisticas.length / 6) - 1, 0) : 0;
-  const topChart = useMeasuredChart(320);
-  const distributionChart = useMeasuredChart(280);
-  const pieChart = useMeasuredChart(280);
-  const allDocentesChart = useMeasuredChart(300);
+  const [topChartRef, topChart] = useMeasuredChart(320);
+  const [distributionChartRef, distributionChart] = useMeasuredChart(280);
+  const [pieChartRef, pieChart] = useMeasuredChart(280);
+  const [allDocentesChartRef, allDocentesChart] = useMeasuredChart(300);
   const pieHasVisibleData = pieData.some((item) => item.value > 0);
   const showTopRanking = topDocentes.length > 0 && hasProjectAssignments;
   const showAllDocentes = estadisticas.length > 0 && hasProjectAssignments;
@@ -91,7 +91,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
       <div className="dashboard-main-grid content-shell">
         <div className="chart-container dashboard-primary-chart">
           <h2>Top docentes por cantidad de proyectos</h2>
-          <div ref={topChart.ref} className="dashboard-chart-stage dashboard-chart-stage-lg">
+          <div ref={topChartRef} className="dashboard-chart-stage dashboard-chart-stage-lg">
             {showTopRanking ? (
               topChart.ready ? (
                 <BarChart width={topChart.width} height={topChart.height} data={topDocentes} margin={chartMargin}>
@@ -133,7 +133,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
       <div className="dashboard-secondary-grid content-shell">
         <div className="chart-container">
           <h2>Distribución de carga por docente</h2>
-          <div ref={distributionChart.ref} className="dashboard-chart-stage dashboard-chart-stage-md">
+          <div ref={distributionChartRef} className="dashboard-chart-stage dashboard-chart-stage-md">
             {distribucionConDatos.length > 0 ? (
               distributionChart.ready ? (
                 <BarChart width={distributionChart.width} height={distributionChart.height} data={distribucionConDatos} margin={chartMargin}>
@@ -153,7 +153,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
 
         <div className="chart-container">
           <h2>Docentes con y sin proyectos</h2>
-          <div ref={pieChart.ref} className="dashboard-chart-stage dashboard-chart-stage-md">
+          <div ref={pieChartRef} className="dashboard-chart-stage dashboard-chart-stage-md">
             {pieHasVisibleData ? (
               pieChart.ready ? (
                 <PieChart width={pieChart.width} height={pieChart.height}>
@@ -171,6 +171,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
                     label={({ name, value }) => value ? `${name}: ${value}` : ''}
                   >
                     {pieData.map((entry, idx) => (
+                      // eslint-disable-next-line @typescript-eslint/no-deprecated
                       <Cell key={`${entry.name}-${idx}`} fill={pieColors[idx % pieColors.length]} stroke="#ffffff" strokeWidth={2} />
                     ))}
                   </Pie>
@@ -187,7 +188,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
 
       <div className="chart-container content-shell dashboard-wide-chart">
         <h2>Todos los docentes: proyectos asignados</h2>
-        <div ref={allDocentesChart.ref} className="dashboard-chart-stage dashboard-chart-stage-lg">
+        <div ref={allDocentesChartRef} className="dashboard-chart-stage dashboard-chart-stage-lg">
           {showAllDocentes ? (
             allDocentesChart.ready ? (
               <BarChart width={allDocentesChart.width} height={allDocentesChart.height} data={estadisticas} margin={chartMargin}>

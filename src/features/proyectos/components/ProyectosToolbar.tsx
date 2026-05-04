@@ -32,13 +32,13 @@ export const ProyectosToolbar: React.FC<ProyectosToolbarProps> = ({
       className="form-input filter-search"
       placeholder="Buscar por título o perfil docente"
       value={busqueda}
-      onChange={(e) => onBusquedaChange(e.target.value)}
+      onChange={(e) => { onBusquedaChange(e.target.value); }}
       aria-label="Buscar proyectos por título o perfil docente"
     />
     <select
       className="form-input filter-select"
       value={estadoFiltro}
-      onChange={(e) => onEstadoFiltroChange(e.target.value as 'todos' | 'activos' | 'inactivos')}
+      onChange={(e) => { onEstadoFiltroChange(e.target.value as 'todos' | 'activos' | 'inactivos'); }}
       aria-label="Filtrar proyectos por estado"
     >
       <option value="todos">Todos</option>

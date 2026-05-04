@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Trash2, Edit2, Search } from 'lucide-react';
-import { AppIcon } from '../../shared/ui/AppIcon';
-import { toast } from '../../services/toast';
-import { FormInput } from '../../shared/forms/FormInput';
-import { FormModal } from '../../shared/forms/FormModal';
-import { ConfirmDialog } from '../../shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { toast } from '@/services/toast';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormModal } from '@/shared/forms/FormModal';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
 import {
   createGrupo,
   deleteGrupo,
@@ -37,19 +37,17 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
   const [lineas, setLineas] = useState<string[]>([]);
 
   const cargarGrupos = useCallback(async () => {
-    setIsLoading(true);
     try {
       const data = await getAllGrupos();
       setGrupos(data);
     } catch (error) {
       toast.error(getTauriErrorMessage(error));
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void cargarGrupos();
+    const load = async () => { await cargarGrupos(); };
+    load().catch(console.error);
   }, [cargarGrupos]);
 
   const handleOpenCreate = () => {
@@ -81,7 +79,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
     setLineas(lineas.filter((l) => l !== linea));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!formData.nombre.trim()) {
@@ -173,7 +171,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
               type="text"
               placeholder="Buscar por nombre o coordinador..."
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => { setBusqueda(e.target.value); }}
               className="search-input"
             />
           </div>
@@ -205,7 +203,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
                       <button
                         type="button"
                         className="btn-icon"
-                        onClick={() => handleEditGrupo(grupo)}
+                        onClick={() => { handleEditGrupo(grupo); }}
                         title="Editar grupo"
                       >
                         <AppIcon icon={Edit2} size={16} />
@@ -213,7 +211,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
                       <button
                         type="button"
                         className="btn-icon btn-danger"
-                        onClick={() => setGrupoToDelete(grupo)}
+                        onClick={() => { setGrupoToDelete(grupo); }}
                         title="Eliminar grupo"
                       >
                         <AppIcon icon={Trash2} size={16} />
@@ -261,8 +259,8 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
             </span>
           }
           description="Configure los detalles del grupo de investigación"
-          onClose={() => setIsFormOpen(false)}
-          onSubmit={handleSubmit}
+          onClose={() => { setIsFormOpen(false); }}
+          onSubmit={(e) => { void handleSubmit(e); }}
           submitText={editingGrupo ? 'Actualizar grupo' : 'Crear grupo'}
           isLoading={isLoading}
           size="lg"
@@ -270,7 +268,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
           <FormInput
             label="Nombre del Grupo"
             value={formData.nombre}
-            onChange={(value) => setFormData({ ...formData, nombre: value })}
+            onChange={(value) => { setFormData({ ...formData, nombre: value }); }}
             placeholder="Ej: Grupo de Sostenibilidad Ambiental"
             required
           />
@@ -280,7 +278,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
             <textarea
               id="descripcion"
               value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, descripcion: e.target.value }); }}
               placeholder="Breve descripción del grupo y sus objetivos"
               rows={3}
             />
@@ -293,8 +291,8 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
                 id="linea"
                 type="text"
                 value={formData.linea}
-                onChange={(e) => setFormData({ ...formData, linea: e.target.value })}
-                onKeyPress={(e) => {
+                onChange={(e) => { setFormData({ ...formData, linea: e.target.value }); }}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     handleAddLinea();
@@ -315,7 +313,7 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
                     <button
                       type="button"
                       className="btn-icon-small"
-                      onClick={() => handleRemoveLinea(linea)}
+                      onClick={() => { handleRemoveLinea(linea); }}
                     >
                       ✕
                     </button>
@@ -334,8 +332,8 @@ export const GruposTab: React.FC<GruposTabProps> = ({ canManage }) => {
           message={`¿Está seguro de que desea eliminar el grupo "${grupoToDelete?.nombre ?? ''}"?`}
           confirmText="Sí, eliminar"
           cancelText="Cancelar"
-          onConfirm={handleDeleteGrupo}
-          onCancel={() => setGrupoToDelete(null)}
+          onConfirm={() => { void handleDeleteGrupo(); }}
+          onCancel={() => { setGrupoToDelete(null); }}
         />
       )}
     </div>

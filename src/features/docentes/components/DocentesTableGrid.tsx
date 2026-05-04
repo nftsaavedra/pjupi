@@ -1,9 +1,9 @@
 import React from 'react';
 import { Eye, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import type { DocenteDetalle } from '../api';
-import { SkeletonTable } from '../../../shared/ui/Skeleton';
-import { TableActionButton } from '../../../shared/ui/TableActionButton';
-import { formatRenacytNivel } from '../../../shared/utils/renacyt';
+import { SkeletonTable } from '@/shared/ui/Skeleton';
+import { TableActionButton } from '@/shared/ui/TableActionButton';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
 
 interface DocentesTableGridProps {
   canManage: boolean;
@@ -90,14 +90,14 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                 className="btn-view"
                 icon={Eye}
                 label="Ver detalles"
-                onClick={() => onView(docente)}
+                onClick={() => { onView(docente); }}
               />
               {canManage && tieneRenacyt && (
                 <TableActionButton
                   className="btn-secondary"
                   icon={RefreshCw}
                   label={estaActualizando ? 'Actualizando formación RENACYT' : tieneFormaciones ? 'Actualizar formación RENACYT' : 'Reintentar formación RENACYT'}
-                  onClick={() => onRefreshRenacyt(docente.id_docente)}
+                  onClick={() => { onRefreshRenacyt(docente.id_docente); }}
                   disabled={estaActualizando}
                 />
               )}
@@ -107,7 +107,7 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                   icon={RotateCcw}
                   iconSize={18}
                   label="Reactivar docente"
-                  onClick={() => onReactivate(docente.id_docente)}
+                  onClick={() => { onReactivate(docente.id_docente); }}
                 />
               )}
               {canManage && docente.activo === 1 && (
@@ -115,7 +115,7 @@ export const DocentesTableGrid: React.FC<DocentesTableGridProps> = ({
                   className="btn-delete"
                   icon={Trash2}
                   label="Desactivar docente"
-                  onClick={() => onDeactivate(docente)}
+                  onClick={() => { onDeactivate(docente); }}
                 />
               )}
             </td>

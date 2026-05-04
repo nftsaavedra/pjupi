@@ -1,10 +1,10 @@
 import React, { useDeferredValue, useId, useState } from 'react';
 import { X } from 'lucide-react';
 import { type DocenteDetalle } from '../../docentes/api';
-import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { SkeletonChecklist } from '../../../shared/ui/Skeleton';
-import { formatRenacytNivel, normalizeRenacytNivelSearch } from '../../../shared/utils/renacyt';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonChecklist } from '@/shared/ui/Skeleton';
+import { formatRenacytNivel, normalizeRenacytNivelSearch } from '@/shared/utils/renacyt';
 
 interface DocentesChecklistProps {
   docentes: DocenteDetalle[];
@@ -107,7 +107,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
             id={searchId}
             className="form-input docentes-selector-search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); }}
             placeholder="Buscar docente por nombre, DNI, grado o nivel RENACYT"
             aria-describedby={helperId}
             aria-controls={resultsId}
@@ -134,7 +134,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
                 key={docente.id_docente}
                 type="button"
                 className="docente-chip"
-                onClick={() => handleToggle(docente.id_docente)}
+                onClick={() => { handleToggle(docente.id_docente); }}
                 title="Quitar de la selección"
               >
                 <span className="docente-chip-content">
@@ -182,7 +182,7 @@ export const DocentesChecklist: React.FC<DocentesChecklistProps> = ({
                     key={docente.id_docente}
                     type="button"
                     className={`checkbox-item docente-option ${seleccionado ? 'selected' : ''}`}
-                    onClick={() => handleToggle(docente.id_docente)}
+                    onClick={() => { handleToggle(docente.id_docente); }}
                     aria-pressed={seleccionado}
                   >
                     <div className="docente-option-main">

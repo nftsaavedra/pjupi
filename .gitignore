@@ -18,7 +18,6 @@ _docs
 !.env.example
 
 # Editor directories and files
-.agents/
 .continue/
 .continue/*
 .vscode/*
@@ -31,5 +30,11 @@ _docs
 *.sln
 *.sw?
 
-# Local agent skill artifacts
+# Database files (local dev data)
+src-tauri/database.db
+
+# Utility scripts (tools/dev helpers)
+scripts/
+
+# Agent/OpenCode artifacts
 skills-lock.json

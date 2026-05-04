@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useFetchUsuarios } from './useFetchUsuarios';
-import { useRefreshToast } from '../../../../shared/hooks/useRefreshToast';
-import { toast } from '../../../../services/toast';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { toast } from '@/services/toast';
 import { actualizarUsuario, crearUsuario, desactivarUsuario, getTauriErrorMessage, reactivarUsuario, type Usuario } from '../../api';
 
 export const useUsuariosTab = (currentUser: Usuario, refreshTrigger = 0, onUsuarioModified: () => void) => {
@@ -32,7 +32,7 @@ export const useUsuariosTab = (currentUser: Usuario, refreshTrigger = 0, onUsuar
     setEditingUsuario(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!username.trim() || !nombreCompleto.trim() || !rol) {

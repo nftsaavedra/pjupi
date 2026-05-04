@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2, Users } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
 import { getAuthStatus, getCurrentSession, logoutUsuario, type Usuario } from './features/auth/api';
@@ -90,18 +90,24 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [requiresSetup, setRequiresSetup] = useState(false);
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const savedValue = window.localStorage.getItem('pjupi.sidebarCollapsed');
+    if (savedValue === 'true' || savedValue === 'false') {
+      return savedValue === 'true';
+    }
+    return window.innerWidth <= 1360 && window.innerWidth > 1024;
+  });
   const [docenteFormOpen, setDocenteFormOpen] = useState(false);
   const currentRole = currentUser?.rol ?? null;
 
-  const tabs: Tab[] = [
+  const tabs: Tab[] = useMemo(() => [
     ...(hasPermission(currentRole, 'dashboard.view') ? [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' }] : []),
     ...(hasPermission(currentRole, 'proyectos.view') ? [{ id: 'proyectos', label: 'Proyectos', icon: FolderOpen, description: 'Alta y seguimiento' }] : []),
     ...(hasPermission(currentRole, 'docentes.view') ? [{ id: 'docentes', label: 'Docentes', icon: GraduationCap, description: 'Registro y estado' }] : []),
     ...(hasPermission(currentRole, 'grupos.view') ? [{ id: 'grupos', label: 'Grupos', icon: Users, description: 'Investigación coordinada' }] : []),
     ...(hasPermission(currentRole, 'reportes.view') ? [{ id: 'reportes', label: 'Reportes', icon: FileSpreadsheet, description: 'Vista previa y exportación' }] : []),
     ...(hasPermission(currentRole, 'configuracion.view') ? [{ id: 'configuracion', label: 'Configuración', icon: Settings2, description: 'Accesos y catálogos' }] : []),
-  ];
+  ], [currentRole]);
   const tabHeaderMeta: Record<string, { kicker: string; title: string; subtitle: string }> = {
     dashboard: {
       kicker: 'Indicadores clave',
@@ -134,7 +140,7 @@ function App() {
       subtitle: 'Accesos y catálogos del sistema.',
     },
   };
-  const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0] ?? { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Indicadores clave' };
+  const activeTabMeta = tabs.find((tab) => tab.id === validActiveTab) ?? tabs[0];
   const activeHeaderMeta = tabHeaderMeta[activeTabMeta.id] ?? tabHeaderMeta.dashboard;
 
   const handleDataModified = () => {
@@ -142,7 +148,6 @@ function App() {
   };
 
   const cargarAuthStatus = async () => {
-    setAuthLoading(true);
     try {
       const [status, session] = await Promise.all([getAuthStatus(), getCurrentSession()]);
       setRequiresSetup(status.requires_setup);
@@ -184,7 +189,7 @@ function App() {
       return null;
     }
 
-    switch (activeTab) {
+    switch (validActiveTab) {
       case 'dashboard':
         return (
           <Suspense fallback={<DashboardFallback />}>
@@ -203,14 +208,14 @@ function App() {
             <div className="module-shell docentes-module">
               <DocentesTable
                 canManage={hasPermission(currentRole, 'docentes.manage')}
-                onCreateClick={() => setDocenteFormOpen(true)}
+                onCreateClick={() => { setDocenteFormOpen(true); }}
                 refreshTrigger={refreshTrigger}
               />
               {docenteFormOpen && hasPermission(currentRole, 'docentes.manage') && (
                 <Suspense fallback={null}>
                   <DocenteCreateModal
                     open={docenteFormOpen}
-                    onClose={() => setDocenteFormOpen(false)}
+                    onClose={() => { setDocenteFormOpen(false); }}
                     onDocenteCreated={handleDataModified}
                     refreshTrigger={refreshTrigger}
                   />
@@ -252,18 +257,11 @@ function App() {
   };
 
   useEffect(() => {
-    cargarAuthStatus();
-  }, []);
-
-  useEffect(() => {
-    const savedValue = window.localStorage.getItem('pjupi.sidebarCollapsed');
-
-    if (savedValue === 'true' || savedValue === 'false') {
-      setSidebarCollapsed(savedValue === 'true');
-      return;
-    }
-
-    setSidebarCollapsed(window.innerWidth <= 1360 && window.innerWidth > 1024);
+    const init = async () => {
+      try { await cargarAuthStatus(); }
+      catch { /* auth init error handled internally */ }
+    };
+    void init();
   }, []);
 
   useEffect(() => {
@@ -286,13 +284,9 @@ function App() {
     };
   }, [currentUser]);
 
-  useEffect(() => {
-    if (!currentUser || tabs.length === 0) return;
-
-    if (!tabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(tabs[0].id);
-    }
-  }, [activeTab, currentUser, tabs]);
+  const validActiveTab = (!currentUser || tabs.length === 0 || tabs.some((tab) => tab.id === activeTab))
+    ? activeTab
+    : tabs[0].id;
 
   if (authLoading) {
     return (
@@ -379,7 +373,7 @@ function App() {
 
             <TabNavigation
               tabs={tabs}
-              activeTab={activeTab}
+              activeTab={validActiveTab}
               onTabChange={setActiveTab}
               variant="sidebar"
               collapsed={sidebarCollapsed}

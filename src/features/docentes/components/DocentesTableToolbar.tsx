@@ -44,13 +44,13 @@ export const DocentesTableToolbar: React.FC<DocentesTableToolbarProps> = ({
       className="form-input filter-search"
       placeholder="Buscar por nombre, DNI, grado o nivel RENACYT"
       value={busqueda}
-      onChange={(e) => onBusquedaChange(e.target.value)}
+      onChange={(e) => { onBusquedaChange(e.target.value); }}
       aria-label="Buscar docentes por nombre, DNI, grado o nivel RENACYT"
     />
     <select
       className="form-input filter-select"
       value={gradoFiltro}
-      onChange={(e) => onGradoFiltroChange(e.target.value)}
+      onChange={(e) => { onGradoFiltroChange(e.target.value); }}
       aria-label="Filtrar docentes por grado"
     >
       <option value="todos">Todos los grados</option>
@@ -61,7 +61,7 @@ export const DocentesTableToolbar: React.FC<DocentesTableToolbarProps> = ({
     <select
       className="form-input filter-select"
       value={renacytNivelFiltro}
-      onChange={(e) => onRenacytNivelFiltroChange(e.target.value)}
+      onChange={(e) => { onRenacytNivelFiltroChange(e.target.value); }}
       aria-label="Filtrar docentes por nivel RENACYT"
     >
       <option value="todos">Todos los niveles RENACYT</option>
@@ -72,7 +72,7 @@ export const DocentesTableToolbar: React.FC<DocentesTableToolbarProps> = ({
     <select
       className="form-input filter-select"
       value={estadoFiltro}
-      onChange={(e) => onEstadoFiltroChange(e.target.value as 'todos' | 'activos' | 'inactivos')}
+      onChange={(e) => { onEstadoFiltroChange(e.target.value as 'todos' | 'activos' | 'inactivos'); }}
       aria-label="Filtrar docentes por estado"
     >
       <option value="todos">Todos</option>

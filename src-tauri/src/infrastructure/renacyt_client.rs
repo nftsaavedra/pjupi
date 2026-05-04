@@ -1,9 +1,9 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::config::RenacytConfig;
-use crate::domain::docente::RenacytLookupResult;
-use crate::error::{sanitize_external_detail, AppError};
+use crate::shared::config::RenacytConfig;
+use crate::docentes::models::RenacytLookupResult;
+use crate::shared::error::{sanitize_external_detail, AppError};
 
 #[derive(Debug, Deserialize)]
 #[allow(non_snake_case)]

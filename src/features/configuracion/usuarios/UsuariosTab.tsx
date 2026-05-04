@@ -1,14 +1,14 @@
 import React from 'react';
 import { Pencil, Plus, RotateCcw, Save, ShieldPlus, Trash2 } from 'lucide-react';
 import { useUsuariosTab } from './hooks/useUsuariosTab';
-import { FormInput } from '../../../shared/forms/FormInput';
-import { FormModal } from '../../../shared/forms/FormModal';
-import { FormSelect } from '../../../shared/forms/FormSelect';
-import { ConfirmDialog } from '../../../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { SkeletonTable } from '../../../shared/ui/Skeleton';
-import { TableActionButton } from '../../../shared/ui/TableActionButton';
-import { getRoleDefinition, getRoleLabel, getRoleOptions } from '../../../shared/auth/permissions';
+import { FormInput } from '@/shared/forms/FormInput';
+import { FormModal } from '@/shared/forms/FormModal';
+import { FormSelect } from '@/shared/forms/FormSelect';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonTable } from '@/shared/ui/Skeleton';
+import { TableActionButton } from '@/shared/ui/TableActionButton';
+import { getRoleDefinition, getRoleLabel, getRoleOptions } from '@/shared/auth/permissions';
 import type { Usuario } from '../../auth/api';
 
 interface UsuariosTabProps {
@@ -106,13 +106,13 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ currentUser, onUsuario
             className="form-input filter-search"
             placeholder="Buscar por usuario, nombre o rol"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => { setBusqueda(e.target.value); }}
             aria-label="Buscar usuarios por nombre, usuario o rol"
           />
           <select
             className="form-input filter-select"
             value={estadoFiltro}
-            onChange={(e) => setEstadoFiltro(e.target.value as 'todos' | 'activos' | 'inactivos')}
+            onChange={(e) => { setEstadoFiltro(e.target.value as 'todos' | 'activos' | 'inactivos'); }}
             aria-label="Filtrar usuarios por estado"
           >
             <option value="todos">Todos</option>
@@ -156,13 +156,13 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ currentUser, onUsuario
                       className="btn-edit"
                       icon={Pencil}
                       label={usuario.id_usuario === currentUser.id_usuario ? 'Editar su propio usuario' : 'Editar usuario'}
-                      onClick={() => handleEditar(usuario)}
+                      onClick={() => { handleEditar(usuario); }}
                     />
                     <TableActionButton
                       className={usuario.activo === 1 ? 'btn-delete' : 'btn-primary'}
                       icon={usuario.activo === 1 ? Trash2 : RotateCcw}
                       label={usuario.id_usuario === currentUser.id_usuario ? 'No puede cambiar su propio estado' : usuario.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
-                      onClick={() => setUsuarioToToggle(usuario)}
+                      onClick={() => { setUsuarioToToggle(usuario); }}
                       disabled={usuario.id_usuario === currentUser.id_usuario}
                     />
                   </td>
@@ -183,7 +183,7 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ currentUser, onUsuario
         )}
         description="Defina las credenciales, el nombre visible y el rol operativo antes de guardar los cambios."
         onClose={handleCloseForm}
-        onSubmit={handleSubmit}
+        onSubmit={(e) => { void handleSubmit(e); }}
         submitText={(
           <span className="button-with-icon">
             <AppIcon icon={Save} size={18} />
@@ -241,13 +241,13 @@ export const UsuariosTab: React.FC<UsuariosTabProps> = ({ currentUser, onUsuario
         title={usuarioToToggle?.activo === 1 ? 'Desactivar usuario' : 'Reactivar usuario'}
         message={
           usuarioToToggle?.activo === 1
-            ? `¿Desea desactivar al usuario "${usuarioToToggle?.username ?? ''}"?`
-            : `¿Desea reactivar al usuario "${usuarioToToggle?.username ?? ''}"?`
+            ? `¿Desea desactivar al usuario "${usuarioToToggle.username}"?`
+            : `¿Desea reactivar al usuario "${usuarioToToggle?.username}"?`
         }
         confirmText={usuarioToToggle?.activo === 1 ? 'Sí, desactivar' : 'Sí, reactivar'}
         cancelText="Cancelar"
-        onConfirm={handleToggleUsuario}
-        onCancel={() => setUsuarioToToggle(null)}
+        onConfirm={() => { void handleToggleUsuario(); }}
+        onCancel={() => { setUsuarioToToggle(null); }}
       />
     </div>
   );

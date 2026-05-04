@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { BadgeCheck, BookOpen, ChevronDown, ChevronUp, ExternalLink, GraduationCap, RefreshCw, TriangleAlert, UserRound, X } from 'lucide-react';
+import { useState } from 'react';
+import { BadgeCheck, ChevronDown, ChevronUp, ExternalLink, GraduationCap, RefreshCw, TriangleAlert, UserRound, X } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import type { DocenteDetalle, Publicacion, RenacytFormacionAcademicaResumen, SyncPublicacionesResult } from '../api';
-import { getPublicacionesDocente, sincronizarPublicacionesPure, getTauriErrorMessage } from '../api';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { InlineIconButton } from '../../../shared/ui/InlineIconButton';
-import { toast } from '../../../services/toast';
-import { formatRenacytNivel } from '../../../shared/utils/renacyt';
+import type { DocenteDetalle } from '../api';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { InlineIconButton } from '@/shared/ui/InlineIconButton';
+import { toast } from '@/services/toast';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
+import { formatDate, parseFormacionesAcademicas } from '@/shared/utils/docenteUtils';
+import { DocentePublicacionesSection } from './DocentePublicacionesSection';
 
 interface DocenteDetailModalProps {
   canRefreshRenacyt: boolean;
@@ -29,70 +30,9 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
 }) => {
   const proyectos = docente.proyectos ? docente.proyectos.split(' | ') : [];
   const tieneRenacyt = Boolean(docente.renacyt_codigo_registro || docente.renacyt_id_investigador);
-  const tieneScopusId = Boolean(docente.renacyt_scopus_author_id);
   const [renacytExpanded, setRenacytExpanded] = useState(true);
   const [formacionesExpanded, setFormacionesExpanded] = useState(false);
-  const [publicacionesExpanded, setPublicacionesExpanded] = useState(false);
-  const [publicaciones, setPublicaciones] = useState<Publicacion[]>([]);
-  const [publicacionesLoaded, setPublicacionesLoaded] = useState(false);
-  const [isSyncingPure, setIsSyncingPure] = useState(false);
-
-  const formatDate = (value?: number | null) => {
-    if (!value) {
-      return 'No disponible';
-    }
-
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(value);
-  };
-
-  const handleOpenExternalUrl = async (url: string, errorMessage: string) => {
-    try {
-      await openUrl(url);
-    } catch {
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleLoadPublicaciones = async () => {
-    if (publicacionesLoaded) return;
-    try {
-      const data = await getPublicacionesDocente(docente.id_docente);
-      setPublicaciones(data);
-      setPublicacionesLoaded(true);
-    } catch (error) {
-      toast.error(getTauriErrorMessage(error));
-    }
-  };
-
-  const handleSyncPure = async () => {
-    setIsSyncingPure(true);
-    try {
-      const result: SyncPublicacionesResult = await sincronizarPublicacionesPure(docente.id_docente);
-      toast.success(
-        `Sincronización Pure completada: ${result.nuevas} nuevas, ${result.actualizadas} actualizadas de ${result.total_encontradas} encontradas.`,
-      );
-      // Reload after sync
-      const data = await getPublicacionesDocente(docente.id_docente);
-      setPublicaciones(data);
-      setPublicacionesLoaded(true);
-    } catch (error) {
-      toast.error(getTauriErrorMessage(error));
-    } finally {
-      setIsSyncingPure(false);
-    }
-  };
-
-  const handleTogglePublicaciones = async () => {
-    const next = !publicacionesExpanded;
-    setPublicacionesExpanded(next);
-    if (next && !publicacionesLoaded) {
-      await handleLoadPublicaciones();
-    }
-  };
+  const formacionesAcademicas = parseFormacionesAcademicas(docente.renacyt_formaciones_academicas_json);
 
   const scopusUrl = docente.renacyt_scopus_author_id
     ? `https://www.scopus.com/authid/detail.uri?authorId=${encodeURIComponent(docente.renacyt_scopus_author_id)}`
@@ -100,15 +40,19 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
   const orcidUrl = docente.renacyt_orcid
     ? `https://orcid.org/${encodeURIComponent(docente.renacyt_orcid)}`
     : null;
-  const formacionesAcademicas = parseFormacionesAcademicas(docente.renacyt_formaciones_academicas_json);
+
+  const handleOpenExternalUrl = async (url: string, errorMessage: string): Promise<void> => {
+    try {
+      await openUrl(url);
+    } catch {
+      toast.error(errorMessage);
+    }
+  };
 
   const renderBrandLabel = (
     label: string,
     brand?: ExternalBrand,
-    action?: {
-      tooltip: string;
-      onClick: () => void;
-    },
+    action?: { tooltip: string; onClick: () => void },
   ) => (
     <span className="renacyt-detail-label-row">
       <span className="renacyt-detail-label-main">
@@ -119,27 +63,9 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
         )}
         <span className="renacyt-detail-label">{label}</span>
       </span>
-      {action && (
-        <InlineIconButton
-          icon={ExternalLink}
-          label={action.tooltip}
-          onClick={action.onClick}
-        />
-      )}
+      {action && <InlineIconButton icon={ExternalLink} label={action.tooltip} onClick={action.onClick} />}
     </span>
   );
-
-  const renderFormacionDate = (value?: number | null) => {
-    if (!value) {
-      return 'No disponible';
-    }
-
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(value);
-  };
 
   const renderLinkedIdentifier = (
     label: string,
@@ -162,7 +88,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => { e.stopPropagation(); }}>
         <div className="modal-header">
           <h2 className="title-with-icon">
             <AppIcon icon={UserRound} size={20} />
@@ -197,7 +123,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
             <button
               type="button"
               className="renacyt-detail-toggle"
-              onClick={() => setRenacytExpanded((current) => !current)}
+              onClick={() => { setRenacytExpanded((current) => !current); }}
               aria-expanded={renacytExpanded}
             >
               <span className="renacyt-detail-toggle-copy">
@@ -224,12 +150,9 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                     <strong>{docente.renacyt_codigo_registro ?? 'No disponible'}</strong>
                   </div>
                   {renderLinkedIdentifier(
-                    'ID investigador',
-                    docente.renacyt_id_investigador,
+                    'ID investigador', docente.renacyt_id_investigador,
                     docente.renacyt_ficha_url ?? null,
-                    'Abrir ficha RENACYT',
-                    'No se pudo abrir la ficha pública RENACYT.',
-                    'renacyt',
+                    'Abrir ficha RENACYT', 'No se pudo abrir la ficha pública RENACYT.', 'renacyt',
                   )}
                   <div className="renacyt-detail-item">
                     <span className="renacyt-detail-label">Nivel</span>
@@ -260,20 +183,12 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                     <strong>{formatDate(docente.renacyt_fecha_ultima_sincronizacion)}</strong>
                   </div>
                   {renderLinkedIdentifier(
-                    'ORCID',
-                    docente.renacyt_orcid,
-                    orcidUrl,
-                    'Abrir ORCID',
-                    'No se pudo abrir el perfil de ORCID.',
-                    'orcid',
+                    'ORCID', docente.renacyt_orcid, orcidUrl,
+                    'Abrir ORCID', 'No se pudo abrir el perfil de ORCID.', 'orcid',
                   )}
                   {renderLinkedIdentifier(
-                    'Scopus Author ID',
-                    docente.renacyt_scopus_author_id,
-                    scopusUrl,
-                    'Abrir Scopus',
-                    'No se pudo abrir el perfil de Scopus.',
-                    'scopus',
+                    'Scopus Author ID', docente.renacyt_scopus_author_id, scopusUrl,
+                    'Abrir Scopus', 'No se pudo abrir el perfil de Scopus.', 'scopus',
                   )}
                 </div>
 
@@ -282,7 +197,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => onRefreshRenacytFormaciones(docente.id_docente)}
+                      onClick={() => { onRefreshRenacytFormaciones(docente.id_docente); }}
                       disabled={isRefreshingRenacyt}
                     >
                       <span className="button-with-icon">
@@ -310,7 +225,7 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                     <button
                       type="button"
                       className="renacyt-subsection-toggle"
-                      onClick={() => setFormacionesExpanded((current) => !current)}
+                      onClick={() => { setFormacionesExpanded((current) => !current); }}
                       aria-expanded={formacionesExpanded}
                     >
                       <span className="renacyt-subsection-toggle-copy">
@@ -338,12 +253,8 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                             <div className="renacyt-formacion-grid">
                               <span><strong>Grado:</strong> {formacion.grado_academico ?? 'No disponible'}</span>
                               <span><strong>Centro:</strong> {formacion.centro_estudios ?? 'No disponible'}</span>
-                              {hasFormacionDate(formacion.fecha_inicio) && (
-                                <span><strong>Inicio:</strong> {renderFormacionDate(formacion.fecha_inicio)}</span>
-                              )}
-                              {hasFormacionDate(formacion.fecha_fin) && (
-                                <span><strong>Fin:</strong> {renderFormacionDate(formacion.fecha_fin)}</span>
-                              )}
+                              <span><strong>Inicio:</strong> {formatDate(formacion.fecha_inicio)}</span>
+                              <span><strong>Fin:</strong> {formatDate(formacion.fecha_fin)}</span>
                               <span><strong>Puntaje:</strong> {formacion.puntaje_obtenido ?? 'No disponible'}</span>
                               <span><strong>Origen:</strong> {formacion.indicador_importado ? 'Importado' : 'Manual'}</span>
                             </div>
@@ -353,7 +264,6 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
                     )}
                   </div>
                 )}
-
               </>
             ) : (
               <p className="renacyt-detail-empty">
@@ -362,111 +272,11 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
             ))}
           </div>
 
-          {/* ── Publicaciones Pure ── */}
-          <div className="renacyt-detail-card">
-            <button
-              type="button"
-              className="renacyt-detail-toggle"
-              onClick={() => void handleTogglePublicaciones()}
-              aria-expanded={publicacionesExpanded}
-            >
-              <span className="renacyt-detail-toggle-copy">
-                <span className="title-with-icon renacyt-detail-title">
-                  <AppIcon icon={BookOpen} size={18} />
-                  <span>Publicaciones (Pure)</span>
-                </span>
-                {publicacionesLoaded && (
-                  <span className="badge badge-info">{publicaciones.length}</span>
-                )}
-              </span>
-              <span className="renacyt-detail-toggle-icon" aria-hidden="true">
-                <AppIcon icon={publicacionesExpanded ? ChevronUp : ChevronDown} size={18} />
-              </span>
-            </button>
-
-            {publicacionesExpanded && (
-              <>
-                {!tieneScopusId && (
-                  <div className="inline-feedback inline-feedback-warning renacyt-formaciones-feedback">
-                    <span>
-                      Este docente no tiene Scopus Author ID. Sincronice primero los datos RENACYT para obtenerlo.
-                    </span>
-                  </div>
-                )}
-
-                {tieneScopusId && canSyncPure && (
-                  <div className="renacyt-detail-actions">
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => void handleSyncPure()}
-                      disabled={isSyncingPure}
-                    >
-                      <span className="button-with-icon">
-                        <AppIcon icon={RefreshCw} size={16} />
-                        <span>{isSyncingPure ? 'Sincronizando Pure...' : 'Sincronizar desde Pure'}</span>
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                {publicacionesLoaded && publicaciones.length === 0 && (
-                  <p className="renacyt-detail-empty">
-                    No hay publicaciones sincronizadas para este docente.
-                    {canSyncPure && tieneScopusId && ' Use el botón para sincronizar desde Pure.'}
-                  </p>
-                )}
-
-                {publicaciones.length > 0 && (
-                  <div className="renacyt-formaciones-list">
-                    {publicaciones.map((pub) => (
-                      <article key={pub.id_publicacion} className="renacyt-formacion-card">
-                        <div className="renacyt-formacion-head">
-                          <strong>{pub.titulo}</strong>
-                          {pub.anio_publicacion && (
-                            <span className="badge badge-info">{pub.anio_publicacion}</span>
-                          )}
-                        </div>
-                        <div className="renacyt-formacion-grid">
-                          {pub.tipo_publicacion && (
-                            <span><strong>Tipo:</strong> {pub.tipo_publicacion}</span>
-                          )}
-                          {pub.journal_titulo && (
-                            <span><strong>Journal:</strong> {pub.journal_titulo}</span>
-                          )}
-                          {pub.estado_publicacion && (
-                            <span><strong>Estado:</strong> {pub.estado_publicacion}</span>
-                          )}
-                          {pub.doi && (
-                            <span>
-                              <strong>DOI:</strong>{' '}
-                              <InlineIconButton
-                                icon={ExternalLink}
-                                label="Abrir DOI"
-                                onClick={() =>
-                                  void handleOpenExternalUrl(
-                                    `https://doi.org/${pub.doi}`,
-                                    'No se pudo abrir el enlace DOI.',
-                                  )
-                                }
-                              />
-                              {pub.doi}
-                            </span>
-                          )}
-                          {pub.autores_json && parseAutores(pub.autores_json).length > 0 && (
-                            <span className="renacyt-formacion-full-col">
-                              <strong>Autores:</strong>{' '}
-                              {parseAutores(pub.autores_json).join('; ')}
-                            </span>
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <DocentePublicacionesSection
+            docenteId={docente.id_docente}
+            scopusAuthorId={docente.renacyt_scopus_author_id}
+            canSyncPure={canSyncPure}
+          />
 
           {docente.cantidad_proyectos > 0 ? (
             <div className="proyectos-section">
@@ -501,31 +311,4 @@ export const DocenteDetailModal: React.FC<DocenteDetailModalProps> = ({
       </div>
     </div>
   );
-};
-
-const parseFormacionesAcademicas = (value?: string | null): RenacytFormacionAcademicaResumen[] => {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed as RenacytFormacionAcademicaResumen[] : [];
-  } catch {
-    return [];
-  }
-};
-
-const hasFormacionDate = (value?: number | null) => {
-  return Boolean(value && value > 0);
-};
-
-const parseAutores = (value?: string | null): string[] => {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? (parsed as string[]) : [];
-  } catch {
-    return [];
-  }
 };

@@ -1,8 +1,8 @@
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 
-use crate::config::ReniecConfig;
-use crate::domain::docente::ReniecDniLookupResult;
-use crate::error::{sanitize_external_detail, AppError};
+use crate::shared::config::ReniecConfig;
+use crate::docentes::models::ReniecDniLookupResult;
+use crate::shared::error::{sanitize_external_detail, AppError};
 
 pub async fn consultar_dni(config: &ReniecConfig, numero: &str) -> Result<ReniecDniLookupResult, AppError> {
     let numero_limpio = numero.trim();

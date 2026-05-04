@@ -1,10 +1,10 @@
 import React, { Suspense, lazy } from 'react';
 import { FolderOpen, RotateCcw, TrendingUp, TriangleAlert, Users } from 'lucide-react';
 import { getEstadisticasProyectosXDocente, getKpisDashboard, type DocenteProyectosCount, type KpisDashboard } from './api';
-import { useRefreshToast } from '../../shared/hooks/useRefreshToast';
-import { useStableFetchData } from '../../shared/hooks/useStableFetch';
-import { AppIcon } from '../../shared/ui/AppIcon';
-import { SkeletonChart, SkeletonKpiGrid } from '../../shared/ui/Skeleton';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { useStableFetchData } from '@/shared/hooks/useStableFetch';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { SkeletonChart, SkeletonKpiGrid } from '@/shared/ui/Skeleton';
 import { KPICard } from './components/KPICard';
 
 const DashboardCharts = lazy(async () => {

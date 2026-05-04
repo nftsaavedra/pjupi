@@ -26,7 +26,7 @@ export const TableActionButton: React.FC<TableActionButtonProps> = ({
       <span className="table-action-button-wrapper">
         <button
           type={type}
-          ref={ref as React.Ref<HTMLButtonElement>}
+          ref={ref}
           className={className ? `table-action-button ${className}` : 'table-action-button'}
           aria-label={label}
           {...triggerProps}

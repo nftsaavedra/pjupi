@@ -1,8 +1,8 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { useProyectosTab } from './hooks/useProyectosTab';
-import { ConfirmDialog } from '../../shared/overlays/ConfirmDialog';
-import { AppIcon } from '../../shared/ui/AppIcon';
+import { ConfirmDialog } from '@/shared/overlays/ConfirmDialog';
+import { AppIcon } from '@/shared/ui/AppIcon';
 import { ProyectoCreateModal } from './components/ProyectoCreateModal';
 import { ProyectoEditModal } from './components/ProyectoEditModal';
 import { ProyectosTableGrid } from './components/ProyectosTableGrid';
@@ -103,7 +103,7 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           proyectos={proyectosFiltrados}
           onDeactivate={setProyectoToDelete}
           onEdit={setProyectoToEdit}
-          onReactivate={handleReactivarProyecto}
+          onReactivate={(id) => { void handleReactivarProyecto(id); }}
           canManage={canManage}
         />
       </div>
@@ -125,12 +125,12 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           onChangeDocentes={handleChangeDocentesSeleccionados}
           onChangeResponsable={setDocenteResponsableId}
           onClose={handleCloseForm}
-          onSubmit={handleSubmit}
+          onSubmit={(e) => { void handleSubmit(e); }}
           onTituloChange={setTitulo}
-          onPatentesChange={handlePatentesChange}
-          onProductosChange={handleProductosChange}
-          onEquipamientosChange={handleEquipamientosChange}
-          onFinanciamientosChange={handleFinanciamientosChange}
+          onPatentesChange={(items) => { void handlePatentesChange(items); }}
+          onProductosChange={(items) => { void handleProductosChange(items); }}
+          onEquipamientosChange={(items) => { void handleEquipamientosChange(items); }}
+          onFinanciamientosChange={(items) => { void handleFinanciamientosChange(items); }}
         />
       )}
 
@@ -146,12 +146,12 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           productos={productos.map((p) => ({ ...p, id: p.id_producto }))}
           equipamientos={equipamientos.map((e) => ({ ...e, id: e.id_equipamiento }))}
           financiamientos={financiamientos.map((f) => ({ ...f, id: f.id_financiamiento }))}
-          onClose={() => setProyectoToEdit(null)}
-          onSubmit={handleActualizarProyecto}
-          onPatentesChange={handlePatentesChange}
-          onProductosChange={handleProductosChange}
-          onEquipamientosChange={handleEquipamientosChange}
-          onFinanciamientosChange={handleFinanciamientosChange}
+          onClose={() => { setProyectoToEdit(null); }}
+          onSubmit={(id, payload) => { void handleActualizarProyecto(id, payload); }}
+          onPatentesChange={(items) => { void handlePatentesChange(items); }}
+          onProductosChange={(items) => { void handleProductosChange(items); }}
+          onEquipamientosChange={(items) => { void handleEquipamientosChange(items); }}
+          onFinanciamientosChange={(items) => { void handleFinanciamientosChange(items); }}
         />
       )}
 
@@ -162,8 +162,8 @@ export const ProyectosTab: React.FC<ProyectosTabProps> = ({ canManage, onProyect
           message={`¿Desea desactivar el proyecto "${proyectoToDelete?.titulo_proyecto ?? ''}"? Solo se desactivará si no tiene docentes relacionados.`}
           confirmText="Sí, desactivar"
           cancelText="Cancelar"
-          onConfirm={handleEliminarProyecto}
-          onCancel={() => setProyectoToDelete(null)}
+          onConfirm={() => { void handleEliminarProyecto(); }}
+          onCancel={() => { setProyectoToDelete(null); }}
         />
       )}
     </div>

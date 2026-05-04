@@ -9,8 +9,8 @@ export {
   getAllUsuarios,
   reactivarGrado,
   reactivarUsuario,
-} from '../../services/tauri/configuracion';
+} from '@/services/tauri/configuracion';
 
-export { getTauriErrorMessage } from '../../services/tauri/error';
+export { getTauriErrorMessage } from '@/services/tauri/error';
 
-export type { GradoAcademico, Usuario } from '../../services/tauri/types';
+export type { GradoAcademico, Usuario } from '@/services/tauri/types';

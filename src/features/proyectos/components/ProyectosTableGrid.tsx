@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Pencil, RotateCcw, Trash2, Users, X } from 'lucide-react';
 import type { ProyectoDetalle, ProyectoParticipanteResumen } from '../api';
-import { SkeletonTable } from '../../../shared/ui/Skeleton';
-import { TableActionButton } from '../../../shared/ui/TableActionButton';
-import { AppIcon } from '../../../shared/ui/AppIcon';
-import { formatRenacytNivel } from '../../../shared/utils/renacyt';
+import { SkeletonTable } from '@/shared/ui/Skeleton';
+import { TableActionButton } from '@/shared/ui/TableActionButton';
+import { AppIcon } from '@/shared/ui/AppIcon';
+import { formatRenacytNivel } from '@/shared/utils/renacyt';
 import { getResponsableProyecto, parseParticipantesProyecto } from '../participantes';
 
 interface ProyectosTableGridProps {
@@ -70,7 +70,7 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
                   <button
                     type="button"
                     className="project-docentes-trigger"
-                    onClick={() => setSelectedProyecto({ titulo: proyecto.titulo_proyecto, participantes })}
+                    onClick={() => { setSelectedProyecto({ titulo: proyecto.titulo_proyecto, participantes }); }}
                     disabled={participantes.length === 0}
                   >
                     <span className="button-with-icon">
@@ -94,7 +94,7 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
                           className="btn-secondary"
                           icon={Pencil}
                           label="Editar proyecto"
-                          onClick={() => onEdit(proyecto)}
+                          onClick={() => { onEdit(proyecto); }}
                         />
                       )}
                       {proyecto.activo === 0 && (
@@ -102,14 +102,14 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
                           className="btn-primary"
                           icon={RotateCcw}
                           label="Reactivar proyecto"
-                          onClick={() => onReactivate(proyecto.id_proyecto)}
+                          onClick={() => { onReactivate(proyecto.id_proyecto); }}
                         />
                       )}
                       <TableActionButton
                         className="btn-delete"
                         icon={Trash2}
                         label={proyecto.activo === 1 ? 'Desactivar proyecto' : 'Mantener proyecto inactivo'}
-                        onClick={() => onDeactivate(proyecto)}
+                        onClick={() => { onDeactivate(proyecto); }}
                       />
                     </>
                   ) : (
@@ -123,14 +123,14 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
       </table>
 
       {selectedProyecto && (
-        <div className="modal-overlay" onClick={() => setSelectedProyecto(null)}>
-          <div className="modal-content project-participants-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => { setSelectedProyecto(null); }}>
+          <div className="modal-content project-participants-modal" onClick={(event) => { event.stopPropagation(); }}>
             <div className="modal-header">
               <h2 className="title-with-icon">
                 <AppIcon icon={Users} size={20} />
                 <span>Participantes del proyecto</span>
               </h2>
-              <button type="button" className="modal-close" onClick={() => setSelectedProyecto(null)} aria-label="Cerrar participantes del proyecto">
+              <button type="button" className="modal-close" onClick={() => { setSelectedProyecto(null); }} aria-label="Cerrar participantes del proyecto">
                 <AppIcon icon={X} size={18} />
               </button>
             </div>
@@ -155,7 +155,7 @@ export const ProyectosTableGrid: React.FC<ProyectosTableGridProps> = ({
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setSelectedProyecto(null)}>
+              <button type="button" className="btn-secondary" onClick={() => { setSelectedProyecto(null); }}>
                 Cerrar
               </button>
             </div>

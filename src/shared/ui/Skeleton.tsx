@@ -36,7 +36,7 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({ columns, rows = 5 
   <div
     className="skeleton-table"
     aria-hidden="true"
-    style={{ ['--skeleton-columns' as string]: columns } as React.CSSProperties}
+    style={{ ['--skeleton-columns' as string]: columns }}
   >
     <div className="skeleton-table-header">
       {Array.from({ length: columns }).map((_, index) => (

@@ -1,43 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-export const useMeasuredChart = (minHeight: number) => {
-  const [node, setNode] = useState<HTMLDivElement | null>(null);
+export const useMeasuredChart = (minHeight: number): [React.RefObject<HTMLDivElement | null>, { width: number; height: number; ready: boolean }] => {
+  const chartRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!node) {
-      setWidth(0);
-      return;
-    }
+    const node = chartRef.current;
+    if (!node) return;
 
-    const element = node;
-
-    const updateWidth = (nextWidth: number) => {
-      setWidth(Math.max(Math.floor(nextWidth), 0));
-    };
-
-    const measure = () => updateWidth(element.getBoundingClientRect().width);
-
+    const measure = () => { setWidth(Math.max(Math.floor(node.getBoundingClientRect().width), 0)); };
     measure();
-    const rafId = window.requestAnimationFrame(measure);
+    setReady(true);
 
     const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      updateWidth(entry.contentRect.width);
+      const width = entries[0]?.contentRect.width ?? 0;
+      setWidth(Math.max(Math.floor(width), 0));
     });
 
-    observer.observe(element);
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, [node]);
+    observer.observe(node);
+    return () => { observer.disconnect(); };
+  }, []);
 
-  return {
-    ref: setNode,
-    width,
-    height: minHeight,
-    ready: width > 0,
-  };
+  return [chartRef, { width, height: minHeight, ready }];
 };

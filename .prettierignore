@@ -1,0 +1,12 @@
+dist
+dist-ssr
+node_modules
+src-tauri/target
+src-tauri/gen
+*.local
+.env
+.env.*
+!.env.example
+package-lock.json
+_docs
+logs

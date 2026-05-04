@@ -18,7 +18,7 @@ export const FieldHelpTooltip: React.FC<FieldHelpTooltipProps> = ({ content, lab
       renderTrigger={({ ref, triggerProps }) => (
         <button
           type="button"
-          ref={ref as React.Ref<HTMLButtonElement>}
+          ref={ref}
           className="field-help-trigger"
           aria-label={label}
           {...triggerProps}

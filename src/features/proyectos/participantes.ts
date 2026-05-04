@@ -6,7 +6,7 @@ export const parseParticipantesProyecto = (value?: string | null): ProyectoParti
   }
 
   try {
-    const parsed = JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? parsed as ProyectoParticipanteResumen[] : [];
   } catch {
     return [];

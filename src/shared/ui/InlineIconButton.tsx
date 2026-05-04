@@ -26,7 +26,7 @@ export const InlineIconButton: React.FC<InlineIconButtonProps> = ({
       <span className="table-action-button-wrapper">
         <button
           type={type}
-          ref={ref as React.Ref<HTMLButtonElement>}
+          ref={ref}
           className={className ? `renacyt-inline-icon-button ${className}` : 'renacyt-inline-icon-button'}
           aria-label={label}
           {...triggerProps}

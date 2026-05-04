@@ -1,6 +1,6 @@
 import { dirname, join } from '@tauri-apps/api/path';
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeExportFile } from '../../services/tauri/files';
+import { writeExportFile } from '@/services/tauri/files';
 
 const LAST_EXPORT_DIRECTORY_KEY = 'pjupi.exports.lastDirectory';
 

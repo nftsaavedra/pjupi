@@ -1,5 +1,7 @@
 # Plan de Refactorización: MongoDB Principal, SQLite Respaldo/Offline
 
+> **⚠️ NOTA**: Este documento es histórico y referencia rutas de la arquitectura anterior (`src-tauri/src/services/`, `src-tauri/src/storage.rs`, etc.) que ya no existen. La arquitectura actual es Screaming Architecture (ver `src-tauri/src/*/`). El plan de migración MongoDB-primary está completo; este documento se conserva como referencia.
+
 ## Resumen Ejecutivo
 
 Estado actual auditado:

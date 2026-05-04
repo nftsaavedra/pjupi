@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRecursoCrud } from '@/shared/hooks/useRecursoCrud';
 import { useFetchDocentes } from '../../docentes/hooks/useFetchDocentes';
-import { useStableFetchData } from '../../../shared/hooks/useStableFetch';
-import { useRefreshToast } from '../../../shared/hooks/useRefreshToast';
-import { toast } from '../../../services/toast';
+import { useStableFetchData } from '@/shared/hooks/useStableFetch';
+import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
+import { toast } from '@/services/toast';
 import {
   actualizarProyectoConParticipantes,
   crearProyectoConParticipantes,
@@ -13,7 +14,7 @@ import {
   type ProyectoParticipantesPayload,
   type ProyectoDetalle,
 } from '../api';
-import type { Patente, Producto, Equipamiento, Financiamiento } from '../../../services/tauri/types';
+import type { Patente, Producto, Equipamiento, Financiamiento } from '@/services/tauri/types';
 import {
   crearPatente, getPatentesProyecto, eliminarPatente,
   crearProducto, getProductosProyecto, eliminarProducto,
@@ -23,7 +24,7 @@ import {
   type CreateProductoPayload,
   type CreateEquipamientoPayload,
   type CreateFinanciamientoPayload,
-} from '../../../services/tauri/recursos';
+} from '@/services/tauri/recursos';
 
 export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => void) => {
   const [titulo, setTitulo] = useState('');
@@ -35,27 +36,74 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
   const [proyectoToEdit, setProyectoToEdit] = useState<ProyectoDetalle | null>(null);
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [busqueda, setBusqueda] = useState('');
-  
-  // Recursos (patentes, productos, equipamientos, financiamientos)
-  const [patentes, setPatentes] = useState<Patente[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [equipamientos, setEquipamientos] = useState<Equipamiento[]>([]);
-  const [financiamientos, setFinanciamientos] = useState<Financiamiento[]>([]);
 
-  // Cargar recursos existentes al abrir edición de un proyecto
+  const getProyectoId = (): string | undefined => proyectoToEdit?.id_proyecto;
+
+  const patentesCrud = useRecursoCrud<Patente, CreatePatentePayload>(
+    getPatentesProyecto, crearPatente, eliminarPatente,
+    (raw, pid) => ({
+      proyecto_id: pid,
+      titulo: (raw.titulo_patente as string) || (raw.titulo as string) || '',
+      numero_patente: raw.numero_patente as string,
+      estado: raw.estado as string,
+    }),
+    (p) => p.id_patente,
+    getProyectoId(),
+  );
+
+  const productosCrud = useRecursoCrud<Producto, CreateProductoPayload>(
+    getProductosProyecto, crearProducto, eliminarProducto,
+    (raw, pid) => ({
+      proyecto_id: pid,
+      nombre: (raw.nombre_producto as string) || (raw.nombre as string) || '',
+      tipo: raw.tipo as string,
+      etapa: raw.etapa as string,
+      descripcion: raw.descripcion as string,
+    }),
+    (p) => p.id_producto,
+    getProyectoId(),
+  );
+
+  const equipamientosCrud = useRecursoCrud<Equipamiento, CreateEquipamientoPayload>(
+    getEquipamientosProyecto, crearEquipamiento, eliminarEquipamiento,
+    (raw, pid) => ({
+      proyecto_id: pid,
+      nombre: (raw.nombre_equipo as string) || (raw.nombre as string) || '',
+      descripcion: raw.descripcion as string,
+      especificaciones: raw.especificaciones as string,
+      valor_estimado: raw.costo as number,
+    }),
+    (e) => e.id_equipamiento,
+    getProyectoId(),
+  );
+
+  const financiamientosCrud = useRecursoCrud<Financiamiento, CreateFinanciamientoPayload>(
+    getFinanciamientosProyecto, crearFinanciamiento, eliminarFinanciamiento,
+    (raw, pid) => ({
+      proyecto_id: pid,
+      entidad_financiadora: (raw.fuente as string) || (raw.entidad_financiadora as string) || '',
+      tipo: raw.tipo as string,
+      monto: raw.monto as number,
+      estado_financiero: raw.estado_financiero as string,
+    }),
+    (f) => f.id_financiamiento,
+    getProyectoId(),
+  );
+
   useEffect(() => {
-    if (!proyectoToEdit?.id_proyecto) {
-      setPatentes([]);
-      setProductos([]);
-      setEquipamientos([]);
-      setFinanciamientos([]);
+    const pid = proyectoToEdit?.id_proyecto;
+    if (!pid) {
+      patentesCrud.resetItems();
+      productosCrud.resetItems();
+      equipamientosCrud.resetItems();
+      financiamientosCrud.resetItems();
       return;
     }
-    const id = proyectoToEdit.id_proyecto;
-    getPatentesProyecto(id).then(setPatentes).catch(() => setPatentes([]));
-    getProductosProyecto(id).then(setProductos).catch(() => setProductos([]));
-    getEquipamientosProyecto(id).then(setEquipamientos).catch(() => setEquipamientos([]));
-    getFinanciamientosProyecto(id).then(setFinanciamientos).catch(() => setFinanciamientos([]));
+    void patentesCrud.loadItems(pid);
+    void productosCrud.loadItems(pid);
+    void equipamientosCrud.loadItems(pid);
+    void financiamientosCrud.loadItems(pid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proyectoToEdit?.id_proyecto]);
 
   const {
@@ -83,41 +131,37 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     toastKey: 'proyectos-refresh',
   });
 
-  const resetForm = () => {
+  const resetForm = (): void => {
     setTitulo('');
     setDocentesSeleccionados([]);
     setDocenteResponsableId(null);
-    setPatentes([]);
-    setProductos([]);
-    setEquipamientos([]);
-    setFinanciamientos([]);
+    patentesCrud.resetItems();
+    productosCrud.resetItems();
+    equipamientosCrud.resetItems();
+    financiamientosCrud.resetItems();
   };
 
-  const handleChangeDocentesSeleccionados = (ids: string[]) => {
+  const handleChangeDocentesSeleccionados = (ids: string[]): void => {
     setDocentesSeleccionados(ids);
     setDocenteResponsableId((current) => {
-      if (ids.length === 0) {
-        return null;
-      }
-      if (current && ids.includes(current)) {
-        return current;
-      }
+      if (ids.length === 0) { return null; }
+      if (current && ids.includes(current)) { return current; }
       return ids[0] ?? null;
     });
   };
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (): void => {
     resetForm();
     setIsFormOpen(true);
   };
 
-  const handleCloseForm = () => {
+  const handleCloseForm = (): void => {
     if (isLoading) return;
     resetForm();
     setIsFormOpen(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent): Promise<void> => {
     e.preventDefault();
 
     if (!titulo.trim()) {
@@ -140,41 +184,40 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
       const proyecto = await crearProyectoConParticipantes(titulo, docentesSeleccionados, docenteResponsableId);
       const pid = proyecto.id_proyecto;
 
-      // Persistir recursos pendientes (colectados durante el modal de creación)
       const recursosPendientes: Promise<unknown>[] = [];
-      for (const item of patentes) {
+      for (const item of patentesCrud.items as unknown as Array<Record<string, unknown>>) {
         recursosPendientes.push(crearPatente({
           proyecto_id: pid,
-          titulo: (item as unknown as Record<string, string>).titulo_patente || (item as unknown as Record<string, string>).titulo || '',
-          numero_patente: (item as unknown as Record<string, string>).numero_patente,
-          estado: (item as unknown as Record<string, string>).estado,
+          titulo: (item.titulo_patente as string) || (item.titulo as string) || '',
+          numero_patente: item.numero_patente as string,
+          estado: item.estado as string,
         }).catch(() => null));
       }
-      for (const item of productos) {
+      for (const item of productosCrud.items as unknown as Array<Record<string, unknown>>) {
         recursosPendientes.push(crearProducto({
           proyecto_id: pid,
-          nombre: (item as unknown as Record<string, string>).nombre_producto || (item as unknown as Record<string, string>).nombre || '',
-          tipo: (item as unknown as Record<string, string>).tipo,
-          etapa: (item as unknown as Record<string, string>).etapa,
-          descripcion: (item as unknown as Record<string, string>).descripcion,
+          nombre: (item.nombre_producto as string) || (item.nombre as string) || '',
+          tipo: item.tipo as string,
+          etapa: item.etapa as string,
+          descripcion: item.descripcion as string,
         }).catch(() => null));
       }
-      for (const item of equipamientos) {
+      for (const item of equipamientosCrud.items as unknown as Array<Record<string, unknown>>) {
         recursosPendientes.push(crearEquipamiento({
           proyecto_id: pid,
-          nombre: (item as unknown as Record<string, string>).nombre_equipo || (item as unknown as Record<string, string>).nombre || '',
-          descripcion: (item as unknown as Record<string, string>).descripcion,
-          especificaciones: (item as unknown as Record<string, string>).especificaciones,
-          valor_estimado: (item as unknown as Record<string, unknown>).costo as number,
+          nombre: (item.nombre_equipo as string) || (item.nombre as string) || '',
+          descripcion: item.descripcion as string,
+          especificaciones: item.especificaciones as string,
+          valor_estimado: item.costo as number,
         }).catch(() => null));
       }
-      for (const item of financiamientos) {
+      for (const item of financiamientosCrud.items as unknown as Array<Record<string, unknown>>) {
         recursosPendientes.push(crearFinanciamiento({
           proyecto_id: pid,
-          entidad_financiadora: (item as unknown as Record<string, string>).fuente || (item as unknown as Record<string, string>).entidad_financiadora || '',
-          tipo: (item as unknown as Record<string, string>).tipo,
-          monto: (item as unknown as Record<string, unknown>).monto as number,
-          estado_financiero: (item as unknown as Record<string, string>).estado_financiero,
+          entidad_financiadora: (item.fuente as string) || (item.entidad_financiadora as string) || '',
+          tipo: item.tipo as string,
+          monto: item.monto as number,
+          estado_financiero: item.estado_financiero as string,
         }).catch(() => null));
       }
       if (recursosPendientes.length > 0) {
@@ -193,7 +236,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     }
   };
 
-  const handleActualizarProyecto = async (idProyecto: string, payload: ProyectoParticipantesPayload) => {
+  const handleActualizarProyecto = async (idProyecto: string, payload: ProyectoParticipantesPayload): Promise<void> => {
     if (!payload.titulo_proyecto.trim()) {
       toast.warning('Ingrese el título del proyecto');
       return;
@@ -218,7 +261,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     }
   };
 
-  const handleEliminarProyecto = async () => {
+  const handleEliminarProyecto = async (): Promise<void> => {
     if (!proyectoToDelete) return;
     try {
       const resultado = await eliminarProyecto(proyectoToDelete.id_proyecto);
@@ -231,7 +274,7 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     }
   };
 
-  const handleReactivarProyecto = async (id: string) => {
+  const handleReactivarProyecto = async (id: string): Promise<void> => {
     try {
       await reactivarProyecto(id);
       toast.success('Proyecto reactivado correctamente');
@@ -239,227 +282,6 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
       onProyectoCreated();
     } catch (error) {
       toast.error(getTauriErrorMessage(error));
-    }
-  };
-
-  // ── Handlers para patentes ──────────────────────────────────────────────────
-  const handlePatentesChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
-    // En flujo de creación: solo actualizar estado local (sin proyecto_id aún)
-    if (!proyectoToEdit?.id_proyecto) {
-      setPatentes(items as unknown as Patente[]);
-      return;
-    }
-
-    const nuevas: CreatePatentePayload[] = [];
-    const eliminadas: string[] = [];
-
-    for (const item of items) {
-      if (item.id.startsWith('temp-')) {
-        // Nuevo item
-        nuevas.push({
-          proyecto_id: proyectoToEdit?.id_proyecto,
-          titulo: (item.titulo_patente as string) || '',
-          numero_patente: item.numero_patente as string,
-          estado: item.estado as string,
-        });
-      }
-    }
-
-    // Detectar eliminadas (items que estaban pero ya no están)
-    const itemIds = items.map((i) => i.id);
-    for (const patente of patentes) {
-      if (!itemIds.includes(patente.id_patente)) {
-        eliminadas.push(patente.id_patente);
-      }
-    }
-
-    // Ejecutar cambios
-    for (const nueva of nuevas) {
-      try {
-        await crearPatente(nueva);
-      } catch (error) {
-        toast.error('Error creando patente: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    for (const id of eliminadas) {
-      try {
-        await eliminarPatente(id);
-      } catch (error) {
-        toast.error('Error eliminando patente: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    // Recargar patentes
-    if (proyectoToEdit?.id_proyecto) {
-      try {
-        const p = await getPatentesProyecto(proyectoToEdit.id_proyecto);
-        setPatentes(p);
-      } catch (error) {
-        toast.error('Error cargando patentes: ' + getTauriErrorMessage(error));
-      }
-    }
-  };
-
-  // ── Handlers para productos ────────────────────────────────────────────────
-  const handleProductosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
-    if (!proyectoToEdit?.id_proyecto) {
-      setProductos(items as unknown as Producto[]);
-      return;
-    }
-    const nuevas: CreateProductoPayload[] = [];
-    const eliminadas: string[] = [];
-
-    for (const item of items) {
-      if (item.id.startsWith('temp-')) {
-        nuevas.push({
-          proyecto_id: proyectoToEdit?.id_proyecto,
-          nombre: (item.nombre_producto as string) || '',
-          tipo: item.tipo as string,
-          etapa: item.etapa as string,
-          descripcion: item.descripcion as string,
-        });
-      }
-    }
-
-    const itemIds = items.map((i) => i.id);
-    for (const producto of productos) {
-      if (!itemIds.includes(producto.id_producto)) {
-        eliminadas.push(producto.id_producto);
-      }
-    }
-
-    for (const nueva of nuevas) {
-      try {
-        await crearProducto(nueva);
-      } catch (error) {
-        toast.error('Error creando producto: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    for (const id of eliminadas) {
-      try {
-        await eliminarProducto(id);
-      } catch (error) {
-        toast.error('Error eliminando producto: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    if (proyectoToEdit?.id_proyecto) {
-      try {
-        const p = await getProductosProyecto(proyectoToEdit.id_proyecto);
-        setProductos(p);
-      } catch (error) {
-        toast.error('Error cargando productos: ' + getTauriErrorMessage(error));
-      }
-    }
-  };
-
-  // ── Handlers para equipamientos ────────────────────────────────────────────
-  const handleEquipamientosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
-    if (!proyectoToEdit?.id_proyecto) {
-      setEquipamientos(items as unknown as Equipamiento[]);
-      return;
-    }
-    const nuevas: CreateEquipamientoPayload[] = [];
-    const eliminadas: string[] = [];
-
-    for (const item of items) {
-      if (item.id.startsWith('temp-')) {
-        nuevas.push({
-          proyecto_id: proyectoToEdit?.id_proyecto,
-          nombre: (item.nombre_equipo as string) || '',
-          descripcion: item.descripcion as string,
-          especificaciones: item.especificaciones as string,
-          valor_estimado: item.costo as number,
-        });
-      }
-    }
-
-    const itemIds = items.map((i) => i.id);
-    for (const equipo of equipamientos) {
-      if (!itemIds.includes(equipo.id_equipamiento)) {
-        eliminadas.push(equipo.id_equipamiento);
-      }
-    }
-
-    for (const nueva of nuevas) {
-      try {
-        await crearEquipamiento(nueva);
-      } catch (error) {
-        toast.error('Error creando equipamiento: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    for (const id of eliminadas) {
-      try {
-        await eliminarEquipamiento(id);
-      } catch (error) {
-        toast.error('Error eliminando equipamiento: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    if (proyectoToEdit?.id_proyecto) {
-      try {
-        const e = await getEquipamientosProyecto(proyectoToEdit.id_proyecto);
-        setEquipamientos(e);
-      } catch (error) {
-        toast.error('Error cargando equipamientos: ' + getTauriErrorMessage(error));
-      }
-    }
-  };
-
-  // ── Handlers para financiamientos ──────────────────────────────────────────
-  const handleFinanciamientosChange = async (items: Array<{ id: string; [key: string]: unknown }>) => {
-    if (!proyectoToEdit?.id_proyecto) {
-      setFinanciamientos(items as unknown as Financiamiento[]);
-      return;
-    }
-    const nuevas: CreateFinanciamientoPayload[] = [];
-    const eliminadas: string[] = [];
-
-    for (const item of items) {
-      if (item.id.startsWith('temp-')) {
-        nuevas.push({
-          proyecto_id: proyectoToEdit?.id_proyecto,
-          entidad_financiadora: (item.fuente as string) || '',
-          tipo: item.tipo as string,
-          monto: item.monto as number,
-          estado_financiero: item.estado_financiero as string,
-        });
-      }
-    }
-
-    const itemIds = items.map((i) => i.id);
-    for (const fin of financiamientos) {
-      if (!itemIds.includes(fin.id_financiamiento)) {
-        eliminadas.push(fin.id_financiamiento);
-      }
-    }
-
-    for (const nueva of nuevas) {
-      try {
-        await crearFinanciamiento(nueva);
-      } catch (error) {
-        toast.error('Error creando financiamiento: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    for (const id of eliminadas) {
-      try {
-        await eliminarFinanciamiento(id);
-      } catch (error) {
-        toast.error('Error eliminando financiamiento: ' + getTauriErrorMessage(error));
-      }
-    }
-
-    if (proyectoToEdit?.id_proyecto) {
-      try {
-        const f = await getFinanciamientosProyecto(proyectoToEdit.id_proyecto);
-        setFinanciamientos(f);
-      } catch (error) {
-        toast.error('Error cargando financiamientos: ' + getTauriErrorMessage(error));
-      }
     }
   };
 
@@ -513,14 +335,13 @@ export const useProyectosTab = (refreshTrigger = 0, onProyectoCreated: () => voi
     totalActivos,
     totalInactivos,
     cargarProyectos,
-    // Recursos
-    patentes,
-    productos,
-    equipamientos,
-    financiamientos,
-    handlePatentesChange,
-    handleProductosChange,
-    handleEquipamientosChange,
-    handleFinanciamientosChange,
+    patentes: patentesCrud.items,
+    productos: productosCrud.items,
+    equipamientos: equipamientosCrud.items,
+    financiamientos: financiamientosCrud.items,
+    handlePatentesChange: patentesCrud.handleChange,
+    handleProductosChange: productosCrud.handleChange,
+    handleEquipamientosChange: equipamientosCrud.handleChange,
+    handleFinanciamientosChange: financiamientosCrud.handleChange,
   };
 };

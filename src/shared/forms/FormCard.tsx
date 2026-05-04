@@ -2,7 +2,7 @@ import React from 'react';
 
 interface FormCardProps {
   title: React.ReactNode;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.SyntheticEvent) => void;
   children: React.ReactNode;
   submitText?: React.ReactNode;
   isLoading?: boolean;

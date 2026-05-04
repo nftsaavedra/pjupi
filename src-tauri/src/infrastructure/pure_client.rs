@@ -5,8 +5,8 @@
 /// Endpoint de personas: POST /persons/search (resolución de UUID de persona por Scopus Author ID).
 use serde::{Deserialize, Serialize};
 
-use crate::config::PureConfig;
-use crate::error::{sanitize_external_detail, AppError};
+use crate::shared::config::PureConfig;
+use crate::shared::error::{sanitize_external_detail, AppError};
 
 // ─── DTOs defensivos de Pure API ────────────────────────────────────────────
 

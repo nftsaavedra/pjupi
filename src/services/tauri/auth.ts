@@ -25,5 +25,5 @@ export const loginUsuario = async (
 };
 
 export const logoutUsuario = async (): Promise<void> => {
-  return await invoke('logout_usuario');
+  await invoke('logout_usuario');
 };
