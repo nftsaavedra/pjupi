@@ -2,12 +2,18 @@ use crate::proyectos::models::{
     CreateProyectoConParticipantesRequest,
     EliminarProyectoResultado,
     ExportDataConProjectos,
+    ExportDataDocentePerfil,
+    ExportDataGrupo,
+    ExportDataProyectoArea,
+    ExportDataRecurso,
     Proyecto,
     ProyectoDetalle,
     UpdateProyectoConParticipantesRequest,
     DocenteProyectosCount,
     ExportData,
     KpisDashboard,
+    ProyectosTrendItem,
+    RenacytDistribucionItem,
 };
 use crate::shared::error::AppError;
 use crate::proyectos::repository;
@@ -111,6 +117,36 @@ pub async fn get_exportacion_plana(state: &AppState) -> Result<Vec<ExportData>, 
 pub async fn get_exportacion_agrupada(state: &AppState) -> Result<Vec<ExportDataConProjectos>, AppError> {
     let db = state.mongo_db()?;
     repository::get_data_exportacion_agrupada_docente(db).await
+}
+
+pub async fn get_exportacion_grupos(state: &AppState) -> Result<Vec<ExportDataGrupo>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_data_exportacion_grupos(db).await
+}
+
+pub async fn get_exportacion_recursos(state: &AppState) -> Result<Vec<ExportDataRecurso>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_data_exportacion_recursos(db).await
+}
+
+pub async fn get_exportacion_docentes_perfil(state: &AppState) -> Result<Vec<ExportDataDocentePerfil>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_data_exportacion_docentes_perfil(db).await
+}
+
+pub async fn get_exportacion_proyectos_area(state: &AppState) -> Result<Vec<ExportDataProyectoArea>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_data_exportacion_proyectos_area(db).await
+}
+
+pub async fn get_proyectos_trend(state: &AppState) -> Result<Vec<ProyectosTrendItem>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_proyectos_trend(db).await
+}
+
+pub async fn get_renacyt_distribucion(state: &AppState) -> Result<Vec<RenacytDistribucionItem>, AppError> {
+    let db = state.mongo_db()?;
+    repository::get_renacyt_distribucion(db).await
 }
 
 fn normalize_docente_ids(docentes_ids: &[String]) -> Result<Vec<String>, AppError> {

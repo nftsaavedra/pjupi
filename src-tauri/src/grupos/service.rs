@@ -2,7 +2,6 @@ use crate::grupos::models::{GrupoInvestigacion, CreateGrupoInvestigacionRequest,
 use crate::grupos::repository;
 use crate::shared::error::AppError;
 use crate::shared::state::AppState;
-use chrono::Utc;
 
 pub async fn get_all(state: &AppState) -> Result<Vec<GrupoInvestigacion>, AppError> {
     let mongo = state.mongo_db()?;
@@ -12,7 +11,7 @@ pub async fn get_all(state: &AppState) -> Result<Vec<GrupoInvestigacion>, AppErr
 pub async fn create(state: &AppState, request: CreateGrupoInvestigacionRequest) -> Result<GrupoInvestigacion, AppError> {
     let mongo = state.mongo_db()?;
 
-    let now_ms = Utc::now().timestamp_millis();
+    let now_ms = crate::shared::time::now_ms();
     let mut nuevo_grupo = GrupoInvestigacion::new(request.nombre, now_ms);
     nuevo_grupo.descripcion = request.descripcion;
     nuevo_grupo.coordinador_id = request.coordinador_id;

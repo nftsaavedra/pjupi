@@ -11,8 +11,9 @@ interface RelatedEntityFieldConfig {
   name: string;
   label: string;
   placeholder?: string;
-  type?: 'text' | 'number' | 'textarea';
+  type?: 'text' | 'number' | 'textarea' | 'select';
   required?: boolean;
+  options?: { value: string; label: string }[];
 }
 
 interface RelatedEntitiesSectionProps {
@@ -199,6 +200,19 @@ export const RelatedEntitiesSection: React.FC<RelatedEntitiesSectionProps> = ({
                         placeholder={field.placeholder}
                         rows={3}
                       />
+                    ) : field.type === 'select' && field.options ? (
+                      <select
+                        id={`${field.name}-${editingId}`}
+                        value={getField(editingItem, field.name)}
+                        onChange={(e) =>
+                          { setEditingItem({ ...editingItem, [field.name]: e.target.value }); }
+                        }
+                      >
+                        <option value="">{field.placeholder || 'Seleccionar...'}</option>
+                        {field.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
                     ) : (
                       <input
                         id={`${field.name}-${editingId}`}

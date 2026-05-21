@@ -138,6 +138,21 @@ export interface EliminarGradoResultado {
   mensaje: string;
 }
 
+export interface CatalogoItem {
+  id_catalogo: string;
+  tipo: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  orden?: number | null;
+  activo: number;
+}
+
+export interface EliminarCatalogoResultado {
+  accion: string;
+  mensaje: string;
+}
+
 export interface DocenteProyectosCount {
   nombre: string;
   cantidad: number;
@@ -148,6 +163,19 @@ export interface KpisDashboard {
   total_docentes: number;
   docentes_con_1_proyecto: number;
   docentes_multiples_proyectos: number;
+}
+
+export interface ProyectosTrendItem {
+  anio: number;
+  mes: number;
+  cantidad: number;
+}
+
+export interface RenacytDistribucionItem {
+  nivel: string;
+  cantidad_docentes: number;
+  con_proyectos: number;
+  sin_proyectos: number;
 }
 
 export interface ExportData {
@@ -274,4 +302,210 @@ export interface GrupoInvestigacion {
   activo: number;
   created_at?: number | null;
   updated_at?: number | null;
+}
+
+// ─── Entity-centric report types ────────────────────────────────────────────────
+
+export interface ProyectoCabeceraReporte {
+  id_proyecto: string;
+  titulo_proyecto: string;
+  activo: boolean;
+  campo_ocde?: string | null;
+  programas_relacionados: string[];
+  fecha_creacion?: string | null;
+  fecha_actualizacion?: string | null;
+}
+
+export interface MiembroProyectoReporte {
+  id_docente: string;
+  dni: string;
+  nombres_apellidos: string;
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+  grado_nombre: string;
+  grado_id: string;
+  es_responsable: boolean;
+  renacyt_codigo_registro?: string | null;
+  renacyt_nivel?: string | null;
+  renacyt_grupo?: string | null;
+  renacyt_condicion?: string | null;
+  renacyt_orcid?: string | null;
+  renacyt_scopus_author_id?: string | null;
+  grupo_nombre?: string | null;
+  grupo_id?: string | null;
+  publicaciones_count: number;
+}
+
+export interface PatenteConEtiquetas {
+  id_patente: string;
+  titulo: string;
+  numero_patente?: string | null;
+  tipo_codigo?: string | null;
+  tipo_nombre?: string | null;
+  estado_codigo?: string | null;
+  estado_nombre?: string | null;
+  fecha_solicitud?: number | null;
+  fecha_concesion?: number | null;
+  pais?: string | null;
+  entidad_concedente?: string | null;
+  descripcion?: string | null;
+}
+
+export interface ProductoConEtiquetas {
+  id_producto: string;
+  nombre: string;
+  tipo_codigo?: string | null;
+  tipo_nombre?: string | null;
+  etapa_codigo?: string | null;
+  etapa_nombre?: string | null;
+  descripcion?: string | null;
+  fecha_registro?: number | null;
+}
+
+export interface EquipamientoConEtiquetas {
+  id_equipamiento: string;
+  nombre: string;
+  descripcion?: string | null;
+  especificaciones?: string | null;
+  valor_estimado?: number | null;
+  moneda_codigo?: string | null;
+  moneda_nombre?: string | null;
+  proveedor?: string | null;
+  fecha_adquisicion?: number | null;
+}
+
+export interface FinanciamientoConEtiquetas {
+  id_financiamiento: string;
+  entidad_financiadora: string;
+  tipo_codigo?: string | null;
+  tipo_nombre?: string | null;
+  monto?: number | null;
+  moneda_codigo?: string | null;
+  moneda_nombre?: string | null;
+  fecha_inicio?: number | null;
+  fecha_fin?: number | null;
+  descripcion?: string | null;
+  estado_financiero_codigo?: string | null;
+  estado_financiero_nombre?: string | null;
+}
+
+export interface ResumenFinanciero {
+  total_financiamientos: number;
+  desglose_por_moneda: {
+    moneda_codigo: string;
+    moneda_nombre: string;
+    cantidad: number;
+    monto_total: number;
+  }[];
+  desglose_por_estado: {
+    estado_codigo: string;
+    estado_nombre: string;
+    cantidad: number;
+  }[];
+}
+
+export interface ReporteProyectoIntegral {
+  cabecera: ProyectoCabeceraReporte;
+  equipo: MiembroProyectoReporte[];
+  total_docentes: number;
+  patentes: PatenteConEtiquetas[];
+  total_patentes: number;
+  productos: ProductoConEtiquetas[];
+  total_productos: number;
+  equipamientos: EquipamientoConEtiquetas[];
+  total_equipamientos: number;
+  financiamientos: FinanciamientoConEtiquetas[];
+  total_financiamientos: number;
+  resumen_financiero: ResumenFinanciero;
+}
+
+export interface PerfilDocenteReporte {
+  id_docente: string;
+  dni: string;
+  nombres_apellidos: string;
+  nombres?: string | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+  grado_nombre: string;
+  grado_id: string;
+  renacyt_codigo_registro?: string | null;
+  renacyt_id_investigador?: string | null;
+  renacyt_nivel?: string | null;
+  renacyt_grupo?: string | null;
+  renacyt_condicion?: string | null;
+  renacyt_fecha_informe_calificacion?: number | null;
+  renacyt_fecha_registro?: number | null;
+  renacyt_fecha_ultima_revision?: number | null;
+  renacyt_orcid?: string | null;
+  renacyt_scopus_author_id?: string | null;
+  renacyt_ficha_url?: string | null;
+  renacyt_formaciones_academicas_json?: string | null;
+  grupo_nombre?: string | null;
+  grupo_id?: string | null;
+}
+
+export interface ColegaProyecto {
+  id_docente: string;
+  nombres_apellidos: string;
+  grado_nombre: string;
+  es_responsable: boolean;
+}
+
+export interface RecursosProyectoResumen {
+  patentes: number;
+  productos: number;
+  equipamientos: number;
+  financiamientos: number;
+}
+
+export interface ProyectoDocenteDetalle {
+  id_proyecto: string;
+  titulo_proyecto: string;
+  es_responsable: boolean;
+  activo: boolean;
+  campo_ocde?: string | null;
+  programas_relacionados: string[];
+  colegas: ColegaProyecto[];
+  recursos_en_proyecto: RecursosProyectoResumen;
+}
+
+export interface RecursosDocenteResumen {
+  patentes: PatenteConEtiquetas[];
+  productos: ProductoConEtiquetas[];
+  equipamientos: EquipamientoConEtiquetas[];
+  total_patentes: number;
+  total_productos: number;
+  total_equipamientos: number;
+}
+
+export interface TrazabilidadDocente {
+  updated_at?: number | null;
+  fecha_ultima_sincronizacion_renacyt?: number | null;
+  fecha_ultima_sincronizacion_pure?: number | null;
+}
+
+export interface PublicacionConEtiquetas {
+  id_publicacion: string;
+  pure_uuid: string;
+  titulo: string;
+  tipo_publicacion?: string | null;
+  doi?: string | null;
+  scopus_eid?: string | null;
+  anio_publicacion?: number | null;
+  autores_json?: string | null;
+  estado_publicacion?: string | null;
+  journal_titulo?: string | null;
+  issn?: string | null;
+  pure_sincronizado_at?: number | null;
+}
+
+export interface ReporteDocenteIntegral {
+  perfil: PerfilDocenteReporte;
+  proyectos: ProyectoDocenteDetalle[];
+  total_proyectos: number;
+  recursos: RecursosDocenteResumen;
+  publicaciones: PublicacionConEtiquetas[];
+  total_publicaciones: number;
+  trazabilidad: TrazabilidadDocente;
 }

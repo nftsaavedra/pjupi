@@ -29,9 +29,11 @@ export const DocentePublicacionesSection: React.FC<DocentePublicacionesSectionPr
     try {
       const data = await getPublicacionesDocente(docenteId);
       setPublicaciones(data);
-      setLoaded(true);
     } catch (error) {
       toast.error(getTauriErrorMessage(error));
+      setPublicaciones([]);
+    } finally {
+      setLoaded(true);
     }
   };
 

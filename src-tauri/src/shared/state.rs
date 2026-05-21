@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
 use mongodb::Database;
 use tokio::sync::RwLock;
 
 use crate::shared::config::{PureConfig, RenacytConfig, ReniecConfig};
 use crate::shared::error::AppError;
+use crate::shared::time;
 
 #[derive(Clone)]
 pub struct SessionEntry {
@@ -25,7 +25,7 @@ impl SessionStore {
     }
 
     pub async fn set_user_session(&self, window_label: &str, user_id: String) {
-        let now = Utc::now().timestamp();
+        let now = time::now_ms();
         let mut sessions = self.sessions.write().await;
         sessions.insert(
             window_label.to_string(),
@@ -44,7 +44,7 @@ impl SessionStore {
     pub async fn touch_user_session(&self, window_label: &str) {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(window_label) {
-            session.last_activity_at = Utc::now().timestamp();
+            session.last_activity_at = time::now_ms();
         }
     }
 

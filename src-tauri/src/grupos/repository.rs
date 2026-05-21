@@ -39,7 +39,7 @@ pub async fn update_grupo(db: &Database, id_grupo: &str, request: UpdateGrupoInv
                     "descripcion": request.descripcion,
                     "coordinador_id": request.coordinador_id,
                     "lineas_investigacion": request.lineas_investigacion,
-                    "updated_at": chrono::Utc::now().timestamp_millis(),
+                    "updated_at": crate::shared::time::now_ms(),
                 }
             },
         )

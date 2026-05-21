@@ -3,57 +3,11 @@ use std::collections::HashMap;
 use futures_util::TryStreamExt;
 use mongodb::{bson::doc, Database};
 use crate::shared::error::AppError;
+use crate::shared::pagination::PaginatedResult;
 use crate::docentes::models::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado};
 use crate::docentes::service::build_delete_result;
-use crate::grados::models::GradoAcademico;
-use crate::proyectos::models::Proyecto;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-struct ParticipacionRecord {
-    #[serde(rename = "_id")]
-    id: String,
-    id_proyecto: String,
-    id_docente: String,
-    #[serde(default)]
-    es_responsable: bool,
-}
-
-async fn load_grados_map(db: &Database) -> Result<HashMap<String, GradoAcademico>, AppError> {
-    let grados = db.collection::<GradoAcademico>("grados")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(grados.into_iter().map(|grado| (grado.id_grado.clone(), grado)).collect())
-}
-
-#[allow(dead_code)]
-async fn load_docentes_map(db: &Database) -> Result<HashMap<String, Docente>, AppError> {
-    let docentes = db.collection::<Docente>("docentes")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(docentes.into_iter().map(|docente| (docente.id_docente.clone(), docente)).collect())
-}
-
-async fn load_proyectos_map(db: &Database) -> Result<HashMap<String, Proyecto>, AppError> {
-    let proyectos = db.collection::<Proyecto>("proyectos")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(proyectos.into_iter().map(|proyecto| (proyecto.id_proyecto.clone(), proyecto)).collect())
-}
-
-async fn load_participaciones(db: &Database) -> Result<Vec<ParticipacionRecord>, AppError> {
-    db.collection::<ParticipacionRecord>("participaciones")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await
-        .map_err(Into::into)
-}
+use crate::shared::data_loader;
 
 pub async fn create_docente(db: &Database, request: CreateDocenteRequest) -> Result<Docente, AppError> {
     let grado_existente = db.collection::<mongodb::bson::Document>("grados")
@@ -76,6 +30,31 @@ pub async fn get_all_docentes(db: &Database) -> Result<Vec<Docente>, AppError> {
         .await?;
     docentes.sort_by(|a, b| a.nombres_apellidos.to_lowercase().cmp(&b.nombres_apellidos.to_lowercase()));
     Ok(docentes)
+}
+
+pub async fn get_all_docentes_paginated(db: &Database, page: u32, limit: u32) -> Result<PaginatedResult<Docente>, AppError> {
+    let skip = (page.saturating_sub(1) * limit) as u64;
+    let limit_i64 = limit as i64;
+    let filter = doc! { "activo": 1i64 };
+
+    let total = db.collection::<Docente>("docentes")
+        .count_documents(filter.clone())
+        .await?;
+
+    let mut cursor = db.collection::<Docente>("docentes")
+        .find(filter)
+        .sort(doc! { "nombres_apellidos": 1 })
+        .skip(skip)
+        .limit(limit_i64)
+        .await?;
+
+    let mut docentes: Vec<Docente> = Vec::new();
+    while let Some(docente) = cursor.try_next().await? {
+        docentes.push(docente);
+    }
+
+    let total_pages = ((total as f64) / (limit as f64)).ceil() as u32;
+    Ok(PaginatedResult { items: docentes, total, page, limit, total_pages })
 }
 
 pub async fn get_docente_by_dni(db: &Database, dni: &str) -> Result<Option<Docente>, AppError> {
@@ -108,9 +87,9 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
         .await?;
     docentes.sort_by(|a, b| a.nombres_apellidos.to_lowercase().cmp(&b.nombres_apellidos.to_lowercase()));
 
-    let grados = load_grados_map(db).await?;
-    let proyectos = load_proyectos_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let grados = data_loader::load_grados_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let mut proyectos_por_docente: HashMap<String, Vec<String>> = HashMap::new();
     for participacion in participaciones {
@@ -133,35 +112,7 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
                 .map(|grado| grado.nombre.clone())
                 .unwrap_or_else(|| "Sin grado".to_string());
 
-            DocenteDetalle {
-                id_docente: docente.id_docente,
-                dni: docente.dni,
-                nombres_apellidos: docente.nombres_apellidos,
-                nombres: docente.nombres,
-                apellido_paterno: docente.apellido_paterno,
-                apellido_materno: docente.apellido_materno,
-                grado,
-                cantidad_proyectos: proyectos_docente.len() as i64,
-                proyectos: if proyectos_docente.is_empty() {
-                    None
-                } else {
-                    Some(proyectos_docente.join(" | "))
-                },
-                activo: docente.activo,
-                renacyt_codigo_registro: docente.renacyt_codigo_registro,
-                renacyt_id_investigador: docente.renacyt_id_investigador,
-                renacyt_nivel: docente.renacyt_nivel,
-                renacyt_grupo: docente.renacyt_grupo,
-                renacyt_condicion: docente.renacyt_condicion,
-                renacyt_fecha_informe_calificacion: docente.renacyt_fecha_informe_calificacion,
-                renacyt_fecha_registro: docente.renacyt_fecha_registro,
-                renacyt_fecha_ultima_revision: docente.renacyt_fecha_ultima_revision,
-                renacyt_orcid: docente.renacyt_orcid,
-                renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
-                renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
-                renacyt_ficha_url: docente.renacyt_ficha_url,
-                renacyt_formaciones_academicas_json: docente.renacyt_formaciones_academicas_json,
-            }
+            DocenteDetalle::from((docente, grado, proyectos_docente))
         })
         .collect();
 
@@ -170,9 +121,9 @@ pub async fn get_all_docentes_con_proyectos(db: &Database) -> Result<Vec<Docente
 
 pub async fn get_docente_detalle_by_id(db: &Database, id_docente: &str) -> Result<DocenteDetalle, AppError> {
     let docente = get_docente_by_id(db, id_docente).await?;
-    let grados = load_grados_map(db).await?;
-    let proyectos = load_proyectos_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let grados = data_loader::load_grados_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let proyectos_docente = participaciones
         .into_iter()
@@ -187,35 +138,7 @@ pub async fn get_docente_detalle_by_id(db: &Database, id_docente: &str) -> Resul
         .map(|grado| grado.nombre.clone())
         .unwrap_or_else(|| "Sin grado".to_string());
 
-    Ok(DocenteDetalle {
-        id_docente: docente.id_docente,
-        dni: docente.dni,
-        nombres_apellidos: docente.nombres_apellidos,
-        nombres: docente.nombres,
-        apellido_paterno: docente.apellido_paterno,
-        apellido_materno: docente.apellido_materno,
-        grado,
-        cantidad_proyectos: proyectos_docente.len() as i64,
-        proyectos: if proyectos_docente.is_empty() {
-            None
-        } else {
-            Some(proyectos_docente.join(" | "))
-        },
-        activo: docente.activo,
-        renacyt_codigo_registro: docente.renacyt_codigo_registro,
-        renacyt_id_investigador: docente.renacyt_id_investigador,
-        renacyt_nivel: docente.renacyt_nivel,
-        renacyt_grupo: docente.renacyt_grupo,
-        renacyt_condicion: docente.renacyt_condicion,
-        renacyt_fecha_informe_calificacion: docente.renacyt_fecha_informe_calificacion,
-        renacyt_fecha_registro: docente.renacyt_fecha_registro,
-        renacyt_fecha_ultima_revision: docente.renacyt_fecha_ultima_revision,
-        renacyt_orcid: docente.renacyt_orcid,
-        renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
-        renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
-        renacyt_ficha_url: docente.renacyt_ficha_url,
-        renacyt_formaciones_academicas_json: docente.renacyt_formaciones_academicas_json,
-    })
+    Ok(DocenteDetalle::from((docente, grado, proyectos_docente)))
 }
 
 pub async fn delete_docente(db: &Database, id_docente: &str) -> Result<EliminarDocenteResultado, AppError> {

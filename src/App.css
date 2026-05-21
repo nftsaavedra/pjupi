@@ -1,5 +1,6 @@
 /* ==================== VARIABLES CSS ==================== */
 :root {
+  --primary: #3b82f6;
   --primary-color: #3b82f6;
   --primary-dark: #1e40af;
   --primary-light: #dbeafe;
@@ -11,6 +12,7 @@
   --text-primary: #1f2937;
   --text-secondary: #556274;
   --border-color: #e5e7eb;
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -3034,41 +3036,6 @@ select:focus-visible {
   color: var(--text-primary);
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.required {
-  color: var(--danger-color);
-  margin-left: 0.25rem;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.625rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-family: inherit;
-  transition: border-color var(--transition);
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
 .related-entity-form-actions {
   display: flex;
   gap: 1rem;
@@ -3855,5 +3822,264 @@ select:focus-visible {
 
   .project-diff-label {
     flex-basis: auto;
+  }
+}
+
+/* ==========================================================================
+   Catálogos — Panel Layout & Summary Cards
+   ========================================================================== */
+
+.catalogos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.25rem 0;
+}
+
+.catalogos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.catalogos-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.catalogos-header-title h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.15rem;
+}
+
+.catalogos-header-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 48ch;
+  line-height: 1.45;
+}
+
+/* ── Category pill strip ────────────────────────────────────────────────── */
+
+.catalogos-category-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.25rem 0;
+}
+
+.catalogos-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 100px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: var(--shadow-xs);
+  white-space: nowrap;
+}
+
+.catalogos-category-pill:hover {
+  color: var(--text-primary);
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.catalogos-category-pill.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px -6px rgba(59, 130, 246, 0.45);
+}
+
+/* ── Card grid ──────────────────────────────────────────────────────────── */
+
+.catalogos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.catalogos-grid-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.catalogo-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-xs);
+  text-align: left;
+}
+
+.catalogo-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.1);
+  border-color: #bfdbfe;
+}
+
+.catalogo-summary-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.catalogo-summary-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.catalogo-summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.catalogo-summary-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.catalogo-summary-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.catalogo-summary-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.catalogo-summary-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+
+.catalogo-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  align-items: center;
+  min-width: 3rem;
+}
+
+.catalogo-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.catalogo-stat-value.muted {
+  color: var(--text-secondary);
+}
+
+.catalogo-stat-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.catalogo-stat-divider {
+  width: 1px;
+  height: 2rem;
+  background: var(--border-color);
+}
+
+.catalogo-summary-hint {
+  font-size: 0.78rem;
+  color: var(--primary);
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s ease;
+}
+
+.catalogo-summary-card:hover .catalogo-summary-hint {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── Detail view ────────────────────────────────────────────────────────── */
+
+.catalogos-detail-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.catalogos-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 100px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  align-self: flex-start;
+}
+
+.catalogos-back-btn:hover {
+  color: var(--primary);
+  border-color: #bfdbfe;
+  background: #f8fafc;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .catalogos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogos-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

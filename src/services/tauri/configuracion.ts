@@ -1,5 +1,5 @@
 import { invoke } from './client';
-import type { EliminarGradoResultado, GradoAcademico, Usuario } from './types';
+import type { CatalogoItem, EliminarCatalogoResultado, EliminarGradoResultado, GradoAcademico, Usuario } from './types';
 
 export const getAllGrados = async (): Promise<GradoAcademico[]> => {
   return await invoke('get_all_grados');
@@ -53,4 +53,43 @@ export const desactivarUsuario = async (id_usuario: string): Promise<Usuario> =>
 
 export const reactivarUsuario = async (id_usuario: string): Promise<Usuario> => {
   return await invoke('reactivar_usuario', { idUsuario: id_usuario });
+};
+
+export const getCatalogos = async (tipo: string): Promise<CatalogoItem[]> => {
+  return await invoke('get_catalogos', { tipo });
+};
+
+export const getAllCatalogosAdmin = async (tipo: string): Promise<CatalogoItem[]> => {
+  return await invoke('get_all_catalogos_admin', { tipo });
+};
+
+export const crearCatalogo = async (request: {
+  tipo: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  orden?: number;
+}): Promise<CatalogoItem> => {
+  return await invoke('crear_catalogo', { request });
+};
+
+export const actualizarCatalogo = async (
+  id: string,
+  request: {
+    tipo: string;
+    codigo: string;
+    nombre: string;
+    descripcion?: string;
+    orden?: number;
+  },
+): Promise<CatalogoItem> => {
+  return await invoke('actualizar_catalogo', { id, request });
+};
+
+export const eliminarCatalogo = async (id: string): Promise<EliminarCatalogoResultado> => {
+  return await invoke('eliminar_catalogo', { id });
+};
+
+export const reactivarCatalogo = async (id: string): Promise<CatalogoItem> => {
+  return await invoke('reactivar_catalogo', { id });
 };

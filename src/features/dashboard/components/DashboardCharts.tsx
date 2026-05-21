@@ -5,13 +5,15 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import type { DocenteProyectosCount } from '../api';
+import type { DocenteProyectosCount, ProyectosTrendItem, RenacytDistribucionItem } from '../api';
 import { useMeasuredChart } from '../hooks/useMeasuredChart';
 import { SkeletonChart } from '@/shared/ui/Skeleton';
 
@@ -19,9 +21,15 @@ interface DashboardChartsProps {
   estadisticas: DocenteProyectosCount[];
   totalDocentes: number;
   totalProyectos: number;
+  trend: ProyectosTrendItem[];
+  renacyt: RenacytDistribucionItem[];
 }
 
-export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, totalDocentes, totalProyectos }) => {
+export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, totalDocentes, totalProyectos, trend, renacyt }) => {
+  const trendData = useMemo(() => trend.map((t) => ({
+    ...t,
+    label: `${t.mes.toString().padStart(2, '0')}/${t.anio}`,
+  })), [trend]);
   const [viewportWidth, setViewportWidth] = useState(() => (
     typeof window !== 'undefined' ? window.innerWidth : 1280
   ));
@@ -211,6 +219,47 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ estadisticas, 
             <div className="empty-state">Los docentes existen, pero todavia no tienen proyectos activos asignados.</div>
           )}
         </div>
+      </div>
+
+      {/* ── Proyectos por Año (Trend) ── */}
+      <div className="chart-container">
+        <h3 className="chart-title">Proyectos Registrados por Año y Mes</h3>
+        {trend.length > 0 ? (
+          <LineChart data={trendData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: '#64748b' }}
+              interval="preserveStartEnd"
+            />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+            <Tooltip
+              labelFormatter={(label) => `Periodo: ${label}`}
+              formatter={(value) => [`${String(value)} proyectos`, 'Cantidad']}
+            />
+            <Line type="monotone" dataKey="cantidad" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} name="Proyectos" />
+          </LineChart>
+        ) : (
+          <div className="empty-state">Sin datos de tendencia disponibles.</div>
+        )}
+      </div>
+
+      {/* ── Distribución RENACYT ── */}
+      <div className="chart-container">
+        <h3 className="chart-title">Distribución de Docentes por Nivel RENACYT</h3>
+        {renacyt.length > 0 ? (
+          <BarChart data={renacyt} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+            <CartesianGrid stroke="#dbe7f5" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="nivel" tick={{ fontSize: 12, fill: '#64748b' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+            <Tooltip />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="con_proyectos" fill="#10b981" name="Con proyectos" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="sin_proyectos" fill="#f59e0b" name="Sin proyectos" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        ) : (
+          <div className="empty-state">Sin datos de distribucion RENACYT disponibles.</div>
+        )}
       </div>
     </>
   );

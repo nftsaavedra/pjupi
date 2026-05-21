@@ -21,6 +21,7 @@ académicos, grupos de investigación, reportes). Construido con Tauri v2 + Reac
 | Bundler | Vite (Rolldown) | 8.0 |
 | Backend | Rust (edition 2021) | 1.85+ |
 | Base de datos | MongoDB Atlas | Driver 3.5 |
+| Diseño | DESIGN.md (Google format) | alpha |
 | Auth | Argon2 (password hashing) | 0.5.3 |
 | HTTP | reqwest (rustls-tls) | 0.12 |
 | Gráficos | recharts | 3.8 |
@@ -64,14 +65,17 @@ pjupi/
 │       │   ├── state.rs          #   AppState, SessionStore
 │       │   ├── config.rs         #   Carga de configuración multi-fuente
 │       │   ├── db.rs             #   Conexión MongoDB
+│       │   ├── access_control.rs #   Handlers de dominio (delega RBAC a rbac.rs)
+│       │   ├── rbac.rs           #   RBAC: roles, permisos, autorización
 │       │   ├── audit.rs          #   Auditoría de operaciones
-│       │   └── access_control.rs #   RBAC (roles, permisos, sesiones)
+│       │   ├── time.rs           #   Helper de timestamps unificado
+│       │   ├── data_loader.rs    #   Helpers compartidos de carga (load_*_map)
+│       │   ├── logging.rs        #   Structured logging via tracing
+│       │   └── external/         #   Clientes HTTP a servicios externos
+│       ├── catalogos/            # Feature: Catálogos parametrizables (tipos, estados, monedas)
 │       ├── docentes/             # Feature: Docentes
 │       ├── proyectos/            # Feature: Proyectos + Participantes
-│       ├── grados/               # Feature: Grados Académicos
-│       ├── usuarios/             # Feature: Usuarios + Auth
-│       ├── grupos/               # Feature: Grupos de Investigación
-│       ├── recursos/             # Feature: Patentes/Productos/Equipamientos/Financiamientos
+│       ├── recursos/             # Feature: Patentes/Productos/Equipamientos/Financiamientos (repo via macros)
 │       ├── reportes/             # Feature: Estadísticas + Exportación
 │       └── seguridad/            # Feature: Status de seguridad + guías
 │
@@ -84,6 +88,10 @@ pjupi/
 ---
 
 ## Principios de Arquitectura
+
+### Design System
+
+El diseño del frontend sigue el estándar [DESIGN.md](https://github.com/google-labs-code/design.md). El archivo `DESIGN.md` define tokens de diseño (colores, tipografía, espaciado, sombras, bordes) y guías de componentes. Todo cambio visual debe usar las CSS variables de `App.css` que corresponden a los tokens de DESIGN.md.
 
 ### Screaming Architecture
 La estructura de directorios **grita** lo que la aplicación HACE, no qué frameworks usa.
@@ -149,7 +157,7 @@ cargo clippy             # Linter Rust
 - **Nombres**: snake_case para funciones, CamelCase para tipos
 - **Formato**: `rustfmt.toml` (100 chars, edition 2021, group_imports)
 - **Dependencias**: Mínimas, evitar crates innecesarios
-- **Timestamps**: Usar `chrono::Utc::now()` (migrar a `jiff` en el futuro)
+- **Timestamps**: Usar `shared::time::now_ms()` (unificado, basado en `std::time`)
 
 ---
 
@@ -191,12 +199,12 @@ cargo clippy             # Linter Rust
 - `vercel-composition-patterns`: Patrones de composición React
 
 ### Testing (Pendiente)
-- Rust: `cargo test` (solo 3 tests en `config_validator.rs`)
-- Frontend: Sin tests (Vitest recomendado)
+- Rust: `cargo test` (6 tests: 2 config_validator + 4 docentes)
+- Frontend: Vitest + Testing Library (15 tests: permissions + error handling)
 - E2E: Sin tests (Playwright recomendado con Tauri)
 
 ### CI/CD (Pendiente)
-- Sin GitHub Actions configurado
+- GitHub Actions configurado (`.github/workflows/ci.yml`): lint + typecheck + test + build
 - Build scripts en `scripts/tauri-build.ps1`
 
 ---
@@ -205,14 +213,13 @@ cargo clippy             # Linter Rust
 
 | Prioridad | Ítem |
 |-----------|------|
-| 🔴 Crítico | CSP deshabilitado (`"csp": null` en tauri.conf.json) |
-| 🔴 Crítico | 0% cobertura de tests |
-| 🟡 Alto | Sin structured logging (tracing) |
-| 🟡 Alto | Sin transacciones MongoDB para operaciones multi-documento |
-| 🟡 Alto | Sin paginación en queries de lista |
-| 🟡 Alto | `pure_cmd.rs` bypassea capa de servicios |
-| 🟡 Medio | `chrono` crate con problemas de mantenimiento |
-| 🟡 Medio | TypeScript 6.0 — ecosistema inmaduro |
-| 🟡 Medio | Vite 8 Rolldown — experimental |
-| 🔵 Bajo | Archivo residual `mongo_repo_grupos.txt` |
-| 🔵 Bajo | Inconsistencia timestamps (`chrono::Utc` vs `SystemTime`) |
+| ✅ Resuelto | CSP habilitado en tauri.conf.json |
+| ✅ Resuelto | Tests: 6 Rust + 15 frontend (Vitest) |
+| ✅ Resuelto | Structured logging con tracing crate |
+| ✅ Resuelto | Sin transacciones MongoDB para operaciones multi-documento |
+| ✅ Resuelto | Sin paginación en queries de lista (tipo PaginatedResult creado, integrado en docentes) |
+| ✅ Resuelto | `pure_cmd.rs` bypassea capa de servicios → pure_service.rs creado |
+| ✅ Resuelto | `chrono` centralizado en `time.rs` y `renacyt_client.rs` |
+| ✅ Resuelto | `access_control.rs` dividido en `rbac.rs` + handlers + auditoría genérica en 11 operaciones |
+| 🟡 Bajo | Auditoría pendiente en recursos (12 operaciones) y update/reactivate de docentes/grados/proyectos |
+| 🟡 Medio | Dropdowns de recursos aún usan placeholders; integrar con catálogos (FormSelect dinámico) |

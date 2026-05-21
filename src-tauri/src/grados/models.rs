@@ -25,10 +25,7 @@ pub struct CreateGradoRequest {
 
 impl GradoAcademico {
     pub fn new(request: CreateGradoRequest) -> Self {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_millis() as i64)
-            .unwrap_or_default();
+        let now = crate::shared::time::now_ms();
         
         Self {
             id_grado: Uuid::new_v4().to_string(),

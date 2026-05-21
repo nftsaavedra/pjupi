@@ -1,6 +1,7 @@
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::shared::time;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateDocenteRenacytRequest {
@@ -105,6 +106,37 @@ pub struct DocenteDetalle {
     pub renacyt_formaciones_academicas_json: Option<String>,
 }
 
+impl From<(Docente, String, Vec<String>)> for DocenteDetalle {
+    fn from((docente, grado, proyectos): (Docente, String, Vec<String>)) -> Self {
+        let cantidad_proyectos = proyectos.len() as i64;
+        DocenteDetalle {
+            id_docente: docente.id_docente,
+            dni: docente.dni,
+            nombres_apellidos: docente.nombres_apellidos,
+            nombres: docente.nombres,
+            apellido_paterno: docente.apellido_paterno,
+            apellido_materno: docente.apellido_materno,
+            grado,
+            cantidad_proyectos,
+            proyectos: if proyectos.is_empty() { None } else { Some(proyectos.join(" | ")) },
+            activo: docente.activo,
+            renacyt_codigo_registro: docente.renacyt_codigo_registro,
+            renacyt_id_investigador: docente.renacyt_id_investigador,
+            renacyt_nivel: docente.renacyt_nivel,
+            renacyt_grupo: docente.renacyt_grupo,
+            renacyt_condicion: docente.renacyt_condicion,
+            renacyt_fecha_informe_calificacion: docente.renacyt_fecha_informe_calificacion,
+            renacyt_fecha_registro: docente.renacyt_fecha_registro,
+            renacyt_fecha_ultima_revision: docente.renacyt_fecha_ultima_revision,
+            renacyt_orcid: docente.renacyt_orcid,
+            renacyt_scopus_author_id: docente.renacyt_scopus_author_id,
+            renacyt_fecha_ultima_sincronizacion: docente.renacyt_fecha_ultima_sincronizacion,
+            renacyt_ficha_url: docente.renacyt_ficha_url,
+            renacyt_formaciones_academicas_json: docente.renacyt_formaciones_academicas_json,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReniecDniLookupResult {
     pub first_name: String,
@@ -146,7 +178,7 @@ impl Docente {
         .collect::<Vec<_>>()
         .join(" ");
         let renacyt = request.renacyt;
-        let fecha_ultima_sincronizacion = renacyt.as_ref().map(|_| Utc::now().timestamp_millis());
+        let fecha_ultima_sincronizacion = renacyt.as_ref().map(|_| time::now_ms());
 
         Self {
             id_docente: Uuid::new_v4().to_string(),
@@ -157,7 +189,7 @@ impl Docente {
             apellido_paterno: Some(apellido_paterno),
             apellido_materno,
             activo: 1,
-            updated_at: Some(Self::current_timestamp_ms()),
+            updated_at: Some(time::now_ms()),
             renacyt_codigo_registro: renacyt.as_ref().map(|value| value.codigo_registro.trim().to_string()).filter(|value| !value.is_empty()),
             renacyt_id_investigador: renacyt.as_ref().map(|value| value.id_investigador.trim().to_string()).filter(|value| !value.is_empty()),
             renacyt_nivel: renacyt.as_ref().and_then(|value| value.nivel.clone()).filter(|value| !value.trim().is_empty()),
@@ -192,7 +224,7 @@ impl Docente {
         self.renacyt_orcid = lookup.orcid.filter(|value| !value.trim().is_empty());
         self.renacyt_scopus_author_id = lookup.scopus_author_id.filter(|value| !value.trim().is_empty());
         self.renacyt_ficha_url = Some(lookup.ficha_url.trim().to_string()).filter(|value| !value.is_empty());
-        self.renacyt_fecha_ultima_sincronizacion = Some(Self::current_timestamp_ms());
+        self.renacyt_fecha_ultima_sincronizacion = Some(time::now_ms());
 
         if let Some(formaciones) = nuevas_formaciones {
             self.renacyt_formaciones_academicas_json = Some(formaciones);
@@ -201,9 +233,6 @@ impl Docente {
         tiene_nuevas_formaciones
     }
 
-    fn current_timestamp_ms() -> i64 {
-        Utc::now().timestamp_millis()
-    }
 }
 
 /// Publicación científica sincronizada desde Pure (Elsevier) por Scopus Author ID.
@@ -237,30 +266,6 @@ pub struct Publicacion {
     pub created_at: Option<i64>,
     #[serde(default)]
     pub updated_at: Option<i64>,
-}
-
-impl Publicacion {
-    #[allow(dead_code)]
-    pub fn new(pure_uuid: String, docente_id: String, titulo: String, now_ms: i64) -> Self {
-        Self {
-            id_publicacion: uuid::Uuid::new_v4().to_string(),
-            pure_uuid,
-            docente_id,
-            proyecto_id: None,
-            titulo,
-            tipo_publicacion: None,
-            doi: None,
-            scopus_eid: None,
-            anio_publicacion: None,
-            autores_json: None,
-            estado_publicacion: None,
-            journal_titulo: None,
-            issn: None,
-            pure_sincronizado_at: Some(now_ms),
-            created_at: Some(now_ms),
-            updated_at: Some(now_ms),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

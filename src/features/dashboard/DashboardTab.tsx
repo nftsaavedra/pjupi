@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { FolderOpen, RotateCcw, TrendingUp, TriangleAlert, Users } from 'lucide-react';
-import { getEstadisticasProyectosXDocente, getKpisDashboard, type DocenteProyectosCount, type KpisDashboard } from './api';
+import { getEstadisticasProyectosXDocente, getKpisDashboard, getProyectosTrend, getRenacytDistribucion, type DocenteProyectosCount, type KpisDashboard, type ProyectosTrendItem, type RenacytDistribucionItem } from './api';
 import { useRefreshToast } from '@/shared/hooks/useRefreshToast';
 import { useStableFetchData } from '@/shared/hooks/useStableFetch';
 import { AppIcon } from '@/shared/ui/AppIcon';
@@ -20,6 +20,7 @@ const DashboardChartsFallback = () => (
       <SkeletonChart titleWidth="md" height="md" />
     </div>
     <SkeletonChart titleWidth="lg" height="md" />
+    <SkeletonChart titleWidth="md" height="md" />
   </>
 );
 
@@ -37,18 +38,22 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
   } = useStableFetchData<{
     kpis: KpisDashboard | null;
     estadisticas: DocenteProyectosCount[];
+    trend: ProyectosTrendItem[];
+    renacyt: RenacytDistribucionItem[];
   }>(
     async () => {
-      const [kpisRes, estadisticasRes] = await Promise.all([
+      const [kpisRes, estadisticasRes, trendRes, renacytRes] = await Promise.all([
         getKpisDashboard(),
         getEstadisticasProyectosXDocente(),
+        getProyectosTrend(),
+        getRenacytDistribucion(),
       ]);
 
-      return { kpis: kpisRes, estadisticas: estadisticasRes };
+      return { kpis: kpisRes, estadisticas: estadisticasRes, trend: trendRes, renacyt: renacytRes };
     },
     refreshTrigger,
     'Error al cargar datos del dashboard',
-    { kpis: null, estadisticas: [] },
+    { kpis: null, estadisticas: [], trend: [], renacyt: [] },
   );
 
   useRefreshToast({
@@ -58,7 +63,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
     cooldownMs: 120000,
   });
 
-  const { kpis, estadisticas } = dashboardData;
+  const { kpis, estadisticas, trend, renacyt } = dashboardData;
   const totalDocentes = kpis?.total_docentes ?? 0;
   const totalProyectos = kpis?.total_proyectos ?? 0;
   const docentesConProyectos = estadisticas.filter((docente) => docente.cantidad > 0).length;
@@ -115,6 +120,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ refreshTrigger = 0 }
               estadisticas={estadisticas}
               totalDocentes={totalDocentes}
               totalProyectos={totalProyectos}
+              trend={trend}
+              renacyt={renacyt}
             />
           </Suspense>
 

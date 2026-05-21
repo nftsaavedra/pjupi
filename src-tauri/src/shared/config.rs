@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     env,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use serde::Deserialize;
@@ -40,8 +40,6 @@ pub struct RuntimeConfig {
     pub reniec: ReniecConfig,
     pub renacyt: RenacytConfig,
     pub pure: PureConfig,
-    #[allow(dead_code)]
-    pub user_config_path: PathBuf,
 }
 
 impl DatabaseConfig {
@@ -169,7 +167,6 @@ pub fn load_runtime_config(user_config_path: &Path, bundled_default_env_path: Op
         reniec: ReniecConfig::from_values(&values),
         renacyt: RenacytConfig::from_values(&values),
         pure: PureConfig::from_values(&values),
-        user_config_path: user_config_path.to_path_buf(),
     })
 }
 

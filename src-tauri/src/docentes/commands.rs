@@ -1,8 +1,9 @@
 use tauri::{State, Window};
 use crate::docentes::models::{CreateDocenteRequest, Docente, DocenteDetalle, EliminarDocenteResultado, RefreshDocenteRenacytFormacionResultado, RenacytLookupResult, ReniecDniLookupResult};
 use crate::shared::error::AppError;
-use crate::infrastructure::renacyt_client;
-use crate::infrastructure::reniec_client;
+use crate::shared::pagination::PaginatedResult;
+use crate::shared::external::renacyt_client;
+use crate::shared::external::reniec_client;
 use crate::shared::state::AppState;
 use crate::shared::access_control;
 
@@ -21,6 +22,16 @@ pub async fn get_all_docentes(
     state: State<'_, AppState>,
 ) -> Result<Vec<Docente>, AppError> {
     access_control::get_all_docentes(&state, window.label()).await
+}
+
+#[tauri::command]
+pub async fn get_all_docentes_paginated(
+    window: Window,
+    state: State<'_, AppState>,
+    page: u32,
+    limit: u32,
+) -> Result<PaginatedResult<Docente>, AppError> {
+    access_control::get_all_docentes_paginated(&state, window.label(), page, limit).await
 }
 
 #[tauri::command]

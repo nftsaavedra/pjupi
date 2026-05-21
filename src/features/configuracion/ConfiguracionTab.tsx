@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { GraduationCap, Users } from 'lucide-react';
+import { GraduationCap, LibraryBig, Users } from 'lucide-react';
 import type { Usuario } from '../auth/api';
+import { hasPermission } from '@/shared/auth/permissions';
 import { AppIcon } from '@/shared/ui/AppIcon';
 import { SkeletonBlock, SkeletonTable } from '@/shared/ui/Skeleton';
 
@@ -9,12 +10,17 @@ const GradosTab = lazy(async () => {
   return { default: module.GradosTab };
 });
 
+const CatalogosPanel = lazy(async () => {
+  const module = await import('./catalogos/CatalogosPanel');
+  return { default: module.CatalogosPanel };
+});
+
 const UsuariosTab = lazy(async () => {
   const module = await import('./usuarios/UsuariosTab');
   return { default: module.UsuariosTab };
 });
 
-type ConfigSection = 'grados' | 'usuarios';
+type ConfigSection = 'grados' | 'catalogos' | 'usuarios';
 
 interface ConfiguracionTabProps {
   currentUser: Usuario | null;
@@ -40,10 +46,12 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<ConfigSection>(isAdmin ? 'usuarios' : 'grados');
   const panelId = `config-panel-${activeSection}`;
+  const canManageCatalogos = hasPermission(currentUser?.rol, 'grados.manage');
   const effectiveSection = useMemo(() => {
     if (!isAdmin && activeSection === 'usuarios') return 'grados';
+    if (!canManageCatalogos && activeSection === 'catalogos') return 'grados';
     return activeSection;
-  }, [activeSection, isAdmin]);
+  }, [activeSection, canManageCatalogos, isAdmin]);
 
   const sections = [
     {
@@ -52,6 +60,16 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
       icon: GraduationCap,
       description: 'Catálogo académico base para el sistema.',
     },
+    ...(canManageCatalogos
+      ? [
+          {
+            id: 'catalogos' as const,
+            label: 'Catálogos',
+            icon: LibraryBig,
+            description: 'Tipos de patentes, productos, financiamiento y monedas.',
+          },
+        ]
+      : []),
     ...(isAdmin
       ? [
           {
@@ -102,6 +120,10 @@ export const ConfiguracionTab: React.FC<ConfiguracionTabProps> = ({
             <Suspense fallback={<ConfigSectionFallback />}>
               {effectiveSection === 'grados' && (
                 currentUser ? <GradosTab onGradoModified={onDataModified} refreshTrigger={refreshTrigger} /> : null
+              )}
+
+              {effectiveSection === 'catalogos' && canManageCatalogos && (
+                <CatalogosPanel currentUser={currentUser} onDataModified={onDataModified} refreshTrigger={refreshTrigger} />
               )}
 
               {effectiveSection === 'usuarios' && isAdmin && (

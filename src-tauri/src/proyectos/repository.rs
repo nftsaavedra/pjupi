@@ -13,23 +13,24 @@ use crate::proyectos::models::{
     EliminarProyectoResultado,
     DocenteProyectosCount,
     KpisDashboard,
+    ProyectosTrendItem,
+    RenacytDistribucionItem,
     ExportData,
     ExportDataConProjectos,
+    ExportDataGrupo,
+    ExportDataRecurso,
+    ExportDataDocentePerfil,
+    ExportDataProyectoArea,
 };
 use crate::proyectos::service;
-use crate::docentes::models::Docente;
+use crate::docentes::models::{Docente, Publicacion};
 use crate::docentes::repository as docentes_repo;
-use crate::grados::models::GradoAcademico;
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-struct ParticipacionRecord {
-    #[serde(rename = "_id")]
-    id: String,
-    id_proyecto: String,
-    id_docente: String,
-    #[serde(default)]
-    es_responsable: bool,
-}
+use crate::proyectos::models::ParticipacionRecord;
+use crate::shared::data_loader;
+use crate::recursos::repository as recursos_repo;
+use crate::recursos::models::{Patente, Producto, Equipamiento, Financiamiento};
+use crate::grupos::models::GrupoInvestigacion;
+use crate::catalogos::models::CatalogoItem;
 
 async fn validate_docentes_activos(db: &Database, docentes_ids: &[String]) -> Result<(), AppError> {
     let docentes_activos = db.collection::<Docente>("docentes")
@@ -47,60 +48,42 @@ async fn validate_docentes_activos(db: &Database, docentes_ids: &[String]) -> Re
     Ok(())
 }
 
-async fn load_grados_map(db: &Database) -> Result<HashMap<String, GradoAcademico>, AppError> {
-    let grados = db.collection::<GradoAcademico>("grados")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(grados.into_iter().map(|grado| (grado.id_grado.clone(), grado)).collect())
-}
-
-async fn load_docentes_map(db: &Database) -> Result<HashMap<String, Docente>, AppError> {
-    let docentes = db.collection::<Docente>("docentes")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(docentes.into_iter().map(|docente| (docente.id_docente.clone(), docente)).collect())
-}
-
-async fn load_proyectos_map(db: &Database) -> Result<HashMap<String, Proyecto>, AppError> {
-    let proyectos = db.collection::<Proyecto>("proyectos")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
-    Ok(proyectos.into_iter().map(|proyecto| (proyecto.id_proyecto.clone(), proyecto)).collect())
-}
-
-async fn load_participaciones(db: &Database) -> Result<Vec<ParticipacionRecord>, AppError> {
-    db.collection::<ParticipacionRecord>("participaciones")
-        .find(doc! {})
-        .await?
-        .try_collect::<Vec<_>>()
-        .await
-        .map_err(Into::into)
-}
 
 pub async fn create_proyecto_con_participantes(db: &Database, request: CreateProyectoConParticipantesRequest) -> Result<Proyecto, AppError> {
     let prepared = service::prepare_create_input(request)?;
     validate_docentes_activos(db, &prepared.docentes_ids).await?;
 
-    let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: prepared.titulo_proyecto });
-    db.collection::<Proyecto>("proyectos").insert_one(&proyecto).await?;
+    let mut session = db.client().start_session().await?;
+    session.start_transaction().await?;
 
-    let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
-    for docente_id in prepared.docentes_ids {
-        participaciones_collection.insert_one(ParticipacionRecord {
-            id: format!("{}:{}", proyecto.id_proyecto, docente_id),
-            id_proyecto: proyecto.id_proyecto.clone(),
-            es_responsable: prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str()),
-            id_docente: docente_id,
-        }).await?;
+    let result = async {
+        let proyecto = Proyecto::new(CreateProyectoRequest { titulo_proyecto: prepared.titulo_proyecto });
+        db.collection::<Proyecto>("proyectos")
+            .insert_one(&proyecto)
+            .session(&mut session)
+            .await?;
+
+        let participaciones_collection = db.collection::<ParticipacionRecord>("participaciones");
+        for docente_id in prepared.docentes_ids {
+            participaciones_collection.insert_one(ParticipacionRecord {
+                id: format!("{}:{}", proyecto.id_proyecto, docente_id),
+                id_proyecto: proyecto.id_proyecto.clone(),
+                es_responsable: prepared.docente_responsable_id.as_deref() == Some(docente_id.as_str()),
+                id_docente: docente_id,
+            }).session(&mut session).await?;
+        }
+
+        session.commit_transaction().await?;
+        Ok(proyecto)
+    }.await;
+
+    match result {
+        Ok(proyecto) => Ok(proyecto),
+        Err(error) => {
+            let _ = session.abort_transaction().await;
+            Err(error)
+        }
     }
-
-    Ok(proyecto)
 }
 
 pub async fn update_proyecto_con_participantes(
@@ -175,9 +158,9 @@ pub async fn get_all_proyectos_detalle(db: &Database) -> Result<Vec<ProyectoDeta
         .await?;
     proyectos.sort_by(|a, b| a.titulo_proyecto.to_lowercase().cmp(&b.titulo_proyecto.to_lowercase()));
 
-    let docentes = load_docentes_map(db).await?;
-    let grados = load_grados_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let docentes = data_loader::load_docentes_map(db).await?;
+    let grados = data_loader::load_grados_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let mut docentes_por_proyecto: HashMap<String, Vec<String>> = HashMap::new();
     let mut participantes_por_proyecto: HashMap<String, Vec<ProyectoParticipanteResumen>> = HashMap::new();
@@ -270,6 +253,11 @@ pub async fn eliminar_proyecto(db: &Database, id_proyecto: &str) -> Result<Elimi
         ));
     }
 
+    recursos_repo::delete_patentes_by_proyecto(db, id_proyecto).await?;
+    recursos_repo::delete_productos_by_proyecto(db, id_proyecto).await?;
+    recursos_repo::delete_equipamientos_by_proyecto(db, id_proyecto).await?;
+    recursos_repo::delete_financiamientos_by_proyecto(db, id_proyecto).await?;
+
     db.collection::<mongodb::bson::Document>("proyectos")
         .update_one(doc! { "id_proyecto": id_proyecto }, doc! { "$set": { "activo": 0i64 } })
         .await?;
@@ -293,8 +281,8 @@ pub async fn reactivar_proyecto(db: &Database, id_proyecto: &str) -> Result<Proy
 
 pub async fn get_estadisticas_proyectos_x_docente(db: &Database) -> Result<Vec<DocenteProyectosCount>, AppError> {
     let docentes = docentes_repo::get_all_docentes(db).await?;
-    let proyectos = load_proyectos_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let mut activos_por_docente: HashMap<String, i64> = docentes
         .iter()
@@ -341,10 +329,10 @@ pub async fn get_kpis_dashboard(db: &Database) -> Result<KpisDashboard, AppError
 }
 
 pub async fn get_data_exportacion_plana(db: &Database) -> Result<Vec<ExportData>, AppError> {
-    let grados = load_grados_map(db).await?;
-    let docentes = load_docentes_map(db).await?;
-    let proyectos = load_proyectos_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let grados = data_loader::load_grados_map(db).await?;
+    let docentes = data_loader::load_docentes_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let mut data = Vec::new();
     for participacion in participaciones {
@@ -380,10 +368,11 @@ pub async fn get_data_exportacion_plana(db: &Database) -> Result<Vec<ExportData>
 }
 
 pub async fn get_data_exportacion_agrupada_docente(db: &Database) -> Result<Vec<ExportDataConProjectos>, AppError> {
-    let grados = load_grados_map(db).await?;
+    let grados = data_loader::load_grados_map(db).await?;
+    let grupos = data_loader::load_grupos_map(db).await?;
     let docentes_activos = docentes_repo::get_all_docentes(db).await?;
-    let proyectos = load_proyectos_map(db).await?;
-    let participaciones = load_participaciones(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
 
     let docentes_ids: HashSet<String> = docentes_activos.iter().map(|docente| docente.id_docente.clone()).collect();
     let mut proyectos_por_docente: HashMap<String, Vec<String>> = HashMap::new();
@@ -417,6 +406,11 @@ pub async fn get_data_exportacion_agrupada_docente(db: &Database) -> Result<Vec<
                     .renacyt_nivel
                     .filter(|value| !value.trim().is_empty())
                     .unwrap_or_else(|| "No registrado".to_string()),
+                grupo_investigacion: docente
+                    .grupo_investigacion_id
+                    .as_ref()
+                    .and_then(|gid| grupos.get(gid))
+                    .map(|g| g.nombre.clone()),
                 cantidad_proyectos: proyectos_docente.len() as i64,
                 proyectos: if proyectos_docente.is_empty() {
                     None
@@ -429,4 +423,373 @@ pub async fn get_data_exportacion_agrupada_docente(db: &Database) -> Result<Vec<
 
     data.sort_by(|a, b| a.docente.cmp(&b.docente));
     Ok(data)
+}
+
+pub async fn get_data_exportacion_grupos(db: &Database) -> Result<Vec<ExportDataGrupo>, AppError> {
+    let docentes = data_loader::load_docentes_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
+
+    let grupos = db.collection::<GrupoInvestigacion>("grupos_investigacion")
+        .find(doc! { "activo": 1i64 })
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let mut proyectos_por_docente: HashMap<String, HashSet<String>> = HashMap::new();
+    for p in &participaciones {
+        proyectos_por_docente
+            .entry(p.id_docente.clone())
+            .or_default()
+            .insert(p.id_proyecto.clone());
+    }
+
+    let mut data = Vec::new();
+    for grupo in grupos {
+        let miembros: Vec<&Docente> = docentes
+            .values()
+            .filter(|d| d.grupo_investigacion_id.as_deref() == Some(&grupo.id_grupo))
+            .collect();
+
+        let miembros_nombres: Vec<String> = miembros
+            .iter()
+            .map(|d| d.nombres_apellidos.clone())
+            .collect();
+
+        let coordinador = grupo.coordinador_id.as_ref().and_then(|cid| {
+            docentes.get(cid).map(|d| d.nombres_apellidos.clone())
+        });
+
+        let mut all_proyecto_ids = HashSet::new();
+        for m in &miembros {
+            if let Some(proj_ids) = proyectos_por_docente.get(&m.id_docente) {
+                for pid in proj_ids {
+                    all_proyecto_ids.insert(pid.clone());
+                }
+            }
+        }
+
+        let mut proyecto_titles: Vec<String> = all_proyecto_ids
+            .iter()
+            .filter_map(|pid| proyectos.get(pid))
+            .filter(|p| p.activo == 1)
+            .map(|p| p.titulo_proyecto.clone())
+            .collect();
+        proyecto_titles.sort();
+
+        data.push(ExportDataGrupo {
+            grupo: grupo.nombre.clone(),
+            descripcion: grupo.descripcion.clone(),
+            coordinador,
+            cantidad_miembros: miembros.len() as i64,
+            miembros: if miembros_nombres.is_empty() { None } else { Some(miembros_nombres.join(" | ")) },
+            lineas_investigacion: grupo.lineas_investigacion.clone(),
+            cantidad_proyectos: proyecto_titles.len() as i64,
+            proyectos: if proyecto_titles.is_empty() { None } else { Some(proyecto_titles.join(" | ")) },
+        });
+    }
+
+    data.sort_by(|a, b| a.grupo.cmp(&b.grupo));
+    Ok(data)
+}
+
+pub async fn get_data_exportacion_recursos(db: &Database) -> Result<Vec<ExportDataRecurso>, AppError> {
+    let catalogo_map = data_loader::load_catalogos_map(db).await?;
+    let docentes = data_loader::load_docentes_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+
+    let patentes = db.collection::<Patente>("patentes")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let productos = db.collection::<Producto>("productos")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let equipamientos = db.collection::<Equipamiento>("equipamientos")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let financiamientos = db.collection::<Financiamiento>("financiamientos")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    fn resolve_label(catalogo_map: &HashMap<(String, String), CatalogoItem>, tipo_catalogo: &str, codigo: &Option<String>) -> Option<String> {
+        codigo.as_ref().and_then(|c| catalogo_map.get(&(tipo_catalogo.to_string(), c.clone())).map(|i| i.nombre.clone()))
+    }
+
+    fn resolve_proyecto(proyectos: &HashMap<String, Proyecto>, proyecto_id: &Option<String>) -> Option<String> {
+        proyecto_id.as_ref().and_then(|pid| proyectos.get(pid).map(|p| p.titulo_proyecto.clone()))
+    }
+
+    fn resolve_docente(docentes: &HashMap<String, Docente>, docente_id: &Option<String>) -> Option<String> {
+        docente_id.as_ref().and_then(|did| docentes.get(did).map(|d| d.nombres_apellidos.clone()))
+    }
+
+    let mut data = Vec::new();
+
+    for p in patentes {
+        data.push(ExportDataRecurso {
+            tipo_recurso: "Patente".to_string(),
+            titulo_o_nombre: p.titulo.clone(),
+            proyecto: resolve_proyecto(&proyectos, &p.proyecto_id),
+            docente: resolve_docente(&docentes, &p.docente_id),
+            tipo: resolve_label(&catalogo_map, "tipo_patente", &p.tipo),
+            estado: resolve_label(&catalogo_map, "estado_patente", &p.estado),
+            moneda: None,
+            monto: None,
+        });
+    }
+
+    for p in productos {
+        data.push(ExportDataRecurso {
+            tipo_recurso: "Producto".to_string(),
+            titulo_o_nombre: p.nombre.clone(),
+            proyecto: resolve_proyecto(&proyectos, &p.proyecto_id),
+            docente: resolve_docente(&docentes, &p.docente_id),
+            tipo: resolve_label(&catalogo_map, "tipo_producto", &p.tipo),
+            estado: resolve_label(&catalogo_map, "etapa_producto", &p.etapa),
+            moneda: None,
+            monto: None,
+        });
+    }
+
+    for e in equipamientos {
+        data.push(ExportDataRecurso {
+            tipo_recurso: "Equipamiento".to_string(),
+            titulo_o_nombre: e.nombre.clone(),
+            proyecto: resolve_proyecto(&proyectos, &e.proyecto_id),
+            docente: None,
+            tipo: None,
+            estado: None,
+            moneda: resolve_label(&catalogo_map, "moneda", &e.moneda),
+            monto: e.valor_estimado,
+        });
+    }
+
+    for f in financiamientos {
+        data.push(ExportDataRecurso {
+            tipo_recurso: "Financiamiento".to_string(),
+            titulo_o_nombre: f.entidad_financiadora.clone(),
+            proyecto: resolve_proyecto(&proyectos, &f.proyecto_id),
+            docente: None,
+            tipo: resolve_label(&catalogo_map, "tipo_financiamiento", &f.tipo),
+            estado: resolve_label(&catalogo_map, "estado_financiero", &f.estado_financiero),
+            moneda: resolve_label(&catalogo_map, "moneda", &f.moneda),
+            monto: f.monto,
+        });
+    }
+
+    data.sort_by(|a, b| a.tipo_recurso.cmp(&b.tipo_recurso).then_with(|| a.titulo_o_nombre.to_lowercase().cmp(&b.titulo_o_nombre.to_lowercase())));
+    Ok(data)
+}
+
+pub async fn get_data_exportacion_docentes_perfil(db: &Database) -> Result<Vec<ExportDataDocentePerfil>, AppError> {
+    let grados = data_loader::load_grados_map(db).await?;
+    let grupos = data_loader::load_grupos_map(db).await?;
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
+
+    let mut docentes = db.collection::<Docente>("docentes")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    docentes.sort_by(|a, b| a.nombres_apellidos.to_lowercase().cmp(&b.nombres_apellidos.to_lowercase()));
+
+    let mut proyectos_por_docente: HashMap<String, Vec<String>> = HashMap::new();
+    for p in &participaciones {
+        proyectos_por_docente
+            .entry(p.id_docente.clone())
+            .or_default()
+            .push(p.id_proyecto.clone());
+    }
+
+    let publicaciones = db.collection::<Publicacion>("publicaciones")
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    let mut publicaciones_por_docente: HashMap<String, i64> = HashMap::new();
+    for pub_item in &publicaciones {
+        *publicaciones_por_docente.entry(pub_item.docente_id.clone()).or_default() += 1;
+    }
+
+    let mut data = Vec::new();
+    for docente in docentes {
+        let grado = grados
+            .get(&docente.id_grado)
+            .map(|g| g.nombre.clone())
+            .unwrap_or_else(|| "Sin grado".to_string());
+
+        let grupo_nombre = docente
+            .grupo_investigacion_id
+            .as_ref()
+            .and_then(|gid| grupos.get(gid))
+            .map(|g| g.nombre.clone());
+
+        let proj_ids = proyectos_por_docente.get(&docente.id_docente);
+        let mut proyecto_titles: Vec<String> = proj_ids
+            .map(|ids| {
+                ids.iter()
+                    .filter_map(|pid| proyectos.get(pid))
+                    .filter(|p| p.activo == 1)
+                    .map(|p| p.titulo_proyecto.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        proyecto_titles.sort();
+        let cantidad_proyectos = proyecto_titles.len() as i64;
+
+        let cantidad_publicaciones = publicaciones_por_docente.get(&docente.id_docente).copied().unwrap_or(0);
+
+        data.push(ExportDataDocentePerfil {
+            dni: docente.dni.clone(),
+            nombres_apellidos: docente.nombres_apellidos.clone(),
+            grado,
+            renacyt_nivel: docente.renacyt_nivel.clone(),
+            renacyt_grupo: docente.renacyt_grupo.clone(),
+            renacyt_condicion: docente.renacyt_condicion.clone(),
+            renacyt_orcid: docente.renacyt_orcid.clone(),
+            grupo_investigacion: grupo_nombre,
+            cantidad_proyectos,
+            cantidad_publicaciones,
+            proyectos: if proyecto_titles.is_empty() { None } else { Some(proyecto_titles.join(" | ")) },
+            activo: docente.activo == 1,
+        });
+    }
+
+    Ok(data)
+}
+
+pub async fn get_data_exportacion_proyectos_area(db: &Database) -> Result<Vec<ExportDataProyectoArea>, AppError> {
+    let mut proyectos = db.collection::<Proyecto>("proyectos")
+        .find(doc! { "activo": 1i64 })
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+    proyectos.sort_by(|a, b| a.titulo_proyecto.to_lowercase().cmp(&b.titulo_proyecto.to_lowercase()));
+
+    let participaciones = data_loader::load_participaciones(db).await?;
+
+    let mut docentes_por_proyecto: HashMap<String, HashSet<String>> = HashMap::new();
+    for p in &participaciones {
+        docentes_por_proyecto
+            .entry(p.id_proyecto.clone())
+            .or_default()
+            .insert(p.id_docente.clone());
+    }
+
+    let mut areas: HashMap<String, (Vec<String>, HashSet<String>)> = HashMap::new();
+    for proyecto in proyectos {
+        let area_key = proyecto.campo_ocde.clone().unwrap_or_else(|| "Sin area OCDE".to_string());
+        let entry = areas.entry(area_key).or_default();
+        entry.0.push(proyecto.titulo_proyecto.clone());
+        if let Some(docentes_set) = docentes_por_proyecto.get(&proyecto.id_proyecto) {
+            for did in docentes_set {
+                entry.1.insert(did.clone());
+            }
+        }
+    }
+
+    let mut data: Vec<ExportDataProyectoArea> = areas
+        .into_iter()
+        .map(|(area, (proyectos_list, docentes_set))| {
+            ExportDataProyectoArea {
+                area,
+                cantidad_proyectos: proyectos_list.len() as i64,
+                proyectos: if proyectos_list.is_empty() { None } else { Some(proyectos_list.join(" | ")) },
+                cantidad_docentes: docentes_set.len() as i64,
+            }
+        })
+        .collect();
+
+    data.sort_by(|a, b| a.area.cmp(&b.area));
+    Ok(data)
+}
+
+pub async fn get_proyectos_trend(db: &Database) -> Result<Vec<ProyectosTrendItem>, AppError> {
+    let proyectos = db.collection::<Proyecto>("proyectos")
+        .find(doc! { "activo": 1i64 })
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let mut trend: HashMap<(i32, u32), i64> = HashMap::new();
+
+    for proj in &proyectos {
+        let millis = proj.updated_at.unwrap_or(0);
+        if millis == 0 {
+            continue;
+        }
+        let total_months = millis / 2_628_000_000;
+        let year = 1970 + (total_months / 12) as i32;
+        let month = ((total_months % 12) + 1) as u32;
+        if month > 12 {
+            continue;
+        }
+        *trend.entry((year, month)).or_default() += 1;
+    }
+
+    let mut items: Vec<ProyectosTrendItem> = trend
+        .into_iter()
+        .map(|((anio, mes), cantidad)| ProyectosTrendItem { anio, mes, cantidad })
+        .collect();
+    items.sort_by(|a, b| a.anio.cmp(&b.anio).then_with(|| a.mes.cmp(&b.mes)));
+    Ok(items)
+}
+
+pub async fn get_renacyt_distribucion(db: &Database) -> Result<Vec<RenacytDistribucionItem>, AppError> {
+    let docentes = db.collection::<Docente>("docentes")
+        .find(doc! { "activo": 1i64 })
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let proyectos = data_loader::load_proyectos_map(db).await?;
+    let participaciones = data_loader::load_participaciones(db).await?;
+
+    let mut docentes_con_proyectos: HashSet<String> = HashSet::new();
+    for p in &participaciones {
+        if let Some(proj) = proyectos.get(&p.id_proyecto) {
+            if proj.activo == 1 {
+                docentes_con_proyectos.insert(p.id_docente.clone());
+            }
+        }
+    }
+
+    let mut grupos: HashMap<String, RenacytDistribucionItem> = HashMap::new();
+    for docente in &docentes {
+        let nivel = docente
+            .renacyt_nivel
+            .as_deref()
+            .filter(|v| !v.trim().is_empty())
+            .unwrap_or("No registrado")
+            .to_string();
+
+        let entry = grupos.entry(nivel.clone()).or_insert(RenacytDistribucionItem {
+            nivel,
+            cantidad_docentes: 0,
+            con_proyectos: 0,
+            sin_proyectos: 0,
+        });
+        entry.cantidad_docentes += 1;
+        if docentes_con_proyectos.contains(&docente.id_docente) {
+            entry.con_proyectos += 1;
+        } else {
+            entry.sin_proyectos += 1;
+        }
+    }
+
+    let mut items: Vec<RenacytDistribucionItem> = grupos.into_values().collect();
+    items.sort_by(|a, b| a.nivel.to_lowercase().cmp(&b.nivel.to_lowercase()));
+    Ok(items)
 }

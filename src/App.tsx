@@ -1,95 +1,20 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, FileSpreadsheet, FolderOpen, GraduationCap, LayoutDashboard, LogOut, Settings2, Users } from 'lucide-react';
 import { AppIcon } from './shared/ui/AppIcon';
-import { getAuthStatus, getCurrentSession, logoutUsuario, type Usuario } from './features/auth/api';
-import { AuthScreen } from './features/auth/AuthScreen';
-import { SkeletonBlock, SkeletonChart, SkeletonKpiGrid, SkeletonTable } from './shared/ui/Skeleton';
+import { type Usuario } from './features/auth/api';
+import { SkeletonBlock } from './shared/ui/Skeleton';
 import { ToastContainer } from './shared/feedback/ToastContainer';
 import { TabNavigation, type Tab } from './shared/navigation/TabNavigation';
 import { getRoleLabel, hasPermission } from './shared/auth/permissions';
-import { toast } from './services/toast';
+import { AuthShell } from './app/AuthShell';
+import { TabRenderers } from './app/TabRenderers';
+import { useAuth } from './app/hooks/useAuth';
+import { useAutoRefresh } from './app/hooks/useAutoRefresh';
 import './App.css';
-
-const DashboardTab = lazy(async () => {
-  const module = await import('./features/dashboard/DashboardTab');
-  return { default: module.DashboardTab };
-});
-
-const ProyectosTab = lazy(async () => {
-  const module = await import('./features/proyectos/ProyectosTab');
-  return { default: module.ProyectosTab };
-});
-
-const GruposTab = lazy(async () => {
-  const module = await import('./features/grupos/GruposTab');
-  return { default: module.GruposTab };
-});
-
-const DocenteCreateModal = lazy(async () => {
-  const module = await import('./features/docentes/components/DocenteCreateModal');
-  return { default: module.DocenteCreateModal };
-});
-
-const DocentesTable = lazy(async () => {
-  const module = await import('./features/docentes/components/DocentesTable');
-  return { default: module.DocentesTable };
-});
-
-const ReportesTab = lazy(async () => {
-  const module = await import('./features/reportes/ReportesTab');
-  return { default: module.ReportesTab };
-});
-
-const ConfiguracionTab = lazy(async () => {
-  const module = await import('./features/configuracion/ConfiguracionTab');
-  return { default: module.ConfiguracionTab };
-});
-
-const DashboardFallback = () => (
-  <div className="tab-panel">
-    <SkeletonKpiGrid />
-    <SkeletonChart titleWidth="md" height="lg" />
-    <div className="two-col-charts">
-      <SkeletonChart titleWidth="md" height="md" />
-      <SkeletonChart titleWidth="md" height="md" />
-    </div>
-  </div>
-);
-
-const FormAndTableFallback = ({ columns }: { columns: number }) => (
-  <div className="tab-panel">
-    <div className="form-card" aria-hidden="true">
-      <SkeletonBlock className="skeleton skeleton-line skeleton-title-md" />
-      <div className="form auth-loading-form">
-        <SkeletonBlock className="skeleton skeleton-line skeleton-line-soft" />
-        <SkeletonBlock className="skeleton skeleton-input" />
-        <SkeletonBlock className="skeleton skeleton-line skeleton-line-soft" />
-        <SkeletonBlock className="skeleton skeleton-input" />
-        <SkeletonBlock className="skeleton skeleton-button" />
-      </div>
-    </div>
-    <div className="table-container">
-      <SkeletonBlock className="skeleton skeleton-line skeleton-title-md" />
-      <SkeletonTable columns={columns} rows={6} />
-    </div>
-  </div>
-);
-
-const TableOnlyFallback = ({ columns }: { columns: number }) => (
-  <div className="tab-panel">
-    <div className="table-container">
-      <SkeletonBlock className="skeleton skeleton-line skeleton-title-md" />
-      <SkeletonTable columns={columns} rows={6} />
-    </div>
-  </div>
-);
 
 function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [requiresSetup, setRequiresSetup] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const savedValue = window.localStorage.getItem('pjupi.sidebarCollapsed');
     if (savedValue === 'true' || savedValue === 'false') {
@@ -98,6 +23,31 @@ function App() {
     return window.innerWidth <= 1360 && window.innerWidth > 1024;
   });
   const [docenteFormOpen, setDocenteFormOpen] = useState(false);
+
+  const handleDataModified = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
+
+  const {
+    authLoading,
+    requiresSetup,
+    currentUser,
+    handleAuthenticated: baseHandleAuth,
+    handleLogout: baseHandleLogout,
+  } = useAuth();
+
+  useAutoRefresh(currentUser, handleDataModified);
+
+  const handleAuthenticated = (usuario: Usuario) => {
+    baseHandleAuth(usuario);
+    handleDataModified();
+  };
+
+  const handleLogout = async () => {
+    await baseHandleLogout();
+    setActiveTab('dashboard');
+  };
+
   const currentRole = currentUser?.rol ?? null;
 
   const tabs: Tab[] = useMemo(() => [
@@ -108,6 +58,7 @@ function App() {
     ...(hasPermission(currentRole, 'reportes.view') ? [{ id: 'reportes', label: 'Reportes', icon: FileSpreadsheet, description: 'Vista previa y exportación' }] : []),
     ...(hasPermission(currentRole, 'configuracion.view') ? [{ id: 'configuracion', label: 'Configuración', icon: Settings2, description: 'Accesos y catálogos' }] : []),
   ], [currentRole]);
+
   const tabHeaderMeta: Record<string, { kicker: string; title: string; subtitle: string }> = {
     dashboard: {
       kicker: 'Indicadores clave',
@@ -140,41 +91,13 @@ function App() {
       subtitle: 'Accesos y catálogos del sistema.',
     },
   };
+
+  const validActiveTab = (!currentUser || tabs.length === 0 || tabs.some((tab) => tab.id === activeTab))
+    ? activeTab
+    : tabs[0].id;
+
   const activeTabMeta = tabs.find((tab) => tab.id === validActiveTab) ?? tabs[0];
   const activeHeaderMeta = tabHeaderMeta[activeTabMeta.id] ?? tabHeaderMeta.dashboard;
-
-  const handleDataModified = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const cargarAuthStatus = async () => {
-    try {
-      const [status, session] = await Promise.all([getAuthStatus(), getCurrentSession()]);
-      setRequiresSetup(status.requires_setup);
-      setCurrentUser(session);
-    } catch (error) {
-      toast.error(String(error));
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleAuthenticated = (usuario: Usuario) => {
-    setCurrentUser(usuario);
-    setRequiresSetup(false);
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logoutUsuario();
-    } catch (error) {
-      toast.error(String(error));
-    } finally {
-      setCurrentUser(null);
-      setActiveTab('dashboard');
-    }
-  };
 
   const handleToggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -183,110 +106,6 @@ function App() {
       return next;
     });
   };
-
-  const renderActiveTab = () => {
-    if (!currentUser) {
-      return null;
-    }
-
-    switch (validActiveTab) {
-      case 'dashboard':
-        return (
-          <Suspense fallback={<DashboardFallback />}>
-            <DashboardTab refreshTrigger={refreshTrigger} />
-          </Suspense>
-        );
-      case 'proyectos':
-        return (
-          <Suspense fallback={<FormAndTableFallback columns={5} />}>
-            <ProyectosTab canManage={hasPermission(currentRole, 'proyectos.manage')} onProyectoCreated={handleDataModified} refreshTrigger={refreshTrigger} />
-          </Suspense>
-        );
-      case 'docentes':
-        return (
-          <Suspense fallback={<FormAndTableFallback columns={6} />}>
-            <div className="module-shell docentes-module">
-              <DocentesTable
-                canManage={hasPermission(currentRole, 'docentes.manage')}
-                onCreateClick={() => { setDocenteFormOpen(true); }}
-                refreshTrigger={refreshTrigger}
-              />
-              {docenteFormOpen && hasPermission(currentRole, 'docentes.manage') && (
-                <Suspense fallback={null}>
-                  <DocenteCreateModal
-                    open={docenteFormOpen}
-                    onClose={() => { setDocenteFormOpen(false); }}
-                    onDocenteCreated={handleDataModified}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </Suspense>
-              )}
-            </div>
-          </Suspense>
-        );
-      case 'grupos':
-        return (
-          <Suspense fallback={<FormAndTableFallback columns={4} />}>
-            <GruposTab canManage={hasPermission(currentRole, 'grupos.manage')} />
-          </Suspense>
-        );
-      case 'configuracion':
-        if (!hasPermission(currentRole, 'configuracion.view')) {
-          return null;
-        }
-
-        return (
-          <Suspense fallback={<FormAndTableFallback columns={5} />}>
-            <ConfiguracionTab
-              currentUser={currentUser}
-              onDataModified={handleDataModified}
-              refreshTrigger={refreshTrigger}
-              isAdmin={hasPermission(currentRole, 'usuarios.manage')}
-            />
-          </Suspense>
-        );
-      case 'reportes':
-        return (
-          <Suspense fallback={<TableOnlyFallback columns={5} />}>
-            <ReportesTab canExport={hasPermission(currentRole, 'reportes.export')} refreshTrigger={refreshTrigger} />
-          </Suspense>
-        );
-      default:
-        return null;
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      try { await cargarAuthStatus(); }
-      catch { /* auth init error handled internally */ }
-    };
-    void init();
-  }, []);
-
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const triggerRefresh = () => {
-      if (document.visibilityState === 'visible') {
-        setRefreshTrigger((prev) => prev + 1);
-      }
-    };
-
-    const intervalId = window.setInterval(triggerRefresh, 15000);
-    window.addEventListener('focus', triggerRefresh);
-    document.addEventListener('visibilitychange', triggerRefresh);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', triggerRefresh);
-      document.removeEventListener('visibilitychange', triggerRefresh);
-    };
-  }, [currentUser]);
-
-  const validActiveTab = (!currentUser || tabs.length === 0 || tabs.some((tab) => tab.id === activeTab))
-    ? activeTab
-    : tabs[0].id;
 
   if (authLoading) {
     return (
@@ -332,25 +151,7 @@ function App() {
         </a>
       )}
       {!currentUser ? (
-        <>
-          <header className="app-header">
-            <div className="header-content">
-              <div>
-                <h1 className="app-title title-with-icon">
-                  <AppIcon icon={BookOpen} size={24} />
-                  <span>UPI Research</span>
-                </h1>
-                <p className="app-subtitle">Gestión de Proyectos y Docentes</p>
-              </div>
-            </div>
-          </header>
-          <main className="main-content auth-main">
-            <AuthScreen
-              mode={requiresSetup ? 'setup' : 'login'}
-              onAuthenticated={handleAuthenticated}
-            />
-          </main>
-        </>
+        <AuthShell requiresSetup={requiresSetup} onAuthenticated={handleAuthenticated} />
       ) : (
         <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
           <aside id="app-sidebar" className="app-sidebar">
@@ -427,7 +228,15 @@ function App() {
             </header>
 
             <main id="main-content" className="main-content main-content-shell" tabIndex={-1}>
-              {renderActiveTab()}
+              <TabRenderers
+                validActiveTab={validActiveTab}
+                currentUser={currentUser}
+                currentRole={currentRole}
+                refreshTrigger={refreshTrigger}
+                onDataModified={handleDataModified}
+                docenteFormOpen={docenteFormOpen}
+                setDocenteFormOpen={setDocenteFormOpen}
+              />
             </main>
           </div>
         </div>

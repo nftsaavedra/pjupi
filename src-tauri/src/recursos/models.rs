@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-fn current_timestamp_ms() -> i64 {
-    chrono::Utc::now().timestamp_millis()
-}
+use crate::shared::time;
 
 // ── Patentes ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +28,7 @@ pub struct Patente {
 
 impl Patente {
     pub fn new(request: CreatePatenteRequest) -> Self {
-        let now = current_timestamp_ms();
+        let now = time::now_ms();
         let id = Uuid::new_v4().to_string();
         Self {
             id: id.clone(),
@@ -101,7 +99,7 @@ pub struct Producto {
 
 impl Producto {
     pub fn new(request: CreateProductoRequest) -> Self {
-        let now = current_timestamp_ms();
+        let now = time::now_ms();
         let id = Uuid::new_v4().to_string();
         Self {
             id: id.clone(),
@@ -160,7 +158,7 @@ pub struct Equipamiento {
 
 impl Equipamiento {
     pub fn new(request: CreateEquipamientoRequest) -> Self {
-        let now = current_timestamp_ms();
+        let now = time::now_ms();
         let id = Uuid::new_v4().to_string();
         Self {
             id: id.clone(),
@@ -225,7 +223,7 @@ pub struct Financiamiento {
 
 impl Financiamiento {
     pub fn new(request: CreateFinanciamientoRequest) -> Self {
-        let now = current_timestamp_ms();
+        let now = time::now_ms();
         let id = Uuid::new_v4().to_string();
         Self {
             id: id.clone(),

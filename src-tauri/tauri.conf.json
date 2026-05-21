@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:; font-src 'self' data:; connect-src 'self' https://api.decolecta.com https://renacyt.concytec.gob.pe https://servicio-renacyt.concytec.gob.pe https://pure.unf.edu.pe"
     }
   },
   "bundle": {

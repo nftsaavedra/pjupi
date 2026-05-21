@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FolderOpen, Save, Beaker, Lightbulb, Package, DollarSign } from 'lucide-react';
 import type { DocenteDetalle } from '../../docentes/api';
 import type { ProyectoDetalle, ProyectoParticipantesPayload } from '../api';
+import { getCatalogos } from '@/features/configuracion/api';
+import type { CatalogoItem } from '@/services/tauri/types';
 import { toast } from '@/services/toast';
 import { FormInput } from '@/shared/forms/FormInput';
 import { FormSelect } from '@/shared/forms/FormSelect';
@@ -61,6 +63,18 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
   onEquipamientosChange,
   onFinanciamientosChange,
 }) => {
+  const [catOptsEstadoPatente, setCatOptsEstadoPatente] = useState<{ value: string; label: string }[]>([]);
+  const [catOptsEtapa, setCatOptsEtapa] = useState<{ value: string; label: string }[]>([]);
+  const [catOptsTipoFin, setCatOptsTipoFin] = useState<{ value: string; label: string }[]>([]);
+  const [catOptsEstadoFin, setCatOptsEstadoFin] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    const map = (items: CatalogoItem[]) => items.map((i) => ({ value: i.codigo, label: i.nombre }));
+    void getCatalogos('estado_patente').then((i) => { setCatOptsEstadoPatente(map(i)); }).catch(() => {});
+    void getCatalogos('etapa_producto').then((i) => { setCatOptsEtapa(map(i)); }).catch(() => {});
+    void getCatalogos('tipo_financiamiento').then((i) => { setCatOptsTipoFin(map(i)); }).catch(() => {});
+    void getCatalogos('estado_financiero').then((i) => { setCatOptsEstadoFin(map(i)); }).catch(() => {});
+  }, []);
+
   const participantesIniciales = useMemo(
     () => parseParticipantesProyecto(proyecto?.participantes_json),
     [proyecto?.participantes_json],
@@ -331,7 +345,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
               fields={[
                 { name: 'numero_patente', label: 'Número de Patente', placeholder: 'Ej: PE-2024-00123', required: true },
                 { name: 'titulo_patente', label: 'Título', placeholder: 'Ej: Proceso de purificación de agua', required: true },
-                { name: 'estado', label: 'Estado', placeholder: 'Ej: Solicitada, Concedida, Rechazada', required: false },
+                { name: 'estado', label: 'Estado', type: 'select', options: catOptsEstadoPatente, required: false },
               ]}
               onItemsChange={onPatentesChange}
             />
@@ -346,7 +360,7 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
               fields={[
                 { name: 'nombre_producto', label: 'Nombre del Producto', placeholder: 'Ej: Sistema de tratamiento', required: true },
                 { name: 'descripcion', label: 'Descripción', placeholder: 'Breve descripción del producto', type: 'textarea', required: false },
-                { name: 'etapa', label: 'Etapa de Desarrollo', placeholder: 'Ej: Prototipo, Piloto, Comercialización', required: false },
+                { name: 'etapa', label: 'Etapa de Desarrollo', type: 'select', options: catOptsEtapa, required: false },
               ]}
               onItemsChange={onProductosChange}
             />
@@ -374,9 +388,9 @@ export const ProyectoEditModal: React.FC<ProyectoEditModalProps> = ({
               description="Agregue fuentes de financiamiento del proyecto (opcional)."
               items={financiamientos}
               fields={[
-                { name: 'fuente', label: 'Fuente de Financiamiento', placeholder: 'Ej: FONDECYT, CONCYTEC, Institucional', required: true },
+                { name: 'fuente', label: 'Tipo de Financiamiento', type: 'select', options: catOptsTipoFin, required: true },
                 { name: 'monto', label: 'Monto (S/)', type: 'number', placeholder: '0.00', required: false },
-                { name: 'estado_financiero', label: 'Estado', placeholder: 'Ej: Aprobado, Desembolsado, En proceso', required: false },
+                { name: 'estado_financiero', label: 'Estado', type: 'select', options: catOptsEstadoFin, required: false },
               ]}
               onItemsChange={onFinanciamientosChange}
             />

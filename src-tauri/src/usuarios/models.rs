@@ -61,10 +61,7 @@ pub struct AuthStatus {
 
 impl UsuarioConPassword {
     pub fn new(request: CreateUsuarioRequest, password_hash: String) -> Self {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_millis() as i64)
-            .unwrap_or_default();
+        let now = crate::shared::time::now_ms();
         
         Self {
             id_usuario: Uuid::new_v4().to_string(),
